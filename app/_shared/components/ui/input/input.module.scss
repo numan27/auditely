@@ -1,0 +1,108 @@
+// Input module styles using CSS custom properties
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+
+  &--required::after {
+    content: ' *';
+    color: var(--color-error);
+  }
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background-color: var(--color-bg-secondary);
+    cursor: not-allowed;
+  }
+
+  // Sizes
+  &--sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.875rem;
+  }
+
+  &--lg {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 1.125rem;
+  }
+
+  &--with-left-icon {
+    padding-left: 2.5rem;
+  }
+
+  &--with-right-icon {
+    padding-right: 2.5rem;
+  }
+
+  // Error state
+  &--error {
+    border-color: var(--color-error);
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  }
+}
+
+.left-icon,
+.right-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.left-icon {
+  left: var(--spacing-sm);
+}
+
+.right-icon {
+  right: var(--spacing-sm);
+}
+
+.error {
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
+
+.help-text {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}

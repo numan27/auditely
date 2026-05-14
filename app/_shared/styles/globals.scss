@@ -1,0 +1,42 @@
+// SCSS Entry Point
+// Import this file in your app to use SCSS variables and mixins globally
+
+// Variables and mixins are automatically imported via next.config.ts sassOptions
+// This file can be used for additional global styles
+
+// Import CSS custom properties
+@import 'variables';
+@import 'mixins';
+
+// Utility classes using SCSS
+@layer utilities {
+  // Container
+  .container {
+    @include container;
+  }
+
+  // Screen reader only
+  .sr-only {
+    @include sr-only;
+  }
+
+  // Text truncate
+  .text-truncate {
+    @include text-truncate;
+  }
+
+  // Fade in animation
+  .fade-in {
+    @include fade-in;
+  }
+
+  // Slide up animation
+  .slide-up {
+    @include slide-up;
+  }
+
+  // Custom scrollbar
+  .custom-scrollbar {
+    @include custom-scrollbar;
+  }
+}

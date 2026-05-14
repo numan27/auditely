@@ -1,0 +1,101 @@
+.tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-content {
+  position: absolute;
+  z-index: 50;
+  animation: tooltipIn 0.15s ease-out;
+
+  &--top {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  &--bottom {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: var(--spacing-xs);
+  }
+
+  &--left {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: var(--spacing-xs);
+  }
+
+  &--right {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: var(--spacing-xs);
+  }
+}
+
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltip-inner {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  max-width: 250px;
+  word-wrap: break-word;
+
+  .dark & {
+    background-color: var(--color-gray-700);
+  }
+}
+
+.tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-gray-800);
+  transform: rotate(45deg);
+
+  .dark & {
+    background-color: var(--color-gray-700);
+  }
+
+  &--top {
+    bottom: -4px;
+    left: 50%;
+    margin-left: -4px;
+  }
+
+  &--bottom {
+    top: -4px;
+    left: 50%;
+    margin-left: -4px;
+  }
+
+  &--left {
+    right: -4px;
+    top: 50%;
+    margin-top: -4px;
+  }
+
+  &--right {
+    left: -4px;
+    top: 50%;
+    margin-top: -4px;
+  }
+}
