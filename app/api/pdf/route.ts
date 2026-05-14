@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
 
   let buffer: Buffer;
   try {
-    buffer = await renderToBuffer(createElement(PdfDocument, props));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    buffer = await renderToBuffer(createElement(PdfDocument, props) as any);
   } catch {
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     .toLowerCase()
     .replace(/-+/g, '-')}.pdf`;
 
-  return new Response(buffer, {
+  return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${safeFilename}"`,
