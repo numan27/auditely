@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["@react-pdf/renderer"],
   images: {
     formats: ["image/webp", "image/avif"],
     remotePatterns: [
@@ -11,42 +12,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Enable strict mode for better development experience
   reactStrictMode: true,
-  // Configure redirects
-  async redirects() {
-    return [
-      {
-        source: "/",
-        has: [
-          {
-            type: "cookie",
-            key: "token",
-          },
-        ],
-        permanent: false,
-        destination: "/dashboard",
-      },
-    ];
-  },
-  // Configure headers
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
     ];
