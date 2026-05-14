@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noContentCard';
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
-import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import type { BusinessWithData, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
 
 export default function HomePage() {
   const [isSearching, setIsSearching] = useState(false);
@@ -14,6 +14,33 @@ export default function HomePage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<{ niche: string; location: string } | null>(null);
+
+  useEffect(() => {
+    const savedSearchId = localStorage.getItem('auditely_search_id');
+    if (!savedSearchId) return;
+
+    setIsSearching(true);
+    fetch(`/api/results?search_id=${savedSearchId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.businesses?.length) return;
+
+        const restored: BusinessWithData[] = data.businesses.map(
+          (b: BusinessWithData & { audits?: (Audit & { ai_reports?: AiReport[] })[] }) => ({
+            ...b,
+            audit: b.audits?.[0],
+            ai_report: b.audits?.[0]?.ai_reports?.[0],
+          })
+        );
+
+        setBusinesses(restored);
+        setHasSearched(true);
+      })
+      .catch(() => {
+        // silently fail — fresh start is fine
+      })
+      .finally(() => setIsSearching(false));
+  }, []);
 
   const handleSearch = async (niche: string, location: string) => {
     setIsSearching(true);
