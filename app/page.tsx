@@ -21,6 +21,8 @@ export default function HomePage() {
     setBusinesses([]);
     setHasSearched(false);
 
+    let searchId: string | null = null;
+
     try {
       const res = await fetch('/api/search', {
         method: 'POST',
@@ -32,11 +34,15 @@ export default function HomePage() {
       setBusinesses(data.businesses ?? []);
       setLastQuery({ niche, location });
       setHasSearched(true);
-      localStorage.setItem('auditely_search_id', data.search_id);
+      searchId = data.search_id ?? null;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setIsSearching(false);
+    }
+
+    if (searchId) {
+      try { localStorage.setItem('auditely_search_id', searchId); } catch { /* storage unavailable */ }
     }
   };
 
@@ -44,7 +50,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="text-base font-bold tracking-tight text-[var(--color-text-primary)]">
@@ -55,7 +60,6 @@ export default function HomePage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-10">
-        {/* Hero + Search */}
         <section className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">
@@ -74,7 +78,6 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Loading state */}
         {isSearching && (
           <div className="flex items-center justify-center gap-3 py-20 text-[var(--color-text-secondary)]">
             <Spinner size="md" />
@@ -82,10 +85,8 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Results */}
         {!isSearching && hasSearched && (
           <section className="space-y-6">
-            {/* Stats bar */}
             {businesses.length > 0 && lastQuery && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
                 <span className="text-[var(--color-text-secondary)]">
@@ -116,6 +117,8 @@ export default function HomePage() {
                   <BusinessCard
                     key={business.id}
                     business={business}
+                    initialAudit={business.audit}
+                    initialReport={business.ai_report}
                     index={index}
                   />
                 ))}
