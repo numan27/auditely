@@ -1,4 +1,5 @@
 // Global TypeScript types
+export * from './auditely';
 
 // API Response types
 export interface ApiResponse<T> {
