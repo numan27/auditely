@@ -51,6 +51,14 @@ export async function POST(request: NextRequest) {
     desktopRes.json(),
   ]);
 
+  if (!mobileRes.ok || !desktopRes.ok) {
+    return NextResponse.json({ error: 'PageSpeed API request failed' }, { status: 502 });
+  }
+
+  if (!mobileData.lighthouseResult || !desktopData.lighthouseResult) {
+    return NextResponse.json({ error: 'PageSpeed returned no lighthouse data' }, { status: 502 });
+  }
+
   const mobileScore = Math.round(
     (mobileData.lighthouseResult?.categories?.performance?.score ?? 0) * 100
   );
