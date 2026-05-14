@@ -15,35 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: {
-    template: "%s | Next.js Template",
-    default: "Next.js Template - Production Ready Starter",
-  },
-  description: "A production-ready Next.js template with authentication, form validation, theming, and scalable architecture.",
-  keywords: ["next.js", "template", "react", "typescript", "tailwindcss"],
-  authors: [{ name: "Next.js Template" }],
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    title: "Next.js Template",
-    description: "A production-ready Next.js template with authentication, form validation, theming, and scalable architecture.",
-    siteName: "Next.js Template",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Next.js Template",
-    description: "A production-ready Next.js template with authentication, form validation, theming, and scalable architecture.",
-  },
+  title: "Auditely",
+  description: "Internal lead generation and website audit tool.",
   robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
+    index: false,
+    follow: false,
   },
 };
 
