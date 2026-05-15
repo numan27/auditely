@@ -24,16 +24,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'niche and location are required' }, { status: 400 });
   }
 
-  // Cache check: same niche+location today
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
+  // Cache check: same niche+location ever searched before
   const { data: existingSearch } = await supabase
     .from('searches')
     .select('id')
     .eq('niche', niche)
     .eq('location', location)
-    .gte('created_at', todayStart.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (existingSearch) {

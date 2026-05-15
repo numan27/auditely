@@ -1,3 +1,9 @@
+// Named route constants — always use these instead of hardcoding strings
+export const ROUTES = {
+  HOME: '/',
+  SEARCHES: '/searches',
+} as const;
+
 // Route configuration
 export const PUBLIC_ROUTES = [
   '/',

@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noContentCard';
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
 import type { BusinessWithData, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 export default function HomePage() {
+  const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
   const [businesses, setBusinesses] = useState<BusinessWithData[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -82,7 +85,15 @@ export default function HomePage() {
           <span className="text-base font-bold tracking-tight text-[var(--color-text-primary)]">
             Auditely
           </span>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push(ROUTES.SEARCHES)}
+              className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              Saved Searches
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
