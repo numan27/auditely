@@ -21,6 +21,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>(initialAudit ? 'done' : 'idle');
   const [reportStatus, setReportStatus] = useState<ReportStatus>(initialReport ? 'done' : 'idle');
+  const [email, setEmail] = useState<string | null>(business.email ?? null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const runGenerate = useCallback(async (auditId: string) => {
@@ -51,6 +52,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setAudit(data.audit);
+      if (data.email) setEmail(data.email);
       setAuditStatus('done');
     } catch {
       setAuditStatus('error');
@@ -97,6 +99,14 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
           <p className="text-sm text-[var(--color-text-tertiary)] mt-1">{business.address}</p>
           {business.phone && (
             <p className="text-sm text-[var(--color-text-tertiary)]">{business.phone}</p>
+          )}
+          {email && (
+            <a
+              href={`mailto:${email}`}
+              className="text-sm text-[var(--color-primary-600)] hover:underline"
+            >
+              {email}
+            </a>
           )}
         </div>
         <div className="shrink-0">
