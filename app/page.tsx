@@ -18,16 +18,19 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<{ niche: string; location: string } | null>(null);
 
+  // Only fires when navigating from Saved Searches (?load=<search_id>)
   useEffect(() => {
-    const savedSearchId = localStorage.getItem('auditely_search_id');
-    if (!savedSearchId) return;
+    const params = new URLSearchParams(window.location.search);
+    const searchId = params.get('load');
+    if (!searchId) return;
 
+    window.history.replaceState({}, '', '/');
     setIsSearching(true);
-    fetch(`/api/results?search_id=${savedSearchId}`)
+
+    fetch(`/api/results?search_id=${searchId}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.businesses?.length) return;
-
         const restored: BusinessWithData[] = data.businesses.map(
           (b: BusinessWithData & { audits?: (Audit & { ai_reports?: AiReport[] })[] }) => ({
             ...b,
@@ -35,13 +38,10 @@ export default function HomePage() {
             ai_report: b.audits?.[0]?.ai_reports?.[0],
           })
         );
-
         setBusinesses(restored);
         setHasSearched(true);
       })
-      .catch(() => {
-        // silently fail — fresh start is fine
-      })
+      .catch(() => {})
       .finally(() => setIsSearching(false));
   }, []);
 

@@ -29,8 +29,7 @@ export default function SearchesPage() {
   }, []);
 
   const handleLoad = (searchId: string) => {
-    try { localStorage.setItem('auditely_search_id', searchId); } catch { /* storage unavailable */ }
-    router.push(ROUTES.HOME);
+    router.push(`${ROUTES.HOME}?load=${searchId}`);
   };
 
   return (
