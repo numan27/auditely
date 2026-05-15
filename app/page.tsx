@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
@@ -10,6 +10,8 @@ import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/bus
 import type { BusinessWithData, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
+const PAGE_SIZE = 20;
+
 export default function HomePage() {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
@@ -17,6 +19,9 @@ export default function HomePage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<{ niche: string; location: string } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Only fires when navigating from Saved Searches (?load=<search_id>)
   useEffect(() => {
@@ -39,17 +44,41 @@ export default function HomePage() {
           })
         );
         setBusinesses(restored);
+        setVisibleCount(PAGE_SIZE);
         setHasSearched(true);
       })
       .catch(() => {})
       .finally(() => setIsSearching(false));
   }, []);
 
+  // Infinite scroll — reveal next page when sentinel enters viewport
+  const loadMore = useCallback(() => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => prev + PAGE_SIZE);
+      setIsLoadingMore(false);
+    }, 400);
+  }, [isLoadingMore]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, hasSearched]);
+
   const handleSearch = async (niche: string, location: string) => {
     setIsSearching(true);
     setError(null);
     setBusinesses([]);
     setHasSearched(false);
+    setVisibleCount(PAGE_SIZE);
 
     let searchId: string | null = null;
 
@@ -77,6 +106,8 @@ export default function HomePage() {
   };
 
   const withWebsite = businesses.filter((b) => b.website).length;
+  const visibleBusinesses = businesses.slice(0, visibleCount);
+  const hasMore = visibleCount < businesses.length;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
@@ -125,20 +156,30 @@ export default function HomePage() {
 
         {!isSearching && hasSearched && (
           <section className="space-y-6">
-            {businesses.length > 0 && lastQuery && (
+            {businesses.length > 0 && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
                 <span className="text-[var(--color-text-secondary)]">
+                  Showing{' '}
+                  <strong className="text-[var(--color-text-primary)] font-semibold">
+                    {visibleBusinesses.length}
+                  </strong>{' '}
+                  of{' '}
                   <strong className="text-[var(--color-text-primary)] font-semibold">
                     {businesses.length}
                   </strong>{' '}
-                  businesses found for{' '}
-                  <span className="italic">
-                    &ldquo;{lastQuery.niche}&rdquo; in {lastQuery.location}
-                  </span>
+                  businesses
+                  {lastQuery && (
+                    <span className="text-[var(--color-text-tertiary)]">
+                      {' '}for{' '}
+                      <span className="italic">
+                        &ldquo;{lastQuery.niche}&rdquo; in {lastQuery.location}
+                      </span>
+                    </span>
+                  )}
                 </span>
                 {withWebsite < businesses.length && (
                   <span className="text-[var(--color-text-tertiary)]">
-                    {businesses.length - withWebsite} without a website (skipped)
+                    {businesses.length - withWebsite} without a website
                   </span>
                 )}
               </div>
@@ -150,16 +191,30 @@ export default function HomePage() {
                 description="Try a different niche or location and search again."
               />
             ) : (
-              <div className="space-y-5">
-                {businesses.map((business) => (
-                  <BusinessCard
-                    key={business.id}
-                    business={business}
-                    initialAudit={business.audit}
-                    initialReport={business.ai_report}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="space-y-5">
+                  {visibleBusinesses.map((business) => (
+                    <BusinessCard
+                      key={business.id}
+                      business={business}
+                      initialAudit={business.audit}
+                      initialReport={business.ai_report}
+                    />
+                  ))}
+                </div>
+
+                {hasMore && (
+                  <div ref={sentinelRef} className="flex justify-center py-8">
+                    {isLoadingMore && <Spinner size="md" />}
+                  </div>
+                )}
+
+                {!hasMore && businesses.length > PAGE_SIZE && (
+                  <p className="text-center text-sm text-[var(--color-text-tertiary)] py-4">
+                    All {businesses.length} businesses loaded
+                  </p>
+                )}
+              </>
             )}
           </section>
         )}
