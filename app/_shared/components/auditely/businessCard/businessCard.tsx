@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
@@ -14,10 +14,9 @@ interface BusinessCardProps {
   business: Business;
   initialAudit?: Audit;
   initialReport?: AiReport;
-  index: number;
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, index }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport }: BusinessCardProps) {
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>(initialAudit ? 'done' : 'idle');
@@ -53,20 +52,10 @@ export function BusinessCard({ business, initialAudit, initialReport, index }: B
       if (!res.ok) throw new Error(data.error);
       setAudit(data.audit);
       setAuditStatus('done');
-      runGenerate(data.audit.id);
     } catch {
       setAuditStatus('error');
     }
-  }, [business.id, runGenerate]);
-
-  // Auto-start audit if business has a website and no cached audit
-  useEffect(() => {
-    if (!business.website || initialAudit) return;
-    const timer = setTimeout(() => {
-      runAudit();
-    }, index * 1500);
-    return () => clearTimeout(timer);
-  }, [business.website, initialAudit, index, runAudit]);
+  }, [business.id]);
 
   const handleDownloadPdf = async () => {
     if (!audit) return;
@@ -165,6 +154,11 @@ export function BusinessCard({ business, initialAudit, initialReport, index }: B
           {/* AI Report */}
           {auditStatus === 'done' && (
             <div>
+              {reportStatus === 'idle' && audit && (
+                <Button variant="outline" size="sm" onClick={() => runGenerate(audit.id)}>
+                  Generate AI Summary
+                </Button>
+              )}
               {reportStatus === 'loading' && (
                 <div className="flex items-center gap-2.5 text-sm text-[var(--color-text-secondary)]">
                   <Spinner size="sm" />
@@ -174,11 +168,7 @@ export function BusinessCard({ business, initialAudit, initialReport, index }: B
               {reportStatus === 'error' && audit && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-red-500">Report generation failed.</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => runGenerate(audit.id)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => runGenerate(audit.id)}>
                     Retry
                   </Button>
                 </div>

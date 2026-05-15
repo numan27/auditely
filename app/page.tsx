@@ -140,13 +140,12 @@ export default function HomePage() {
               />
             ) : (
               <div className="space-y-5">
-                {businesses.map((business, index) => (
+                {businesses.map((business) => (
                   <BusinessCard
                     key={business.id}
                     business={business}
                     initialAudit={business.audit}
                     initialReport={business.ai_report}
-                    index={index}
                   />
                 ))}
               </div>
