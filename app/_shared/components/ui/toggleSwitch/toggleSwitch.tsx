@@ -3,7 +3,7 @@
 import React, { useId, forwardRef } from 'react';
 import styles from './toggleSwitch.module.scss';
 
-interface ToggleSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface ToggleSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> {
   label?: string;
   error?: string;
   helperText?: string;

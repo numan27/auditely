@@ -2,13 +2,13 @@
 
 import React, { useId, useState } from 'react';
 import PhoneInputReact from 'react-phone-number-input';
-import type { Country, E164Number } from 'react-phone-number-input';
+import type { Country, Value } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import styles from './phoneInput.module.scss';
 
 interface PhoneInputProps {
-  value?: E164Number | undefined;
-  onChange?: (value: E164Number | undefined) => void;
+  value?: Value;
+  onChange?: (value?: Value) => void;
   label?: string;
   error?: string;
   helperText?: string;
@@ -59,7 +59,7 @@ export const PhoneInput = ({
         <PhoneInputReact
           id={inputId}
           value={value}
-          onChange={onChange}
+          onChange={onChange ?? (() => {})}
           defaultCountry={defaultCountry}
           countries={countries}
           placeholder={placeholder}
