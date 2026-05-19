@@ -1,6 +1,6 @@
 // app/_shared/components/auditely/pdfDocument/pdfDocument.tsx
 
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Link } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
   page: {
@@ -99,13 +99,31 @@ const styles = StyleSheet.create({
     color: '#374151',
     lineHeight: 1.5,
   },
-  emailBox: {
-    backgroundColor: '#f5f3ff',
-    borderRadius: 6,
-    padding: 14,
-    borderLeftWidth: 3,
-    borderLeftColor: '#6366f1',
-    borderLeftStyle: 'solid',
+  issueRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 5,
+    gap: 8,
+  },
+  issueDot: {
+    fontSize: 9,
+    color: '#dc2626',
+    width: 12,
+    marginTop: 1,
+  },
+  issueText: {
+    flex: 1,
+    fontSize: 10,
+    color: '#374151',
+    lineHeight: 1.5,
+  },
+  issueValue: {
+    fontSize: 9,
+    color: '#6b7280',
+  },
+  link: {
+    color: '#6366f1',
+    textDecoration: 'none',
   },
   divider: {
     borderBottomWidth: 1,
@@ -147,9 +165,9 @@ export interface PdfDocumentProps {
   seoScore: number;
   mobileScore: number;
   sslValid: boolean;
+  topIssues?: { title: string; displayValue?: string }[];
   summary: string;
   improvements: string[];
-  coldEmail: string;
 }
 
 export function PdfDocument({
@@ -162,9 +180,9 @@ export function PdfDocument({
   seoScore,
   mobileScore,
   sslValid,
+  topIssues,
   summary,
   improvements,
-  coldEmail,
 }: PdfDocumentProps) {
   return (
     <Document>
@@ -173,7 +191,7 @@ export function PdfDocument({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Website Audit Report</Text>
           <Text style={styles.headerSubtitle}>
-            Prepared by DevArtVentures · {auditDate}
+            Prepared by <Link src="https://devartventures.com" style={styles.link}>DevArtVentures</Link> · {auditDate}
           </Text>
         </View>
 
@@ -217,7 +235,7 @@ export function PdfDocument({
                   sslValid ? styles.scoreGreen : styles.scoreRed,
                 ]}
               >
-                {sslValid ? '✓' : '✗'}
+                {sslValid ? '✓' : 'X'}
               </Text>
               <Text style={styles.scoreLabel}>SSL</Text>
             </View>
@@ -225,6 +243,27 @@ export function PdfDocument({
         </View>
 
         <View style={styles.divider} />
+
+        {/* Top Issues */}
+        {topIssues && topIssues.length > 0 && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Top Issues Found</Text>
+              {topIssues.map((issue, i) => (
+                <View key={i} style={styles.issueRow}>
+                  <Text style={styles.issueDot}>●</Text>
+                  <Text style={styles.issueText}>
+                    {issue.title}
+                    {issue.displayValue ? (
+                      <Text style={styles.issueValue}> ({issue.displayValue})</Text>
+                    ) : null}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.divider} />
+          </>
+        )}
 
         {/* AI Summary */}
         <View style={styles.section}>
@@ -243,20 +282,15 @@ export function PdfDocument({
           ))}
         </View>
 
-        <View style={styles.divider} />
-
-        {/* Cold Email */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Outreach Email</Text>
-          <View style={styles.emailBox}>
-            <Text style={styles.bodyText}>{coldEmail}</Text>
-          </View>
-        </View>
-
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>Powered by DevArtVentures</Text>
-          <Text style={styles.footerText}>contact@devartventures.com</Text>
+          <Text style={styles.footerText}>
+            Powered by{' '}
+            <Link src="https://devartventures.com" style={styles.link}>devartventures.com</Link>
+          </Text>
+          <Text style={styles.footerText}>
+            <Link src="mailto:contact@devartventures.com" style={styles.link}>contact@devartventures.com</Link>
+          </Text>
         </View>
       </Page>
     </Document>

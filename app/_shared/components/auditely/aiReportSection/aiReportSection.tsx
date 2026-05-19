@@ -54,7 +54,7 @@ export function AiReportSection({ report }: AiReportSectionProps) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-tertiary)]">
-            Cold Email
+            Outreach Email
           </p>
           <Button variant="ghost" size="sm" onClick={handleCopy}>
             {copied ? '✓ Copied' : 'Copy'}

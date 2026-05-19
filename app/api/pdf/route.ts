@@ -53,6 +53,16 @@ export async function POST(request: NextRequest) {
     day: 'numeric',
   });
 
+  type KeyAudit = { score: number | null; title: string; displayValue?: string };
+  type RawJson = { mobile?: { keyAudits?: Record<string, KeyAudit> } };
+  const rawJson = audit.raw_json as RawJson | null;
+  const mobileAudits = rawJson?.mobile?.keyAudits ?? {};
+  const topIssues = Object.values(mobileAudits)
+    .filter((a): a is KeyAudit & { score: number } => typeof a.score === 'number' && a.score < 0.9)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 4)
+    .map((a) => ({ title: a.title, ...(a.displayValue && { displayValue: a.displayValue }) }));
+
   const props: PdfDocumentProps = {
     businessName: business.name,
     website: business.website ?? '',
@@ -63,9 +73,9 @@ export async function POST(request: NextRequest) {
     seoScore: audit.seo_score,
     mobileScore: audit.mobile_score,
     sslValid: audit.ssl_valid,
+    topIssues: topIssues.length > 0 ? topIssues : undefined,
     summary: aiReport.summary,
     improvements: aiReport.improvements as string[],
-    coldEmail: aiReport.cold_email,
   };
 
   let buffer: Buffer;

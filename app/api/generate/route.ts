@@ -48,6 +48,20 @@ export async function POST(request: NextRequest) {
   const businessName = biz.name;
   const website = biz.website;
 
+  type RawJson = {
+    mobile?: { keyAudits?: Record<string, { score: number | null; title: string; displayValue?: string }> };
+  };
+  const rawJson = audit.raw_json as RawJson | null;
+  const mobileAudits = rawJson?.mobile?.keyAudits ?? {};
+  const topIssues = Object.values(mobileAudits)
+    .filter((a): a is { score: number; title: string; displayValue?: string } =>
+      typeof a.score === 'number' && a.score < 0.9
+    )
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 6)
+    .map(a => `- ${a.title}${a.displayValue ? ` (${a.displayValue})` : ''}`)
+    .join('\n') || 'No specific issues identified.';
+
   const prompt = `Analyze this website audit and respond in JSON only.
 
 Business: ${businessName}
@@ -57,12 +71,19 @@ SEO Score: ${audit.seo_score}/100
 Mobile Score: ${audit.mobile_score}/100
 SSL Valid: ${audit.ssl_valid}
 
-Instructions:
-1. Write a 2-3 sentence summary of key issues in simple business language
-2. List exactly 4 specific, actionable improvements
-3. Write a short personalized cold email offering web development services
+Specific Issues Found:
+${topIssues}
 
-Tone: professional, concise, value-focused, not salesy.
+Instructions:
+1. Write a 2-3 sentence summary referencing 1-2 of the specific issues above in plain business language
+2. List exactly 4 actionable improvements directly tied to the issues above
+3. Write a personalized cold email exactly 2 paragraphs long:
+   - Paragraph 1: Introduce yourself briefly, mention you audited their website, and call out 2-3 specific issues found (reference the actual issue names and impact, e.g. slow load time, missing SSL, poor SEO).
+   - Paragraph 2: Explain the value of fixing these issues for their business (more customers, better Google ranking, faster site), offer a free consultation or quick call, and end with a clear call to action.
+   - Include a subject line at the very top prefixed with "Subject: "
+   - Do NOT use bullet points inside the email — flowing prose only.
+
+Tone: professional, warm, specific, value-focused. Never generic. Never pushy.
 
 Respond with ONLY valid JSON in this exact format:
 {
@@ -78,7 +99,7 @@ Respond with ONLY valid JSON in this exact format:
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       temperature: 0.7,
-      max_tokens: 1024,
+      max_tokens: 1536,
     });
   } catch {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });

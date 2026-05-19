@@ -2,47 +2,51 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
+import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 
-// Scrape a single URL for the first mailto: email found
-async function scrapeEmail(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Auditely/1.0)' },
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const match = html.match(/href=["']mailto:([^"'?\s]+)/i);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
+type KeyAudit = { score: number | null; title: string; displayValue?: string };
+type LighthouseSummary = {
+  categories: Record<string, { score: number; title: string }>;
+  keyAudits: Record<string, KeyAudit>;
+};
+
+const KEY_AUDIT_IDS = [
+  'redirects', 'bootup-time', 'cache-insight', 'unminified-css',
+  'unminified-javascript', 'render-blocking-resources', 'uses-optimized-images',
+  'uses-webp-images', 'uses-responsive-images', 'offscreen-images',
+  'uses-text-compression', 'time-to-first-byte', 'interactive',
+  'speed-index', 'first-contentful-paint', 'largest-contentful-paint',
+  'total-blocking-time', 'cumulative-layout-shift', 'long-tasks',
+  'dom-size-insight', 'unsized-images', 'is-on-https',
+  'meta-description', 'document-title', 'link-text', 'image-alt',
+  'robots-txt', 'canonical',
+];
+
+function trimLighthouseData(data: Record<string, unknown>): LighthouseSummary {
+  const lr = data.lighthouseResult as Record<string, unknown> | undefined;
+  if (!lr) return { categories: {}, keyAudits: {} };
+
+  const rawCats = (lr.categories ?? {}) as Record<string, { score: number; title: string }>;
+  const rawAudits = (lr.audits ?? {}) as Record<string, { score: number | null; title: string; displayValue?: string }>;
+
+  const categories: Record<string, { score: number; title: string }> = {};
+  for (const [key, cat] of Object.entries(rawCats)) {
+    categories[key] = { score: cat.score, title: cat.title };
   }
-}
 
-// Try homepage, /contact, /about — then Hunter.io as fallback
-async function findEmail(website: string): Promise<string | null> {
-  const origin = new URL(website).origin;
-  const pagesToScrape = [website, `${origin}/contact`, `${origin}/about`];
-
-  for (const url of pagesToScrape) {
-    const email = await scrapeEmail(url);
-    if (email) return email;
+  const keyAudits: Record<string, KeyAudit> = {};
+  for (const id of KEY_AUDIT_IDS) {
+    const a = rawAudits[id];
+    if (a) {
+      keyAudits[id] = {
+        score: a.score,
+        title: a.title,
+        ...(a.displayValue && { displayValue: a.displayValue }),
+      };
+    }
   }
 
-  // Hunter.io fallback
-  const hunterKey = process.env.HUNTER_API_KEY;
-  if (!hunterKey) return null;
-
-  try {
-    const domain = new URL(website).hostname.replace(/^www\./, '');
-    const res = await fetch(
-      `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${hunterKey}`
-    );
-    const data = await res.json();
-    return (data.data?.emails as { value: string }[])?.[0]?.value ?? null;
-  } catch {
-    return null;
-  }
+  return { categories, keyAudits };
 }
 
 export async function POST(request: NextRequest) {
@@ -64,15 +68,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ audit: existingAudit });
   }
 
-  // Get business website + existing email
-  const { data: business } = await supabase
+  // Get business website
+  const { data: business, error: businessError } = await supabase
     .from('businesses')
     .select('website, email')
     .eq('id', businessId)
     .single();
 
-  if (!business?.website) {
-    return NextResponse.json({ error: 'Business has no website' }, { status: 400 });
+  if (businessError || !business?.website) {
+    return NextResponse.json(
+      { error: businessError?.message ?? 'Business has no website' },
+      { status: 400 }
+    );
   }
 
   const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
         seo_score: seoScore,
         mobile_score: mobileScore,
         ssl_valid: sslValid,
-        raw_json: { mobile: mobileData, desktop: desktopData },
+        raw_json: { mobile: trimLighthouseData(mobileData), desktop: trimLighthouseData(desktopData) },
       })
       .select()
       .single(),
