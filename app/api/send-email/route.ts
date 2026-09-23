@@ -6,9 +6,19 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { PdfDocument } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { buildPdfProps } from '@/app/_shared/lib/audit/reportData';
+
+// The AI writes "Subject: ..." as the first line of cold_email. Use it as the
+// real subject and strip it from the body; fall back to a default subject.
+function splitSubject(coldEmail: string, fallback: string): { subject: string; body: string } {
+  const [firstLine, ...rest] = coldEmail.trimStart().split('\n');
+  const match = firstLine?.match(/^\s*subject:\s*(.+)$/i);
+  if (!match) return { subject: fallback, body: coldEmail };
+  return { subject: match[1].trim(), body: rest.join('\n').trimStart() };
+}
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const auditId: string = body.audit_id ?? '';
 
   if (!auditId) {
@@ -49,47 +59,19 @@ export async function POST(request: NextRequest) {
     .from('ai_reports')
     .select('*')
     .eq('audit_id', auditId)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!aiReport) {
     return NextResponse.json({ error: 'Generate the AI report first' }, { status: 400 });
   }
 
-  // Build top issues for PDF attachment
-  type KeyAudit = { score: number | null; title: string; displayValue?: string };
-  type RawJson = { mobile?: { keyAudits?: Record<string, KeyAudit> } };
-  const rawJson = audit.raw_json as RawJson | null;
-  const topIssues = Object.values(rawJson?.mobile?.keyAudits ?? {})
-    .filter((a): a is KeyAudit & { score: number } => typeof a.score === 'number' && a.score < 0.9)
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 4)
-    .map((a) => ({ title: a.title, ...(a.displayValue && { displayValue: a.displayValue }) }));
-
-  const auditDate = new Date(audit.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   // Generate PDF
   let pdfBuffer: Buffer;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pdfBuffer = await renderToBuffer(createElement(PdfDocument, {
-      businessName: business.name,
-      website: business.website ?? '',
-      address: business.address,
-      phone: business.phone,
-      auditDate,
-      performanceScore: audit.performance_score,
-      seoScore: audit.seo_score,
-      mobileScore: audit.mobile_score,
-      sslValid: audit.ssl_valid,
-      topIssues: topIssues.length > 0 ? topIssues : undefined,
-      summary: aiReport.summary,
-      improvements: aiReport.improvements as string[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as any);
+    pdfBuffer = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport)) as any);
   } catch {
     return NextResponse.json({ error: 'Failed to generate PDF attachment' }, { status: 500 });
   }
@@ -101,12 +83,17 @@ export async function POST(request: NextRequest) {
     .toLowerCase()
     .replace(/-+/g, '-');
 
+  const { subject, body: text } = splitSubject(
+    aiReport.cold_email,
+    `Free Website Audit Report — ${business.name}`
+  );
+
   try {
     await resend.emails.send({
       from: fromEmail,
       to: business.email,
-      subject: `Free Website Audit Report — ${business.name}`,
-      text: aiReport.cold_email,
+      subject,
+      text,
       attachments: [
         {
           filename: `audit-${safeName}.pdf`,

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 
 // 5 geographic sub-queries to work around Google Places' 20-result-per-query cap.
-// Deduplication by place_id gives up to ~100 unique results per search.
+// Deduplication by place id gives up to ~100 unique results per search.
 function buildSubQueries(niche: string, location: string): string[] {
   return [
     `${niche} in ${location}`,
@@ -15,8 +15,27 @@ function buildSubQueries(niche: string, location: string): string[] {
   ];
 }
 
+// Places API (New) Text Search returns website + phone inline, so no separate
+// Place Details request is needed. The field mask controls which fields (and
+// billing tier) are returned.
+const FIELD_MASK =
+  'places.id,places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber';
+
+interface NewPlace {
+  id: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  websiteUri?: string;
+  nationalPhoneNumber?: string;
+}
+
+interface SearchResponseData {
+  places?: NewPlace[];
+  error?: { status?: string; message?: string };
+}
+
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const niche: string = (body.niche ?? '').trim().toLowerCase();
   const location: string = (body.location ?? '').trim().toLowerCase();
 
@@ -50,38 +69,50 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'GOOGLE_PLACES_API_KEY is not configured' }, { status: 503 });
   }
 
-  // Run all 5 sub-queries concurrently
+  // Run all 5 sub-queries concurrently against Places API (New) Text Search.
+  // Legacy `maps/api/place/textsearch/json` is disabled for newer projects
+  // (returns REQUEST_DENIED).
   const subQueries = buildSubQueries(niche, location);
   const searchResponses = await Promise.all(
-    subQueries.map((q) =>
-      fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&key=${apiKey}`
-      ).then((r) => r.json())
-    )
+    subQueries.map(async (q) => {
+      try {
+        const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': FIELD_MASK,
+          },
+          body: JSON.stringify({ textQuery: q }),
+        });
+        const data: SearchResponseData = await res.json();
+        return { ok: res.ok, status: res.status, data };
+      } catch {
+        return { ok: false, status: 0, data: {} as SearchResponseData };
+      }
+    })
   );
 
-  // Deduplicate across all sub-query results by place_id
-  type RawPlace = { place_id: string; name: string; formatted_address?: string };
+  // Deduplicate across all sub-query results by place id
   const seenPlaceIds = new Set<string>();
-  const allPlaces: RawPlace[] = [];
+  const allPlaces: NewPlace[] = [];
 
-  for (const searchData of searchResponses) {
-    if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') continue;
-    for (const place of searchData.results ?? []) {
-      if (!seenPlaceIds.has(place.place_id)) {
-        seenPlaceIds.add(place.place_id);
+  for (const resp of searchResponses) {
+    if (!resp.ok) continue;
+    for (const place of resp.data.places ?? []) {
+      if (place.id && !seenPlaceIds.has(place.id)) {
+        seenPlaceIds.add(place.id);
         allPlaces.push(place);
       }
     }
   }
 
   // At least one sub-query must have succeeded
-  const allFailed = searchResponses.every(
-    (r) => r.status !== 'OK' && r.status !== 'ZERO_RESULTS'
-  );
+  const allFailed = searchResponses.every((r) => !r.ok);
   if (allFailed) {
+    const firstError = searchResponses[0]?.data?.error?.status ?? searchResponses[0]?.status;
     return NextResponse.json(
-      { error: `Google Places error: ${searchResponses[0]?.status}` },
+      { error: `Google Places error: ${firstError}` },
       { status: 502 }
     );
   }
@@ -97,48 +128,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create search record' }, { status: 500 });
   }
 
-  const businesses = [];
-
-  // Fetch Places Details for each unique place (website + phone)
-  for (const place of allPlaces) {
-    const detailsRes = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,website,formatted_phone_number&key=${apiKey}`
-    );
-    const detailsData = await detailsRes.json();
-    const d = detailsData.result ?? {};
-
-    const { data: business } = await supabase
+  // Persist all unique places in one bulk insert. Text Search (New) already
+  // returned website + phone. Rows in one insert share NOW(), so created_at is
+  // staggered by 1ms to keep Google's relevance order for later reads.
+  let businesses: unknown[] = [];
+  if (allPlaces.length > 0) {
+    const insertedAt = Date.now();
+    const { data, error: businessInsertError } = await supabase
       .from('businesses')
-      .insert({
-        search_id: newSearch.id,
-        name: d.name ?? place.name,
-        address: d.formatted_address ?? place.formatted_address ?? '',
-        website: d.website ?? null,
-        phone: d.formatted_phone_number ?? null,
-      })
-      .select()
-      .single();
+      .insert(
+        allPlaces.map((place, i) => ({
+          search_id: newSearch.id,
+          name: place.displayName?.text ?? '',
+          address: place.formattedAddress ?? '',
+          website: place.websiteUri ?? null,
+          phone: place.nationalPhoneNumber ?? null,
+          created_at: new Date(insertedAt + i).toISOString(),
+        }))
+      )
+      .select();
 
-    if (business) businesses.push(business);
+    if (businessInsertError) {
+      console.error('[search] Failed to store businesses:', businessInsertError.message);
+      return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
+    }
+    businesses = data ?? [];
   }
 
   return NextResponse.json({ search_id: newSearch.id, businesses });
 }
-
-// ── Google Places single-query reference (original, 20-result cap) ────────────
-//
-// const query = encodeURIComponent(`${niche} in ${location}`);
-// const searchRes = await fetch(
-//   `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`
-// );
-// const searchData = await searchRes.json();
-//
-// if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
-//   return NextResponse.json(
-//     { error: `Google Places error: ${searchData.status}` },
-//     { status: 502 }
-//   );
-// }
-//
-// const places = (searchData.results ?? []).slice(0, 20);
-// ─────────────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getCookie, setCookie, removeCookie } from '@/app/_shared/lib/utils/storage';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 // Create axios instance
 const axiosInstance: AxiosInstance = axios.create({
@@ -117,7 +118,7 @@ axiosInstance.interceptors.response.use(
       removeCookie('token');
       removeCookie('refreshToken');
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        window.location.href = ROUTES.LOGIN;
       }
       return Promise.reject(refreshError);
     } finally {

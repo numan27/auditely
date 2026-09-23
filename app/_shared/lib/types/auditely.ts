@@ -1,5 +1,7 @@
 // app/_shared/lib/types/auditely.ts
 
+import type { AuditChecks } from '@/app/_shared/lib/audit/types';
+
 export interface Search {
   id: string;
   niche: string;
@@ -21,10 +23,16 @@ export interface Business {
 export interface Audit {
   id: string;
   business_id: string;
-  performance_score: number;
-  seo_score: number;
-  mobile_score: number;
-  ssl_valid: boolean;
+  // null = not measured ("—"), never 0
+  performance_score: number | null;
+  seo_score: number | null;
+  mobile_score: number | null;
+  ssl_valid: boolean | null;
+  geo_score: number | null;
+  aeo_score: number | null;
+  /** `{}` on audits written before engine v2 */
+  checks: Partial<AuditChecks>;
+  engine_version: number;
   raw_json: Record<string, unknown>;
   created_at: string;
 }

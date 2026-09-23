@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/app/_shared/components/ui/button/button";
+import { ROUTES } from "@/app/_shared/lib/config/routes";
 
 export default function Error({
   error,
@@ -44,7 +45,7 @@ export default function Error({
             Try again
           </Button>
           <Button
-            onClick={() => (window.location.href = "/")}
+            onClick={() => (window.location.href = ROUTES.HOME)}
             variant="outline"
             size="lg"
           >

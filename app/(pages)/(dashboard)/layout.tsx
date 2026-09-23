@@ -4,20 +4,28 @@ import Link from 'next/link';
 import { useAuth } from '@/app/_shared/lib/hooks/useAuth';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
+import { useLogout } from '@/app/_shared/lib/hooks/useLogout';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { logout, user } = useAuth();
+  const { logout: clearClientAuth, user } = useAuth();
+  const logoutSession = useLogout();
+
+  const logout = () => {
+    clearClientAuth();
+    logoutSession();
+  };
 
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="w-64 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] hidden md:flex flex-col">
         <div className="p-4 border-b border-[var(--color-border)]">
-          <Link href="/" className="text-xl font-bold text-[var(--color-primary-600)]">
+          <Link href={ROUTES.HOME} className="text-xl font-bold text-[var(--color-primary-600)]">
             Next.js Template
           </Link>
         </div>
@@ -26,7 +34,7 @@ export default function DashboardLayout({
           <ul className="space-y-2">
             <li>
               <Link
-                href="/dashboard"
+                href={ROUTES.DASHBOARD}
                 className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +48,7 @@ export default function DashboardLayout({
             </li>
             <li>
               <Link
-                href="/profile"
+                href={ROUTES.PROFILE}
                 className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +60,7 @@ export default function DashboardLayout({
             </li>
             <li>
               <Link
-                href="/settings"
+                href={ROUTES.SETTINGS}
                 className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -88,7 +96,7 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-[var(--color-border)] flex items-center justify-between px-6 md:hidden">
-          <Link href="/" className="text-xl font-bold text-[var(--color-primary-600)]">
+          <Link href={ROUTES.HOME} className="text-xl font-bold text-[var(--color-primary-600)]">
             Next.js Template
           </Link>
           <div className="flex items-center space-x-4">

@@ -1,0 +1,41 @@
+# Persona & Role
+You are an elite AI Product Manager and Senior Full-Stack Architect specializing in B2B SaaS lead generation tools, Web APIs, Node.js data pipelines, and conversion rate optimization (CRO).
+
+# Core Mission
+Your task is to generate a comprehensive, highly actionable engineering and product blueprint to upgrade "Auditely" (https://auditely.vercel.app/), an automated B2B website auditing and lead generation tool operated by DevArtVentures (devartventures.com). 
+
+Auditely fetches local business data via the Google Places API, audits technical web performance via PageSpeed Insights/Lighthouse APIs, uses LLMs (Grok/ChatGPT) for data synthesis, and generates downloadable audit PDFs alongside cold outreach copy.
+
+---
+
+# Auditely Technical & Product Requirements
+
+Please output a structured, multi-section implementation guide covering the following 5 critical areas:
+
+## 1. Data Pipeline Hardening & Bug Fixes
+- **SSL Certificate Score Fix:** Resolve the bug where valid `https://` URLs return an SSL score of `0`. Provide Node.js code or Lighthouse `is-on-https` logic to accurately verify TLS/SSL validity.
+- **Null Metric & API Timeout Fallbacks:** Provide an exponential backoff retry queue strategy for third-party API calls (Google PageSpeed Insights) to prevent missing/blank scores (e.g., missing SEO/Mobile scores). Include direct DOM/Meta parsing fallbacks (using Cheerio/Puppeteer) for basic meta tags, title, canonicals, and `robots.txt`.
+
+## 2. Advanced Metrics Expansion (GEO, AEO & Local Search)
+Expand Auditely beyond standard Lighthouse scores by adding checks for:
+- **GEO (Generative Engine Optimization):** Technical logic to detect `JSON-LD` Schema markup (`MedicalWebPage`, `Dentist`, `EducationalOrganization`, `LocalBusiness`) and check NAP (Name, Address, Phone) consistency against Google Places data.
+- **AEO (Answer Engine Optimization):** Heading structure audits (`H1`/`H2`) and Q&A formatting checks to measure AI search engine readiness (ChatGPT, Perplexity, Claude).
+
+## 3. UI/UX & Architectural Separation
+- **Dashboard vs. PDF Split:** Define the architecture where internal sales assets (AI cold email copy, WhatsApp templates, quick-action contact buttons) live exclusively on the private **Auditely Admin Dashboard**, while the **Client PDF Report** is strictly formatted as a clean, enterprise consulting deliverable.
+- **Business Impact Translation Engine:** Provide an LLM prompt framework that automatically translates technical jargon into plain-English business consequences (e.g., translating `12.8s LCP` into *"60%+ mobile drop-off rate, leading to lost patient/student bookings"*).
+
+## 4. B2B Outreach Prompt Engineering
+Provide a production-ready LLM system prompt that generates hyper-personalized cold outreach emails based on audit data. The prompt must enforce:
+- Word count under 90 words.
+- Specific callout of the worst metric found (e.g., LCP speed, missing schema).
+- Direct connection between the technical flaw and operational revenue loss.
+- Soft CTA offering a free 3-minute video teardown or 5-point fix roadmap.
+
+## 5. Engineering Roadmap & Code Architecture
+Provide a phased implementation checklist (API Stabilization ➔ Feature Expansion ➔ PDF Redesign ➔ Batch CSV Auditing) along with recommended npm libraries (`@react-pdf/renderer`, `p-queue`, `cheerio`, `tls`) to build the upgrade cleanly.
+
+---
+
+# Output Instructions
+Format the response clearly with headers, code snippets, table mappings for metric translations, and step-by-step instructions so a developer can begin building immediately.

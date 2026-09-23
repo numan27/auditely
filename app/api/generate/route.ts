@@ -3,21 +3,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { supabase } from '@/app/_shared/lib/supabase/client';
+import { auditFacts } from '@/app/_shared/lib/audit/reportData';
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const auditId: string = body.audit_id ?? '';
 
   if (!auditId) {
     return NextResponse.json({ error: 'audit_id is required' }, { status: 400 });
   }
 
+  // Newest report for this audit. Ordered + limited so it still works if
+  // duplicate rows exist (maybeSingle() errors on more than one row).
+  const findLatestReport = async () => {
+    const { data } = await supabase
+      .from('ai_reports')
+      .select('*')
+      .eq('audit_id', auditId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
+  };
+
   // Cache check
-  const { data: existing } = await supabase
-    .from('ai_reports')
-    .select('*')
-    .eq('audit_id', auditId)
-    .maybeSingle();
+  const existing = await findLatestReport();
 
   if (existing) {
     return NextResponse.json({ ai_report: existing });
@@ -45,40 +55,25 @@ export async function POST(request: NextRequest) {
   if (!biz) {
     return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   }
-  const businessName = biz.name;
-  const website = biz.website;
 
-  type RawJson = {
-    mobile?: { keyAudits?: Record<string, { score: number | null; title: string; displayValue?: string }> };
-  };
-  const rawJson = audit.raw_json as RawJson | null;
-  const mobileAudits = rawJson?.mobile?.keyAudits ?? {};
-  const topIssues = Object.values(mobileAudits)
-    .filter((a): a is { score: number; title: string; displayValue?: string } =>
-      typeof a.score === 'number' && a.score < 0.9
-    )
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 6)
-    .map(a => `- ${a.title}${a.displayValue ? ` (${a.displayValue})` : ''}`)
-    .join('\n') || 'No specific issues identified.';
+  const { scores, issues } = auditFacts(audit);
 
   const prompt = `Analyze this website audit and respond in JSON only.
 
-Business: ${businessName}
-Website: ${website}
-Performance Score: ${audit.performance_score}/100
-SEO Score: ${audit.seo_score}/100
-Mobile Score: ${audit.mobile_score}/100
-SSL Valid: ${audit.ssl_valid}
+Business: ${biz.name}
+Website: ${biz.website}
+${scores}
 
 Specific Issues Found:
-${topIssues}
+${issues}
+
+Only mention metrics that were measured. Never claim a problem for a metric marked "not measured".
 
 Instructions:
 1. Write a 2-3 sentence summary referencing 1-2 of the specific issues above in plain business language
 2. List exactly 4 actionable improvements directly tied to the issues above
 3. Write a personalized cold email exactly 2 paragraphs long:
-   - Paragraph 1: Introduce yourself briefly, mention you audited their website, and call out 2-3 specific issues found (reference the actual issue names and impact, e.g. slow load time, missing SSL, poor SEO).
+   - Paragraph 1: Introduce yourself briefly, mention you audited their website, and call out 2-3 specific issues found (reference the actual issue names above and their business impact).
    - Paragraph 2: Explain the value of fixing these issues for their business (more customers, better Google ranking, faster site), offer a free consultation or quick call, and end with a clear call to action.
    - Include a subject line at the very top prefixed with "Subject: "
    - Do NOT use bullet points inside the email — flowing prose only.
@@ -124,6 +119,12 @@ Respond with ONLY valid JSON in this exact format:
     })
     .select()
     .single();
+
+  // Unique violation → a concurrent request stored this audit's report first
+  if (error?.code === '23505') {
+    const stored = await findLatestReport();
+    if (stored) return NextResponse.json({ ai_report: stored });
+  }
 
   if (error || !aiReport) {
     return NextResponse.json({ error: 'Failed to store AI report' }, { status: 500 });

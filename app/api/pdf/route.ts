@@ -5,10 +5,10 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { PdfDocument } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
-import type { PdfDocumentProps } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { buildPdfProps } from '@/app/_shared/lib/audit/reportData';
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const auditId: string = body.audit_id ?? '';
 
   if (!auditId) {
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
     .from('ai_reports')
     .select('*')
     .eq('audit_id', auditId)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!aiReport) {
@@ -47,41 +49,10 @@ export async function POST(request: NextRequest) {
     phone: string | null;
   };
 
-  const auditDate = new Date(audit.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  type KeyAudit = { score: number | null; title: string; displayValue?: string };
-  type RawJson = { mobile?: { keyAudits?: Record<string, KeyAudit> } };
-  const rawJson = audit.raw_json as RawJson | null;
-  const mobileAudits = rawJson?.mobile?.keyAudits ?? {};
-  const topIssues = Object.values(mobileAudits)
-    .filter((a): a is KeyAudit & { score: number } => typeof a.score === 'number' && a.score < 0.9)
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 4)
-    .map((a) => ({ title: a.title, ...(a.displayValue && { displayValue: a.displayValue }) }));
-
-  const props: PdfDocumentProps = {
-    businessName: business.name,
-    website: business.website ?? '',
-    address: business.address,
-    phone: business.phone,
-    auditDate,
-    performanceScore: audit.performance_score,
-    seoScore: audit.seo_score,
-    mobileScore: audit.mobile_score,
-    sslValid: audit.ssl_valid,
-    topIssues: topIssues.length > 0 ? topIssues : undefined,
-    summary: aiReport.summary,
-    improvements: aiReport.improvements as string[],
-  };
-
   let buffer: Buffer;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    buffer = await renderToBuffer(createElement(PdfDocument, props) as any);
+    buffer = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport)) as any);
   } catch {
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }

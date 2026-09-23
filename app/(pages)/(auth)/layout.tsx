@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 export default function AuthLayout({
   children,
@@ -11,8 +12,8 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="w-full p-4 flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold text-[var(--color-primary-600)]">
-          Next.js Template
+        <Link href={ROUTES.HOME} className="text-2xl font-bold text-[var(--color-primary-600)]">
+          Auditely
         </Link>
         <ThemeToggle />
       </header>

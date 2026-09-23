@@ -1,4 +1,5 @@
 -- Run this in your Supabase project: Dashboard → SQL Editor → New query
+-- (Existing databases: run the files in docs/migrations/ in date/name order instead.)
 
 -- 1. searches
 CREATE TABLE IF NOT EXISTS searches (
@@ -16,33 +17,43 @@ CREATE TABLE IF NOT EXISTS businesses (
   address     TEXT        NOT NULL DEFAULT '',
   website     TEXT,
   phone       TEXT,
+  email       TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. audits
+-- 3. audits (one per business). NULL score = not measured, never 0.
 CREATE TABLE IF NOT EXISTS audits (
   id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id         UUID        NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  performance_score   INTEGER     NOT NULL DEFAULT 0,
-  seo_score           INTEGER     NOT NULL DEFAULT 0,
-  mobile_score        INTEGER     NOT NULL DEFAULT 0,
-  ssl_valid           BOOLEAN     NOT NULL DEFAULT false,
+  business_id         UUID        NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
+  performance_score   INTEGER,
+  seo_score           INTEGER,
+  mobile_score        INTEGER,
+  ssl_valid           BOOLEAN,
+  geo_score           INTEGER,
+  aeo_score           INTEGER,
+  checks              JSONB       NOT NULL DEFAULT '{}',
+  engine_version      INTEGER     NOT NULL DEFAULT 1,
   raw_json            JSONB       NOT NULL DEFAULT '{}',
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. ai_reports
+-- 4. ai_reports (one per audit)
 CREATE TABLE IF NOT EXISTS ai_reports (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  audit_id     UUID        NOT NULL REFERENCES audits(id) ON DELETE CASCADE,
+  audit_id     UUID        NOT NULL UNIQUE REFERENCES audits(id) ON DELETE CASCADE,
   summary      TEXT        NOT NULL DEFAULT '',
   improvements JSONB       NOT NULL DEFAULT '[]',
   cold_email   TEXT        NOT NULL DEFAULT '',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Indexes for common lookups
+-- Indexes for common lookups (audits/ai_reports are covered by their UNIQUE indexes)
 CREATE INDEX IF NOT EXISTS idx_businesses_search_id  ON businesses(search_id);
-CREATE INDEX IF NOT EXISTS idx_audits_business_id    ON audits(business_id);
-CREATE INDEX IF NOT EXISTS idx_ai_reports_audit_id   ON ai_reports(audit_id);
 CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location, created_at);
+
+-- Row Level Security: on, with no policies. The public anon key can read/write
+-- nothing; the app's server uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
+ALTER TABLE searches   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audits     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_reports ENABLE ROW LEVEL SECURITY;

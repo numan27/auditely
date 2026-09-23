@@ -3,147 +3,141 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
+import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
+import { isOutdatedAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
 
-type KeyAudit = { score: number | null; title: string; displayValue?: string };
-type LighthouseSummary = {
-  categories: Record<string, { score: number; title: string }>;
-  keyAudits: Record<string, KeyAudit>;
-};
+// PageSpeed can be slow; runAudit keeps PageSpeed inside a 240 s budget.
+export const maxDuration = 300;
 
-const KEY_AUDIT_IDS = [
-  'redirects', 'bootup-time', 'cache-insight', 'unminified-css',
-  'unminified-javascript', 'render-blocking-resources', 'uses-optimized-images',
-  'uses-webp-images', 'uses-responsive-images', 'offscreen-images',
-  'uses-text-compression', 'time-to-first-byte', 'interactive',
-  'speed-index', 'first-contentful-paint', 'largest-contentful-paint',
-  'total-blocking-time', 'cumulative-layout-shift', 'long-tasks',
-  'dom-size-insight', 'unsized-images', 'is-on-https',
-  'meta-description', 'document-title', 'link-text', 'image-alt',
-  'robots-txt', 'canonical',
-];
+interface BusinessRecord {
+  name: string;
+  address: string;
+  phone: string | null;
+  website: string | null;
+  email: string | null;
+  searches: { niche: string } | null;
+}
 
-function trimLighthouseData(data: Record<string, unknown>): LighthouseSummary {
-  const lr = data.lighthouseResult as Record<string, unknown> | undefined;
-  if (!lr) return { categories: {}, keyAudits: {} };
+// Newest audit for this business. Ordered + limited so it still works if
+// duplicate rows exist (maybeSingle() errors on more than one row).
+async function findLatestAudit(businessId: string) {
+  const { data } = await supabase
+    .from('audits')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
 
-  const rawCats = (lr.categories ?? {}) as Record<string, { score: number; title: string }>;
-  const rawAudits = (lr.audits ?? {}) as Record<string, { score: number | null; title: string; displayValue?: string }>;
+async function insertAudit(businessId: string, row: AuditRow) {
+  const { data, error } = await supabase
+    .from('audits')
+    .insert({ business_id: businessId, ...row })
+    .select()
+    .single();
+  // Unique violation → a concurrent request stored this business's audit first
+  if (error?.code === '23505') return findLatestAudit(businessId);
+  if (error) console.error('[audit] insert failed:', error.message);
+  return data;
+}
 
-  const categories: Record<string, { score: number; title: string }> = {};
-  for (const [key, cat] of Object.entries(rawCats)) {
-    categories[key] = { score: cat.score, title: cat.title };
+// Re-audit: overwrite the same row (stable id) and drop its now-stale AI report
+async function replaceAudit(auditId: string, row: AuditRow) {
+  const { data, error } = await supabase
+    .from('audits')
+    .update({ ...row, created_at: new Date().toISOString() })
+    .eq('id', auditId)
+    .select()
+    .single();
+  if (error || !data) {
+    console.error('[audit] update failed:', error?.message);
+    return null;
   }
-
-  const keyAudits: Record<string, KeyAudit> = {};
-  for (const id of KEY_AUDIT_IDS) {
-    const a = rawAudits[id];
-    if (a) {
-      keyAudits[id] = {
-        score: a.score,
-        title: a.title,
-        ...(a.displayValue && { displayValue: a.displayValue }),
-      };
-    }
+  const { error: deleteError } = await supabase.from('ai_reports').delete().eq('audit_id', auditId);
+  if (deleteError) {
+    console.error('[audit] stale AI report delete failed:', deleteError.message);
+    return null;
   }
-
-  return { categories, keyAudits };
+  return data;
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const businessId: string = body.business_id ?? '';
+  const body = await request.json().catch(() => ({}));
+  const businessId: string = typeof body.business_id === 'string' ? body.business_id : '';
+  const force = body.force === true;
 
   if (!businessId) {
     return NextResponse.json({ error: 'business_id is required' }, { status: 400 });
   }
 
-  // Cache check
-  const { data: existingAudit } = await supabase
-    .from('audits')
-    .select('*')
-    .eq('business_id', businessId)
-    .maybeSingle();
-
-  if (existingAudit) {
-    return NextResponse.json({ audit: existingAudit });
-  }
-
-  // Get business website
-  const { data: business, error: businessError } = await supabase
+  const { data, error: businessError } = await supabase
     .from('businesses')
-    .select('website, email')
+    .select('name, address, phone, website, email, searches(niche)')
     .eq('id', businessId)
     .single();
 
-  if (businessError || !business?.website) {
-    return NextResponse.json(
-      { error: businessError?.message ?? 'Business has no website' },
-      { status: 400 }
-    );
+  if (businessError || !data) {
+    if (businessError) console.error('[audit] business lookup failed:', businessError.message);
+    return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+  }
+  const business = data as unknown as BusinessRecord;
+
+  // Email discovery is the core value of the app, so attempt it on EVERY audit
+  // request until an email is stored — including cache hits. Reuses the
+  // homepage HTML when the audit already fetched it.
+  const ensureEmail = async (homepageHtml?: string | null): Promise<string | null> => {
+    if (business.email) return business.email;
+    if (!business.website) return null;
+    const found = await findEmail(business.website, { homepageHtml });
+    if (found) {
+      await supabase.from('businesses').update({ email: found }).eq('id', businessId);
+    }
+    return found;
+  };
+
+  const existing = await findLatestAudit(businessId);
+
+  // Current-engine audit and no Re-audit requested → serve the cached audit
+  if (existing && !force && !isOutdatedAudit(existing.engine_version)) {
+    return NextResponse.json({ audit: existing, email: await ensureEmail() });
   }
 
-  const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
-  if (!apiKey) {
+  if (!business.website) {
+    return NextResponse.json({ error: 'Business has no website' }, { status: 400 });
+  }
+
+  // Without PageSpeed the audit would be stored as current with no scores
+  if (!process.env.GOOGLE_PAGESPEED_API_KEY) {
     return NextResponse.json({ error: 'GOOGLE_PAGESPEED_API_KEY is not configured' }, { status: 503 });
   }
 
-  const encodedUrl = encodeURIComponent(business.website);
-  const base = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodedUrl}&key=${apiKey}`;
-
-  // Run PageSpeed + email finder concurrently
-  const [mobileRes, desktopRes, foundEmail] = await Promise.all([
-    fetch(`${base}&strategy=mobile`),
-    fetch(`${base}&strategy=desktop`),
-    business.email ? Promise.resolve(business.email) : findEmail(business.website),
-  ]);
-
-  const [mobileData, desktopData] = await Promise.all([
-    mobileRes.json(),
-    desktopRes.json(),
-  ]);
-
-  if (!mobileRes.ok || !desktopRes.ok) {
-    return NextResponse.json({ error: 'PageSpeed API request failed' }, { status: 502 });
+  let outcome: AuditOutcome;
+  try {
+    outcome = await runAudit({
+      website: business.website,
+      name: business.name,
+      address: business.address,
+      phone: business.phone,
+      niche: business.searches?.niche ?? null,
+      discoverEmail: ensureEmail,
+    });
+  } catch (err) {
+    if (err instanceof AuditUnavailableError) {
+      return NextResponse.json({ error: `Couldn't audit this site: ${err.message}` }, { status: 502 });
+    }
+    console.error('[audit] unexpected failure:', err);
+    return NextResponse.json({ error: 'Audit failed' }, { status: 500 });
   }
 
-  if (!mobileData.lighthouseResult || !desktopData.lighthouseResult) {
-    return NextResponse.json({ error: 'PageSpeed returned no lighthouse data' }, { status: 502 });
-  }
+  const saved = existing
+    ? await replaceAudit(existing.id, outcome.row)
+    : await insertAudit(businessId, outcome.row);
 
-  const mobileScore = Math.round(
-    (mobileData.lighthouseResult?.categories?.performance?.score ?? 0) * 100
-  );
-  const seoScore = Math.round(
-    (mobileData.lighthouseResult?.categories?.seo?.score ?? 0) * 100
-  );
-  const performanceScore = Math.round(
-    (desktopData.lighthouseResult?.categories?.performance?.score ?? 0) * 100
-  );
-  const sslValid =
-    (mobileData.lighthouseResult?.audits?.['is-on-https']?.score ?? 0) === 1;
-
-  // Store audit + update business email in parallel
-  const [auditResult] = await Promise.all([
-    supabase
-      .from('audits')
-      .insert({
-        business_id: businessId,
-        performance_score: performanceScore,
-        seo_score: seoScore,
-        mobile_score: mobileScore,
-        ssl_valid: sslValid,
-        raw_json: { mobile: trimLighthouseData(mobileData), desktop: trimLighthouseData(desktopData) },
-      })
-      .select()
-      .single(),
-    foundEmail && !business.email
-      ? supabase.from('businesses').update({ email: foundEmail }).eq('id', businessId)
-      : Promise.resolve(),
-  ]);
-
-  if (auditResult.error || !auditResult.data) {
+  if (!saved) {
     return NextResponse.json({ error: 'Failed to store audit' }, { status: 500 });
   }
 
-  return NextResponse.json({ audit: auditResult.data, email: foundEmail ?? null });
+  return NextResponse.json({ audit: saved, email: outcome.email });
 }

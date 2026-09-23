@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useRef, useState } from 'react';
+import Image from 'next/image';
 import styles from './fileUpload.module.scss';
 
 interface FileWithPreview extends File {
@@ -205,7 +206,14 @@ export const FileUpload = ({
           {files.map((file) => (
             <li key={file.id} className={styles['file-upload-item']}>
               {file.preview ? (
-                <img src={file.preview} alt={file.name} className={styles['file-upload-thumb']} />
+                <Image
+                  src={file.preview}
+                  alt={file.name}
+                  width={40}
+                  height={40}
+                  unoptimized // local blob: preview URL, nothing to optimize
+                  className={styles['file-upload-thumb']}
+                />
               ) : (
                 <div className={styles['file-upload-thumb-placeholder']}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

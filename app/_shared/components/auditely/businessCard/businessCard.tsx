@@ -2,13 +2,18 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
 import { AuditScores } from '@/app/_shared/components/auditely/auditScores/auditScores';
+import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
-import type { Business, Audit, AiReport, AuditStatus, ReportStatus } from '@/app/_shared/lib/types/auditely';
+import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
+import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
+import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
+import type { Business, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
 
 interface BusinessCardProps {
   business: Business;
@@ -16,96 +21,58 @@ interface BusinessCardProps {
   initialReport?: AiReport;
 }
 
-function scoreTextColor(score: number) {
-  if (score >= 80) return 'text-emerald-600 dark:text-emerald-400';
-  if (score >= 50) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+const PILL_TONES: Record<ScoreTone, string> = {
+  good: 'text-emerald-600 dark:text-emerald-400',
+  ok: 'text-amber-600 dark:text-amber-400',
+  poor: 'text-red-600 dark:text-red-400',
+  none: 'text-[var(--color-text-tertiary)]',
+};
+
+// Compact score summary shown when a completed card is collapsed
+function ScorePills({ audit }: { audit: Audit }) {
+  const scores: [string, number | null][] = [
+    ['Perf', audit.performance_score],
+    ['SEO', audit.seo_score],
+    ['Mobile', audit.mobile_score],
+    ['GEO', audit.geo_score],
+    ['AEO', audit.aeo_score],
+  ];
+  const ssl = audit.ssl_valid;
+  const sslTone: ScoreTone = ssl === null ? 'none' : ssl ? 'good' : 'poor';
+
+  return (
+    <div className="flex items-center gap-x-3 gap-y-1 mt-2 flex-wrap text-xs font-semibold">
+      {scores.map(([label, score]) => (
+        <span key={label} className={PILL_TONES[scoreTone(score)]}>
+          {label} {score ?? '—'}
+        </span>
+      ))}
+      <span className={PILL_TONES[sslTone]}>SSL {ssl === null ? '—' : ssl ? '✓' : '✗'}</span>
+    </div>
+  );
 }
 
 export function BusinessCard({ business, initialAudit, initialReport }: BusinessCardProps) {
-  const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
-  const [report, setReport] = useState<AiReport | undefined>(initialReport);
-  const [auditStatus, setAuditStatus] = useState<AuditStatus>(initialAudit ? 'done' : 'idle');
-  const [reportStatus, setReportStatus] = useState<ReportStatus>(initialReport ? 'done' : 'idle');
-  const [email, setEmail] = useState<string | null>(business.email ?? null);
-  const [emailCopied, setEmailCopied] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const {
+    audit,
+    report,
+    auditStatus,
+    auditError,
+    reportStatus,
+    email,
+    setEmail,
+    pdfLoading,
+    runAudit,
+    reAudit,
+    retryAudit,
+    generateReport,
+    downloadPdf,
+  } = useBusinessAudit(business, initialAudit, initialReport);
   // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
   const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
-
-  const copyEmail = async () => {
-    if (!email) return;
-    await navigator.clipboard.writeText(email);
-    setEmailCopied(true);
-    setTimeout(() => setEmailCopied(false), 2000);
-  };
-
-  const runGenerate = useCallback(async (auditId: string) => {
-    setReportStatus('loading');
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audit_id: auditId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setReport(data.ai_report);
-      setReportStatus('done');
-    } catch {
-      setReportStatus('error');
-    }
-  }, []);
-
-  const runAudit = useCallback(async () => {
-    setAuditStatus('loading');
-    try {
-      const res = await fetch('/api/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: business.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setAudit(data.audit);
-      if (data.email) setEmail(data.email);
-      setAuditStatus('done');
-      runGenerate(data.audit.id);
-    } catch {
-      setAuditStatus('error');
-    }
-  }, [business.id, runGenerate]);
-
-  const handleDownloadPdf = async () => {
-    if (!audit) return;
-    setPdfLoading(true);
-    try {
-      const res = await fetch('/api/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audit_id: audit.id }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `audit-${business.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('PDF download failed:', err);
-    } finally {
-      setPdfLoading(false);
-    }
-  };
+  const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
 
   return (
     <div className={`rounded-2xl bg-[var(--color-bg-secondary)] overflow-hidden transition-all ${
@@ -126,58 +93,22 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
                 Audited
               </span>
             )}
+            {isOutdated && (
+              <Badge variant="warning" size="sm">Outdated</Badge>
+            )}
           </div>
           <p className="text-sm text-[var(--color-text-tertiary)] mt-1">{business.address}</p>
           {business.phone && (
             <p className="text-sm text-[var(--color-text-tertiary)]">{business.phone}</p>
           )}
-          {email && (
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <a
-                href={`mailto:${email}`}
-                className="text-sm text-[var(--color-primary-600)] hover:underline"
-              >
-                {email}
-              </a>
-              <button
-                onClick={copyEmail}
-                title="Copy email"
-                className="cursor-pointer text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors"
-              >
-                {emailCopied ? (
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : (
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-          )}
+          <BusinessEmail
+            email={email}
+            website={business.website}
+            businessId={business.id}
+            onFound={setEmail}
+          />
 
-          {/* Mini score pills — visible only when collapsed */}
-          {isCompleted && !isExpanded && audit && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className={`text-xs font-semibold ${scoreTextColor(audit.performance_score)}`}>
-                Perf {audit.performance_score}
-              </span>
-              <span className="text-[var(--color-text-tertiary)] text-xs">·</span>
-              <span className={`text-xs font-semibold ${scoreTextColor(audit.seo_score)}`}>
-                SEO {audit.seo_score}
-              </span>
-              <span className="text-[var(--color-text-tertiary)] text-xs">·</span>
-              <span className={`text-xs font-semibold ${scoreTextColor(audit.mobile_score)}`}>
-                Mobile {audit.mobile_score}
-              </span>
-              <span className="text-[var(--color-text-tertiary)] text-xs">·</span>
-              <span className={`text-xs font-semibold ${audit.ssl_valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                SSL {audit.ssl_valid ? '✓' : '✗'}
-              </span>
-            </div>
-          )}
+          {isCompleted && !isExpanded && audit && <ScorePills audit={audit} />}
         </div>
 
         <div className="shrink-0 flex items-start gap-2">
@@ -228,11 +159,21 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
             <div className="px-6 py-6 space-y-6">
               {/* Audit Scores */}
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-tertiary)] mb-3">
-                  Audit Scores
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-tertiary)]">
+                    Audit Scores
+                  </p>
+                  {auditStatus === 'done' && (
+                    <div className="flex items-center gap-2">
+                      {auditError && <span className="text-xs text-red-500">{auditError}</span>}
+                      <Button variant="ghost" size="sm" onClick={reAudit} disabled={reportStatus === 'loading'}>
+                        Re-audit
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 {auditStatus === 'idle' && (
-                  <Button variant="outline" size="sm" onClick={runAudit}>
+                  <Button variant="outline" size="sm" onClick={() => runAudit()}>
                     Run Audit
                   </Button>
                 )}
@@ -244,20 +185,25 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
                 )}
                 {auditStatus === 'error' && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-red-500">Audit failed.</span>
-                    <Button variant="ghost" size="sm" onClick={runAudit}>
+                    <span className="text-sm text-red-500">{auditError ?? 'Audit failed.'}</span>
+                    <Button variant="ghost" size="sm" onClick={retryAudit}>
                       Retry
                     </Button>
                   </div>
                 )}
-                {auditStatus === 'done' && audit && <AuditScores audit={audit} />}
+                {auditStatus === 'done' && audit && (
+                  <div className="space-y-6">
+                    <AuditScores audit={audit} />
+                    <AuditChecklist audit={audit} />
+                  </div>
+                )}
               </div>
 
               {/* AI Report */}
               {auditStatus === 'done' && (
                 <div>
                   {reportStatus === 'idle' && audit && (
-                    <Button variant="outline" size="sm" onClick={() => runGenerate(audit.id)}>
+                    <Button variant="outline" size="sm" onClick={() => generateReport(audit.id)}>
                       Generate AI Summary
                     </Button>
                   )}
@@ -270,7 +216,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
                   {reportStatus === 'error' && audit && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-red-500">Report generation failed.</span>
-                      <Button variant="ghost" size="sm" onClick={() => runGenerate(audit.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => generateReport(audit.id)}>
                         Retry
                       </Button>
                     </div>
@@ -289,7 +235,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
               <Button
                 variant="primary"
                 size="sm"
-                onClick={handleDownloadPdf}
+                onClick={downloadPdf}
                 isLoading={pdfLoading}
                 disabled={pdfLoading}
               >

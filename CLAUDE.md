@@ -11,6 +11,7 @@ npm run dev       # Dev server at localhost:3000
 npm run build     # Production build
 npm run start     # Start production server (run build first)
 npm run lint      # ESLint check
+npm test          # Unit tests (vitest)
 ```
 
 ---

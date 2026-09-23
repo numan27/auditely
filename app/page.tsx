@@ -8,9 +8,14 @@ import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noConte
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
 import type { BusinessWithData, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
+import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 const PAGE_SIZE = 20;
+
+// UNIQUE FKs make PostgREST embed audits / ai_reports as an object (or null), not an array
+const one = <T,>(v: T | T[] | null | undefined): T | undefined => (Array.isArray(v) ? v[0] : v ?? undefined);
 
 export default function HomePage() {
   const router = useRouter();
@@ -21,7 +26,21 @@ export default function HomePage() {
   const [lastQuery, setLastQuery] = useState<{ niche: string; location: string } | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [discoveryRun, setDiscoveryRun] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Merge background-discovered emails into the list (cards re-render via prop sync).
+  const mergeEmails = useCallback((found: { id: string; email: string }[]) => {
+    setBusinesses((prev) =>
+      prev.map((b) => {
+        const hit = found.find((f) => f.id === b.id);
+        return hit ? { ...b, email: hit.email } : b;
+      })
+    );
+  }, []);
+
+  // Auto-discover emails (scrape-only) whenever a new search/result set loads.
+  const discovery = useEmailDiscovery(businesses, mergeEmails, discoveryRun);
 
   // Only fires when navigating from Saved Searches (?load=<search_id>)
   useEffect(() => {
@@ -29,23 +48,24 @@ export default function HomePage() {
     const searchId = params.get('load');
     if (!searchId) return;
 
-    window.history.replaceState({}, '', '/');
+    window.history.replaceState({}, '', ROUTES.HOME);
     setIsSearching(true);
 
     fetch(`/api/results?search_id=${searchId}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.businesses?.length) return;
+        type SavedAudit = Audit & { ai_reports?: AiReport | AiReport[] | null };
         const restored: BusinessWithData[] = data.businesses.map(
-          (b: BusinessWithData & { audits?: (Audit & { ai_reports?: AiReport[] })[] }) => ({
-            ...b,
-            audit: b.audits?.[0],
-            ai_report: b.audits?.[0]?.ai_reports?.[0],
-          })
+          (b: BusinessWithData & { audits?: SavedAudit | SavedAudit[] | null }) => {
+            const audit = one(b.audits);
+            return { ...b, audit, ai_report: one(audit?.ai_reports) };
+          }
         );
         setBusinesses(restored);
         setVisibleCount(PAGE_SIZE);
         setHasSearched(true);
+        setDiscoveryRun((n) => n + 1);
       })
       .catch(() => {})
       .finally(() => setIsSearching(false));
@@ -93,6 +113,7 @@ export default function HomePage() {
       setBusinesses(data.businesses ?? []);
       setLastQuery({ niche, location });
       setHasSearched(true);
+      setDiscoveryRun((n) => n + 1);
       searchId = data.search_id ?? null;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -123,6 +144,7 @@ export default function HomePage() {
             >
               Saved Searches
             </button>
+            <LogoutButton />
             <ThemeToggle />
           </div>
         </div>
@@ -180,6 +202,12 @@ export default function HomePage() {
                 {withWebsite < businesses.length && (
                   <span className="text-[var(--color-text-tertiary)]">
                     {businesses.length - withWebsite} without a website
+                  </span>
+                )}
+                {discovery.total > 0 && discovery.done < discovery.total && (
+                  <span className="flex items-center gap-1.5 text-[var(--color-text-tertiary)]">
+                    <Spinner size="sm" />
+                    Finding emails… {discovery.done}/{discovery.total}
                   </span>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/app/_shared/components/ui/button/button";
+import { ROUTES } from "@/app/_shared/lib/config/routes";
 
 export default function NotFound() {
   return (
@@ -14,7 +15,7 @@ export default function NotFound() {
         <p className="text-[var(--color-text-secondary)] mb-8">
           The page you are looking for doesn&apos;t exist or has been moved.
         </p>
-        <Link href="/">
+        <Link href={ROUTES.HOME}>
           <Button variant="primary" size="lg">
             Go home
           </Button>

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sign In',
-  description: 'Sign in to your account',
+  description: 'Sign in to Auditely',
 };
 
 interface LoginPageProps {
@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Welcome back
         </h1>
         <p className="text-[var(--color-text-secondary)]">
-          Sign in to your account to continue
+          Enter the admin password to continue
         </p>
       </div>
       <LoginForm callbackUrl={callbackUrl} />

@@ -3,6 +3,9 @@
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const MAILTO_REGEX = /href=["']mailto:([^"'?\s]+)/gi;
 const CF_EMAIL_REGEX = /data-cfemail=["']([a-f0-9]+)["']/gi;
+// "info at acme dot com" — bare words only count as a full address with at least
+// one " dot ", so prose like "Order online at doordash.com" is never matched.
+const BARE_WORD_EMAIL_REGEX = /\b([A-Z0-9._%+-]+)\s+at\s+([A-Z0-9-]+(?:\s+dot\s+[A-Z0-9-]+)+)\b/gi;
 
 const PAGES_TO_TRY = [
   '/contact', '/contact-us', '/about', '/about-us',
@@ -23,6 +26,15 @@ const BLACKLISTED_DOMAINS = [
   'placeholder.com', 'gmail.com.com', 'noreply.com',
 ];
 
+// Off-domain addresses are only trusted when they're a free-mail inbox (many
+// small businesses use one). Anything else is usually a third party — the web
+// agency in the footer, a booking platform, a widget vendor.
+const FREE_MAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'outlook.com',
+  'hotmail.com', 'live.com', 'msn.com', 'aol.com', 'icloud.com', 'me.com',
+  'protonmail.com', 'proton.me', 'gmx.com', 'zoho.com', 'comcast.net',
+]);
+
 const FAKE_LOCAL_PREFIXES = [
   'your', 'youremail', 'your.email', 'your_email', 'yourname',
   'name', 'user', 'username', 'email', 'test', 'testing', 'noreply', 'no-reply',
@@ -42,13 +54,16 @@ function decodeCfEmail(encoded: string): string | null {
   }
 }
 
-// Normalize common human-readable obfuscations: "info [at] domain dot com" → "info@domain.com"
+// Normalize human-readable obfuscations into real addresses:
+//   "info [at] acme [dot] com" / "info (at) acme (dot) com" → "info@acme.com"
+//   "info at acme dot com" → "info@acme.com" (full pattern only, see BARE_WORD_EMAIL_REGEX)
 function deobfuscate(text: string): string {
   return text
-    .replace(/\s*[[(]\s*at\s*[)\]]\s*/gi, '@')
-    .replace(/\s+at\s+/gi, '@')
-    .replace(/\s*[[(]\s*dot\s*[)\]]\s*/gi, '.')
-    .replace(/\s+dot\s+/gi, '.');
+    .replace(/\s*[[({]\s*at\s*[)\]}]\s*/gi, '@')
+    .replace(/\s*[[({]\s*dot\s*[)\]}]\s*/gi, '.')
+    .replace(BARE_WORD_EMAIL_REGEX, (_match, local: string, rest: string) =>
+      `${local}@${rest.replace(/\s+dot\s+/gi, '.')}`
+    );
 }
 
 function isValidBusinessEmail(email: string): boolean {
@@ -108,12 +123,16 @@ function pickBestEmail(emails: string[], targetDomain: string): string | null {
 
   const cleanDomain = targetDomain.replace(/^www\./, '').toLowerCase();
 
-  // Prefer emails on the same domain (most trustworthy)
+  // Prefer emails on the same domain (most trustworthy); otherwise only
+  // accept free-mail inboxes, never another company's address.
   const onDomain = emails.filter((e) => {
     const d = e.split('@')[1];
     return d === cleanDomain || d.endsWith(`.${cleanDomain}`);
   });
-  const candidates = onDomain.length > 0 ? onDomain : emails;
+  const candidates = onDomain.length > 0
+    ? onDomain
+    : emails.filter((e) => FREE_MAIL_DOMAINS.has(e.split('@')[1]));
+  if (candidates.length === 0) return null;
 
   // Prefer personal-looking local parts over generic ones (info@, contact@)
   const personal = candidates.filter((e) => !GENERIC_PREFIXES.has(e.split('@')[0]));
@@ -136,13 +155,13 @@ async function scrapePage(url: string): Promise<string[]> {
   }
 }
 
-async function scrapeWebsite(website: string): Promise<string | null> {
+async function scrapeWebsite(website: string, homepageHtml?: string | null): Promise<string | null> {
   const url = new URL(website);
   const origin = url.origin;
   const domain = url.hostname;
 
-  // Homepage first — if it has a good email, we're done
-  const homepageEmails = await scrapePage(website);
+  // Homepage first (reusing HTML the audit already fetched) — if it has a good email, we're done
+  const homepageEmails = homepageHtml != null ? extractEmails(homepageHtml) : await scrapePage(website);
   const homepageBest = pickBestEmail(homepageEmails, domain);
   if (homepageBest) return homepageBest;
 
@@ -158,10 +177,22 @@ async function scrapeWebsite(website: string): Promise<string | null> {
 
 // ─── API Fallbacks (free-tier friendly, called only if scraping fails) ──────
 
+// A key counts as configured only when it's present and not a template
+// placeholder (`your_x_here`). This keeps the cascade from firing doomed
+// network calls for providers the user hasn't actually set up.
+function configured(...values: (string | undefined)[]): boolean {
+  return values.every((v) => !!v && !/your_.*_here/i.test(v));
+}
+
+// Provider responses get the same sanity checks as scraped addresses
+function validApiEmail(email: unknown): string | null {
+  return typeof email === 'string' && isValidBusinessEmail(email) ? email.toLowerCase() : null;
+}
+
 async function findViaSnov(domain: string): Promise<string | null> {
   const clientId = process.env.SNOV_CLIENT_ID;
   const clientSecret = process.env.SNOV_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  if (!clientId || !clientSecret || !configured(clientId, clientSecret)) return null;
 
   try {
     const tokenRes = await fetch('https://api.snov.io/v1/oauth/access_token', {
@@ -175,14 +206,41 @@ async function findViaSnov(domain: string): Promise<string | null> {
       signal: AbortSignal.timeout(8000),
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return null;
+    const accessToken: string | undefined = tokenData.access_token;
+    if (!accessToken) return null;
 
-    const res = await fetch(
-      `https://api.snov.io/v1/get-domain-emails-with-info?domain=${domain}&access_token=${tokenData.access_token}&type=all&limit=1`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    const data = await res.json();
-    return data.emails?.[0]?.email ?? null;
+    const auth = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    // Snov's domain search is an async v2 flow (the old v1
+    // get-domain-emails-with-info endpoint was removed → 404). Start a task…
+    const startRes = await fetch('https://api.snov.io/v2/domain-search/domain-emails/start', {
+      method: 'POST',
+      headers: auth,
+      body: JSON.stringify({ domain }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const start = await startRes.json();
+    const taskHash: string | undefined = start.meta?.task_hash;
+    if (!taskHash) return null;
+
+    // …then poll for the result (typically completes within a couple seconds).
+    // `status` is top-level (not under `meta`); a non-empty `data` array means
+    // emails were found, while status 'completed' with empty data ends polling.
+    const resultUrl = `https://api.snov.io/v2/domain-search/domain-emails/result/${taskHash}`;
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const res = await fetch(resultUrl, { headers: auth, signal: AbortSignal.timeout(8000) });
+      const data = await res.json();
+      const emails: Array<{ email?: string }> = Array.isArray(data.data) ? data.data : [];
+      if (emails.length > 0 || data.status === 'completed') {
+        const email = emails[0]?.email;
+        return validApiEmail(email);
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -191,7 +249,7 @@ async function findViaSnov(domain: string): Promise<string | null> {
 async function findViaTomba(domain: string): Promise<string | null> {
   const key = process.env.TOMBA_API_KEY;
   const secret = process.env.TOMBA_SECRET;
-  if (!key || !secret) return null;
+  if (!key || !secret || !configured(key, secret)) return null;
 
   try {
     const res = await fetch(
@@ -202,7 +260,7 @@ async function findViaTomba(domain: string): Promise<string | null> {
       }
     );
     const data = await res.json();
-    return data.data?.emails?.[0]?.email ?? null;
+    return validApiEmail(data.data?.emails?.[0]?.email);
   } catch {
     return null;
   }
@@ -210,7 +268,7 @@ async function findViaTomba(domain: string): Promise<string | null> {
 
 async function findViaHunter(domain: string): Promise<string | null> {
   const key = process.env.HUNTER_API_KEY;
-  if (!key) return null;
+  if (!key || !configured(key)) return null;
 
   try {
     const res = await fetch(
@@ -218,7 +276,7 @@ async function findViaHunter(domain: string): Promise<string | null> {
       { signal: AbortSignal.timeout(8000) }
     );
     const data = await res.json();
-    return data.data?.emails?.[0]?.value ?? null;
+    return validApiEmail(data.data?.emails?.[0]?.value);
   } catch {
     return null;
   }
@@ -226,7 +284,7 @@ async function findViaHunter(domain: string): Promise<string | null> {
 
 async function findViaApollo(domain: string): Promise<string | null> {
   const key = process.env.APOLLO_API_KEY;
-  if (!key) return null;
+  if (!key || !configured(key)) return null;
 
   try {
     const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
@@ -251,7 +309,10 @@ async function findViaApollo(domain: string): Promise<string | null> {
 
 // ─── Main entry point ────────────────────────────────────────────────────────
 
-export async function findEmail(website: string): Promise<string | null> {
+export async function findEmail(
+  website: string,
+  opts: { apiFallback?: boolean; homepageHtml?: string | null } = {}
+): Promise<string | null> {
   let domain: string;
   try {
     domain = new URL(website).hostname.replace(/^www\./, '');
@@ -260,14 +321,19 @@ export async function findEmail(website: string): Promise<string | null> {
   }
 
   // 1. Scrape the website (free, fastest, highest trust)
-  const scraped = await scrapeWebsite(website);
+  const scraped = await scrapeWebsite(website, opts.homepageHtml);
   if (scraped) return scraped;
 
-  // 2. Cascade through free-tier APIs — stop at first hit to save credits
+  // 2. Cascade through the (quota-limited) APIs only when explicitly enabled.
+  //    Automatic/bulk callers stay scrape-only; the on-demand "Find email"
+  //    action opts in. Hunter is the primary provider; the others act as
+  //    backups and only run if their keys are configured. Stop at first hit.
+  if (!opts.apiFallback) return null;
+
   return (
-    (await findViaSnov(domain)) ??
-    (await findViaTomba(domain)) ??
     (await findViaHunter(domain)) ??
+    (await findViaTomba(domain)) ??
+    (await findViaSnov(domain)) ??
     (await findViaApollo(domain))
   );
 }

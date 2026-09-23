@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noContentCard';
+import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 interface SavedSearch {
@@ -47,7 +48,10 @@ export default function SearchesPage() {
               Saved Searches
             </span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <LogoutButton />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

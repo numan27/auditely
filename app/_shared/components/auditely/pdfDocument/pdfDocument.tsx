@@ -51,13 +51,14 @@ const styles = StyleSheet.create({
   },
   scoresRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   scoreBox: {
     flex: 1,
     backgroundColor: '#f9fafb',
     borderRadius: 6,
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     alignItems: 'center',
   },
   scoreValue: {
@@ -75,6 +76,7 @@ const styles = StyleSheet.create({
   scoreGreen: { color: '#16a34a' },
   scoreAmber: { color: '#d97706' },
   scoreRed: { color: '#dc2626' },
+  scoreNeutral: { color: '#9ca3af' },
   bodyText: {
     fontSize: 11,
     color: '#374151',
@@ -149,10 +151,31 @@ const styles = StyleSheet.create({
   },
 });
 
-function scoreColor(score: number) {
+function scoreColor(score: number | null) {
+  if (score === null) return styles.scoreNeutral;
   if (score >= 80) return styles.scoreGreen;
   if (score >= 50) return styles.scoreAmber;
   return styles.scoreRed;
+}
+
+// null = not measured → "—"
+function ScoreTile({ label, score }: { label: string; score: number | null }) {
+  return (
+    <View style={styles.scoreBox}>
+      <Text style={[styles.scoreValue, scoreColor(score)]}>{score ?? '—'}</Text>
+      <Text style={styles.scoreLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function SslTile({ valid }: { valid: boolean | null }) {
+  const color = valid === null ? styles.scoreNeutral : valid ? styles.scoreGreen : styles.scoreRed;
+  return (
+    <View style={styles.scoreBox}>
+      <Text style={[styles.scoreValue, color]}>{valid === null ? '—' : valid ? '✓' : 'X'}</Text>
+      <Text style={styles.scoreLabel}>SSL</Text>
+    </View>
+  );
 }
 
 export interface PdfDocumentProps {
@@ -161,10 +184,12 @@ export interface PdfDocumentProps {
   address: string;
   phone: string | null;
   auditDate: string;
-  performanceScore: number;
-  seoScore: number;
-  mobileScore: number;
-  sslValid: boolean;
+  performanceScore: number | null;
+  seoScore: number | null;
+  mobileScore: number | null;
+  sslValid: boolean | null;
+  geoScore: number | null;
+  aeoScore: number | null;
   topIssues?: { title: string; displayValue?: string }[];
   summary: string;
   improvements: string[];
@@ -180,6 +205,8 @@ export function PdfDocument({
   seoScore,
   mobileScore,
   sslValid,
+  geoScore,
+  aeoScore,
   topIssues,
   summary,
   improvements,
@@ -210,35 +237,12 @@ export function PdfDocument({
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Audit Scores</Text>
           <View style={styles.scoresRow}>
-            <View style={styles.scoreBox}>
-              <Text style={[styles.scoreValue, scoreColor(performanceScore)]}>
-                {performanceScore}
-              </Text>
-              <Text style={styles.scoreLabel}>Performance</Text>
-            </View>
-            <View style={styles.scoreBox}>
-              <Text style={[styles.scoreValue, scoreColor(seoScore)]}>
-                {seoScore}
-              </Text>
-              <Text style={styles.scoreLabel}>SEO</Text>
-            </View>
-            <View style={styles.scoreBox}>
-              <Text style={[styles.scoreValue, scoreColor(mobileScore)]}>
-                {mobileScore}
-              </Text>
-              <Text style={styles.scoreLabel}>Mobile</Text>
-            </View>
-            <View style={styles.scoreBox}>
-              <Text
-                style={[
-                  styles.scoreValue,
-                  sslValid ? styles.scoreGreen : styles.scoreRed,
-                ]}
-              >
-                {sslValid ? '✓' : 'X'}
-              </Text>
-              <Text style={styles.scoreLabel}>SSL</Text>
-            </View>
+            <ScoreTile label="Performance" score={performanceScore} />
+            <ScoreTile label="SEO" score={seoScore} />
+            <ScoreTile label="Mobile" score={mobileScore} />
+            <SslTile valid={sslValid} />
+            <ScoreTile label="GEO" score={geoScore} />
+            <ScoreTile label="AEO" score={aeoScore} />
           </View>
         </View>
 

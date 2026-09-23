@@ -1,34 +1,41 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isProtectedRoute, isAuthRoute } from "@/app/_shared/lib/config/routes";
+import {
+  ROUTES,
+  isApiRoute,
+  isAuthRoute,
+  isProtectedRoute,
+} from "@/app/_shared/lib/config/routes";
+import { SESSION_COOKIE, verifySessionToken } from "@/app/_shared/lib/auth/session";
 
-// This proxy handles authentication and route protection
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+// This proxy handles authentication and route protection.
+// The whole app is private except the login page and the login API.
+export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
 
-  // Get the token from cookies
-  const token = request.cookies.get("token")?.value;
-  const isLoggedIn = !!token;
+  // Verify the signed session cookie (not just its presence)
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  const isLoggedIn = await verifySessionToken(token);
 
   // Handle protected routes
-  if (isProtectedRoute(pathname)) {
-    if (!isLoggedIn) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+  if (isProtectedRoute(pathname) && !isLoggedIn) {
+    if (isApiRoute(pathname)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const loginUrl = new URL(ROUTES.LOGIN, request.url);
+    loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Handle auth routes (login, register, etc.)
   // Redirect logged-in users away from auth pages
   if (isAuthRoute(pathname) && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(ROUTES.HOME, request.url));
   }
 
   return NextResponse.next();
 }
 
-// Configure which routes the middleware should run on
+// Configure which routes the proxy should run on
 export const config = {
   matcher: [
     /*
@@ -36,9 +43,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes (we handle auth separately in API routes)
      */
-    "/((?!_next/static|_next/image|favicon.ico|public|api).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
