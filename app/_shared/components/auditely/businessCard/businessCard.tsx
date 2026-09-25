@@ -10,6 +10,7 @@ import { AuditScores } from '@/app/_shared/components/auditely/auditScores/audit
 import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
+import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
@@ -99,7 +100,12 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
           </div>
           <p className="text-sm text-[var(--color-text-tertiary)] mt-1">{business.address}</p>
           {business.phone && (
-            <p className="text-sm text-[var(--color-text-tertiary)]">{business.phone}</p>
+            <a
+              href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
+              className="block w-fit text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-primary-600)] hover:underline"
+            >
+              {business.phone}
+            </a>
           )}
           <BusinessEmail
             email={email}
@@ -107,6 +113,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
             businessId={business.id}
             onFound={setEmail}
           />
+          <ContactLinks contactPage={business.contact_page} socials={business.socials} />
 
           {isCompleted && !isExpanded && audit && <ScorePills audit={audit} />}
         </div>

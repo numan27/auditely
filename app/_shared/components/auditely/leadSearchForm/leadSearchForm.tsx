@@ -127,6 +127,13 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
                 {s.description}
               </li>
             ))}
+            {/* Attribution required by Geoapify's free plan */}
+            <li className="px-4 py-1.5 text-[11px] text-right text-[var(--color-text-tertiary)] border-t border-[var(--color-border)]">
+              Powered by{' '}
+              <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" className="underline">
+                Geoapify
+              </a>
+            </li>
           </ul>
         )}
       </div>

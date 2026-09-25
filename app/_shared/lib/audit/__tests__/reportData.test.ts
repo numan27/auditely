@@ -103,12 +103,12 @@ describe('auditFacts', () => {
 });
 
 describe('buildPdfProps', () => {
+  const contact = { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null };
+  const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
+  const noReport = { summary: '', improvements: [] };
+
   it('passes nulls through and drops non-string improvements', () => {
-    const props = buildPdfProps(
-      audit,
-      { name: 'Smile Dental', website: null, address: '123 Main St', phone: null },
-      { summary: 'Slow site.', improvements: ['Compress images', 42] }
-    );
+    const props = buildPdfProps(audit, business, { summary: 'Slow site.', improvements: ['Compress images', 42] }, contact);
     expect(props).toMatchObject({
       businessName: 'Smile Dental',
       website: '',
@@ -124,11 +124,55 @@ describe('buildPdfProps', () => {
   });
 
   it('drops SEO and SSL from an outdated v1 audit', () => {
-    const props = buildPdfProps(
-      v1Audit,
-      { name: 'Smile Dental', website: null, address: '123 Main St', phone: null },
-      { summary: 'Slow site.', improvements: [] }
-    );
+    const props = buildPdfProps(v1Audit, business, noReport, contact);
     expect(props).toMatchObject({ seoScore: null, sslValid: null, performanceScore: 42 });
+  });
+
+  it('replaces characters the built-in PDF font cannot draw', () => {
+    // gpt-oss writes narrow no-break spaces and non-breaking hyphens; Helvetica
+    // renders them as "/" and nothing
+    const props = buildPdfProps(
+      audit,
+      { ...business, name: 'Smile\u00a0Dental', address: '123\u202fMain St' },
+      {
+        summary: 'First Contentful Paint of 7.7\u202fseconds on non\u2011descriptive links.',
+        improvements: ['Add JSON\u2011LD schema', 'Save 2,235\u2009KiB'],
+      },
+      contact
+    );
+    expect(props.summary).toBe('First Contentful Paint of 7.7 seconds on non-descriptive links.');
+    expect(props.improvements).toEqual(['Add JSON-LD schema', 'Save 2,235 KiB']);
+    expect(props.businessName).toBe('Smile Dental');
+    expect(props.address).toBe('123 Main St');
+  });
+
+  it('lists GEO and AEO problems, failures first, without passes', () => {
+    const props = buildPdfProps(audit, business, noReport, contact);
+    expect(props.geoFindings).toEqual([{ status: 'fail', label: 'geo.b' }]);
+    expect(props.aeoFindings.map((finding) => [finding.status, finding.label])).toEqual([
+      ['fail', 'aeo.a'],
+      ['fail', 'aeo.c'],
+      ['warn', 'aeo.b'],
+    ]);
+  });
+
+  it('keeps finding details and makes their text drawable', () => {
+    const withDetail: AuditLike = {
+      ...audit,
+      checks: {
+        ...checks,
+        aeo: {
+          ...checks.aeo!,
+          findings: [{ id: 'aeo.levels', status: 'fail', label: 'Heading levels skip (e.g. H1 \u2192 H3)', detail: 'Site\u202fshows: 1' }],
+        },
+      },
+    };
+    const props = buildPdfProps(withDetail, business, noReport, contact);
+    expect(props.aeoFindings).toEqual([{ status: 'fail', label: 'Heading levels skip (e.g. H1 -> H3)', detail: 'Site shows: 1' }]);
+  });
+
+  it('passes the report contact through', () => {
+    const withBooking = { ...contact, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
+    expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
   });
 });

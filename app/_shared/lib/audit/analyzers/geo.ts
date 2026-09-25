@@ -1,5 +1,5 @@
 // GEO (Generative Engine Optimization): can AI search engines read who this
-// business is, and does it agree with the Google listing? Rubric: see spec.
+// business is, and does it agree with its business listing? Rubric: see spec.
 
 import type { Finding, GeoChecks, NapResult, NapStatus } from '@/app/_shared/lib/audit/types';
 import type { StructuredData } from '@/app/_shared/lib/audit/analyzers/structuredData';
@@ -14,18 +14,18 @@ function napPoints(status: NapStatus, points: number): number {
 function napFinding(id: string, label: string, status: NapStatus, siteValue: string | null): Finding {
   switch (status) {
     case 'match':
-      return { id, status: 'pass', label: `${label} matches Google listing` };
+      return { id, status: 'pass', label: `${label} matches business listing` };
     case 'mismatch':
       return {
         id,
         status: 'fail',
-        label: `${label} on site doesn't match Google listing`,
+        label: `${label} on site doesn't match business listing`,
         ...(siteValue ? { detail: `Site shows: ${siteValue}` } : {}),
       };
     case 'missing':
       return { id, status: 'fail', label: `${label} not found on the homepage` };
     case 'n/a':
-      return { id, status: 'warn', label: `Google listing has no ${label.toLowerCase()}` };
+      return { id, status: 'warn', label: `Business listing has no ${label.toLowerCase()}` };
   }
 }
 

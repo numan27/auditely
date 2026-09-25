@@ -6,6 +6,7 @@ import { createElement } from 'react';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { PdfDocument } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 import { buildPdfProps } from '@/app/_shared/lib/audit/reportData';
+import { reportContact } from '@/app/_shared/lib/config/reportContact';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   let buffer: Buffer;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    buffer = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport)) as any);
+    buffer = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport, reportContact())) as any);
   } catch {
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }

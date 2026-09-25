@@ -4,7 +4,7 @@
 // PDF and the dashboard. Client-safe (no Node-only imports).
 
 import { isOutdatedAudit, type AuditChecks, type Finding, type KeyAudit } from '@/app/_shared/lib/audit/types';
-import type { PdfDocumentProps } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import type { PdfContact, PdfDocumentProps, PdfFinding } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 export interface IssueSummary {
   title: string;
@@ -92,22 +92,45 @@ export function auditFacts(audit: AuditLike): { scores: string; issues: string }
   return { scores, issues };
 }
 
+// The PDF uses the built-in Helvetica (WinAnsi encoding): Unicode spaces render
+// as "/", non-breaking hyphens vanish and arrows don't exist. The AI model emits
+// the first two; finding labels use the arrow.
+const pdfText = (text: string): string =>
+  text
+    .replace(/\u2192/g, '->')
+    .replace(/[\u00a0\u2000-\u200a\u202f\u205f\u3000]/g, ' ')
+    .replace(/[\u2010-\u2012\u2212]/g, '-');
+
+const PDF_FINDINGS_LIMIT = 6;
+
+// Problems only (fail, then warn) — the PDF is a list of what to fix
+function pdfFindings(findings: Finding[] | undefined): PdfFinding[] {
+  return sortFindings((findings ?? []).filter((finding) => finding.status !== 'pass'))
+    .slice(0, PDF_FINDINGS_LIMIT)
+    .map((finding) => ({
+      status: finding.status as PdfFinding['status'],
+      label: pdfText(finding.label),
+      ...(finding.detail && { detail: pdfText(finding.detail) }),
+    }));
+}
+
 export function buildPdfProps(
   audit: AuditLike,
   business: { name: string; website: string | null; address: string; phone: string | null },
-  report: { summary: string; improvements: unknown }
+  report: { summary: string; improvements: unknown },
+  contact: PdfContact
 ): PdfDocumentProps {
   const topIssues = topLighthouseIssues(audit.raw_json, 4);
   const { seo, ssl } = measuredSeoAndSsl(audit);
   const improvements = Array.isArray(report.improvements)
-    ? report.improvements.filter((item): item is string => typeof item === 'string')
+    ? report.improvements.filter((item): item is string => typeof item === 'string').map(pdfText)
     : [];
 
   return {
-    businessName: business.name,
+    businessName: pdfText(business.name),
     website: business.website ?? '',
-    address: business.address,
-    phone: business.phone,
+    address: pdfText(business.address),
+    phone: business.phone && pdfText(business.phone),
     auditDate: new Date(audit.created_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -120,8 +143,17 @@ export function buildPdfProps(
     sslValid: ssl,
     geoScore: audit.geo_score ?? null,
     aeoScore: audit.aeo_score ?? null,
-    topIssues: topIssues.length > 0 ? topIssues : undefined,
-    summary: report.summary,
+    topIssues:
+      topIssues.length > 0
+        ? topIssues.map((issue) => ({
+            title: pdfText(issue.title),
+            ...(issue.displayValue && { displayValue: pdfText(issue.displayValue) }),
+          }))
+        : undefined,
+    geoFindings: pdfFindings(audit.checks?.geo?.findings),
+    aeoFindings: pdfFindings(audit.checks?.aeo?.findings),
+    summary: pdfText(report.summary),
     improvements,
+    contact,
   };
 }

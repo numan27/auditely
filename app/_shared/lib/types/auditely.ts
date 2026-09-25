@@ -1,6 +1,7 @@
 // app/_shared/lib/types/auditely.ts
 
 import type { AuditChecks } from '@/app/_shared/lib/audit/types';
+import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
 
 export interface Search {
   id: string;
@@ -17,6 +18,11 @@ export interface Business {
   website: string | null;
   phone: string | null;
   email: string | null;
+  /** Contact page on the business's site (usually a form) */
+  contact_page: string | null;
+  socials: Socials;
+  /** When contact discovery last loaded the homepage; null = never */
+  contacts_checked_at: string | null;
   created_at: string;
 }
 

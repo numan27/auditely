@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
 
 const CHUNK_SIZE = 8;
 
@@ -10,8 +11,17 @@ export interface DiscoveryProgress {
   total: number;
 }
 
+export interface ContactsFound {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  contact_page: string | null;
+  socials: Socials;
+}
+
+// No email yet, or contact channels never checked (searches from before they existed)
 function pendingIds(businesses: BusinessWithData[]): string[] {
-  return businesses.filter((b) => b.website && !b.email).map((b) => b.id);
+  return businesses.filter((b) => b.website && (!b.email || !b.contacts_checked_at)).map((b) => b.id);
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -21,21 +31,22 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 /**
- * Background email discovery for a freshly loaded search.
+ * Background contact discovery (email, phone, contact page, social profiles)
+ * for a freshly loaded search.
  *
  * Scrape-only (no API fallback) so it can run automatically across every
  * business without burning quota. Businesses are processed in sequential
  * chunks so each request stays well under serverless time limits, and
- * discovered emails are merged into the list as each chunk returns.
+ * discovered contacts are merged into the list as each chunk returns.
  *
- * @param businesses    current business list (read via an effect event — merging
- *                       emails back in does NOT restart discovery)
- * @param onEmailsFound called per chunk with the discovered { id, email } pairs
- * @param runKey        changes when a new search loads; restarts discovery
+ * @param businesses      current business list (read via an effect event — merging
+ *                         contacts back in does NOT restart discovery)
+ * @param onContactsFound called per chunk with each business's current contacts
+ * @param runKey          changes when a new search loads; restarts discovery
  */
 export function useEmailDiscovery(
   businesses: BusinessWithData[],
-  onEmailsFound: (found: { id: string; email: string }[]) => void,
+  onContactsFound: (found: ContactsFound[]) => void,
   runKey: string | number
 ): DiscoveryProgress {
   const [progress, setProgress] = useState(() => ({
@@ -51,7 +62,7 @@ export function useEmailDiscovery(
   }
 
   // Effect events always see the latest props without being effect dependencies
-  const onFound = useEffectEvent(onEmailsFound);
+  const onFound = useEffectEvent(onContactsFound);
   const getPendingIds = useEffectEvent(() => pendingIds(businesses));
 
   useEffect(() => {
@@ -75,9 +86,13 @@ export function useEmailDiscovery(
           });
           const data = await res.json();
           if (cancelled) return;
-          const found = (data.results ?? [])
-            .filter((r: FindResultDto) => r.email)
-            .map((r: FindResultDto) => ({ id: r.business_id, email: r.email as string }));
+          const found: ContactsFound[] = (data.results ?? []).map((r: FindResultDto) => ({
+            id: r.business_id,
+            email: r.email,
+            phone: r.phone,
+            contact_page: r.contact_page,
+            socials: r.socials ?? {},
+          }));
           if (found.length) onFound(found);
         } catch {
           /* chunk failed (e.g. aborted) — continue with the rest */
@@ -101,4 +116,7 @@ export function useEmailDiscovery(
 interface FindResultDto {
   business_id: string;
   email: string | null;
+  phone: string | null;
+  contact_page: string | null;
+  socials: Socials | null;
 }

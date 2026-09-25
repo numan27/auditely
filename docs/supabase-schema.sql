@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS businesses (
   website     TEXT,
   phone       TEXT,
   email       TEXT,
+  -- Other ways to reach the business, found on its homepage
+  contact_page        TEXT,
+  socials             JSONB       NOT NULL DEFAULT '{}',
+  contacts_checked_at TIMESTAMPTZ,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

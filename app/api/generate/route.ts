@@ -90,13 +90,15 @@ Respond with ONLY valid JSON in this exact format:
   let completion;
   try {
     completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      // llama-3.3-70b-versatile is no longer served by Groq (model_not_found)
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       temperature: 0.7,
       max_tokens: 1536,
     });
-  } catch {
+  } catch (err) {
+    console.error('[generate] Groq request failed:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
   }
 

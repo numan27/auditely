@@ -11,6 +11,7 @@ const entity = (over: Partial<BusinessEntity> = {}): BusinessEntity => ({
   hasHours: true,
   hasGeo: false,
   hasSameAs: false,
+  sameAs: [],
   ...over,
 });
 
@@ -61,10 +62,10 @@ describe('analyzeGeo', () => {
     expect(finding(checks, 'geo.nap.phone')?.label).toBe('Phone number not found on the homepage');
   });
 
-  it('awards NAP points but warns when Google lacks the field', () => {
+  it('awards NAP points but warns when the listing lacks the field', () => {
     const { score, checks } = analyzeGeo(structured(entity()), nap({ phone: 'n/a' }), 'dentist');
     expect(score).toBe(100);
-    expect(finding(checks, 'geo.nap.phone')).toMatchObject({ status: 'warn', label: 'Google listing has no phone number' });
+    expect(finding(checks, 'geo.nap.phone')).toMatchObject({ status: 'warn', label: 'Business listing has no phone number' });
   });
 
   it('shows the site value on a mismatch', () => {

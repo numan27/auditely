@@ -14,6 +14,8 @@ export interface BusinessEntity {
   hasHours: boolean;
   hasGeo: boolean;
   hasSameAs: boolean;
+  /** Profile URLs listed in sameAs (social pages, directories) */
+  sameAs: string[];
 }
 
 export interface StructuredData {
@@ -77,6 +79,7 @@ function toEntity(node: JsonNode): BusinessEntity {
     hasHours: Boolean(node.openingHours || node.openingHoursSpecification),
     hasGeo: Boolean(node.geo),
     hasSameAs: toArray(node.sameAs).length > 0,
+    sameAs: toArray(node.sameAs).filter((url): url is string => typeof url === 'string'),
   };
 }
 

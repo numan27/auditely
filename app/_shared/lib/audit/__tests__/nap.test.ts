@@ -13,6 +13,7 @@ const entity = (over: Partial<BusinessEntity> = {}): BusinessEntity => ({
   hasHours: false,
   hasGeo: false,
   hasSameAs: false,
+  sameAs: [],
   ...over,
 });
 

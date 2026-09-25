@@ -1,162 +1,12 @@
 // app/_shared/components/auditely/pdfDocument/pdfDocument.tsx
 
-import { Document, Page, Text, View, StyleSheet, Link } from '@react-pdf/renderer';
-
-const styles = StyleSheet.create({
-  page: {
-    padding: 48,
-    fontFamily: 'Helvetica',
-    backgroundColor: '#ffffff',
-    fontSize: 11,
-    color: '#374151',
-  },
-  header: {
-    marginBottom: 28,
-    paddingBottom: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: '#6366f1',
-    borderBottomStyle: 'solid',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 10,
-    color: '#9ca3af',
-  },
-  section: {
-    marginBottom: 22,
-  },
-  sectionLabel: {
-    fontSize: 9,
-    fontFamily: 'Helvetica-Bold',
-    color: '#6366f1',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  businessName: {
-    fontSize: 16,
-    fontFamily: 'Helvetica-Bold',
-    color: '#111827',
-    marginBottom: 3,
-  },
-  businessMeta: {
-    fontSize: 10,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  scoresRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  scoreBox: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-  },
-  scoreValue: {
-    fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
-    color: '#111827',
-    marginBottom: 3,
-  },
-  scoreLabel: {
-    fontSize: 8,
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  scoreGreen: { color: '#16a34a' },
-  scoreAmber: { color: '#d97706' },
-  scoreRed: { color: '#dc2626' },
-  scoreNeutral: { color: '#9ca3af' },
-  bodyText: {
-    fontSize: 11,
-    color: '#374151',
-    lineHeight: 1.6,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-    gap: 8,
-  },
-  bulletNum: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: '#6366f1',
-    width: 16,
-    marginTop: 1,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#374151',
-    lineHeight: 1.5,
-  },
-  issueRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-    gap: 8,
-  },
-  issueDot: {
-    fontSize: 9,
-    color: '#dc2626',
-    width: 12,
-    marginTop: 1,
-  },
-  issueText: {
-    flex: 1,
-    fontSize: 10,
-    color: '#374151',
-    lineHeight: 1.5,
-  },
-  issueValue: {
-    fontSize: 9,
-    color: '#6b7280',
-  },
-  link: {
-    color: '#6366f1',
-    textDecoration: 'none',
-  },
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    borderBottomStyle: 'solid',
-    marginBottom: 22,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 32,
-    left: 48,
-    right: 48,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    borderTopStyle: 'solid',
-    paddingTop: 10,
-  },
-  footerText: {
-    fontSize: 9,
-    color: '#9ca3af',
-  },
-});
-
-function scoreColor(score: number | null) {
-  if (score === null) return styles.scoreNeutral;
-  if (score >= 80) return styles.scoreGreen;
-  if (score >= 50) return styles.scoreAmber;
-  return styles.scoreRed;
-}
+import { Document, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
+import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
+import {
+  NextStepSection,
+  ScoreLegend,
+  SearchReadinessSection,
+} from '@/app/_shared/components/auditely/pdfDocument/pdfSections';
 
 // null = not measured → "—"
 function ScoreTile({ label, score }: { label: string; score: number | null }) {
@@ -168,14 +18,42 @@ function ScoreTile({ label, score }: { label: string; score: number | null }) {
   );
 }
 
+// The tick is drawn — built-in Helvetica has no "✓" glyph (it rendered blank)
 function SslTile({ valid }: { valid: boolean | null }) {
   const color = valid === null ? styles.scoreNeutral : valid ? styles.scoreGreen : styles.scoreRed;
   return (
     <View style={styles.scoreBox}>
-      <Text style={[styles.scoreValue, color]}>{valid === null ? '—' : valid ? '✓' : 'X'}</Text>
+      {valid ? (
+        <Svg width={21} height={21} viewBox="0 0 24 24" style={{ marginBottom: 3 }}>
+          <Path
+            d="M5 12.5l4.5 4.5L19 7.5"
+            stroke={styles.scoreGreen.color}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </Svg>
+      ) : (
+        <Text style={[styles.scoreValue, color]}>{valid === null ? '—' : 'X'}</Text>
+      )}
       <Text style={styles.scoreLabel}>SSL</Text>
     </View>
   );
+}
+
+export interface PdfFinding {
+  status: 'fail' | 'warn';
+  label: string;
+  detail?: string;
+}
+
+/** Who the prospect contacts — see reportContact() */
+export interface PdfContact {
+  name: string | null;
+  phone: string | null;
+  email: string;
+  bookingUrl: string | null;
 }
 
 export interface PdfDocumentProps {
@@ -191,8 +69,11 @@ export interface PdfDocumentProps {
   geoScore: number | null;
   aeoScore: number | null;
   topIssues?: { title: string; displayValue?: string }[];
+  geoFindings: PdfFinding[];
+  aeoFindings: PdfFinding[];
   summary: string;
   improvements: string[];
+  contact: PdfContact;
 }
 
 export function PdfDocument({
@@ -208,8 +89,11 @@ export function PdfDocument({
   geoScore,
   aeoScore,
   topIssues,
+  geoFindings,
+  aeoFindings,
   summary,
   improvements,
+  contact,
 }: PdfDocumentProps) {
   return (
     <Document>
@@ -244,6 +128,7 @@ export function PdfDocument({
             <ScoreTile label="GEO" score={geoScore} />
             <ScoreTile label="AEO" score={aeoScore} />
           </View>
+          <ScoreLegend />
         </View>
 
         <View style={styles.divider} />
@@ -251,11 +136,11 @@ export function PdfDocument({
         {/* Top Issues */}
         {topIssues && topIssues.length > 0 && (
           <>
-            <View style={styles.section}>
+            <View style={styles.section} wrap={false}>
               <Text style={styles.sectionLabel}>Top Issues Found</Text>
               {topIssues.map((issue, i) => (
                 <View key={i} style={styles.issueRow}>
-                  <Text style={styles.issueDot}>●</Text>
+                  <View style={[styles.bulletDot, styles.dotRed]} />
                   <Text style={styles.issueText}>
                     {issue.title}
                     {issue.displayValue ? (
@@ -269,14 +154,27 @@ export function PdfDocument({
           </>
         )}
 
-        {/* AI Summary */}
+        {/* GEO / AEO findings — v1 audits never measured them */}
+        {(geoScore !== null || aeoScore !== null) && (
+          <>
+            <SearchReadinessSection
+              geoScore={geoScore}
+              aeoScore={aeoScore}
+              geoFindings={geoFindings}
+              aeoFindings={aeoFindings}
+            />
+            <View style={styles.divider} />
+          </>
+        )}
+
+        {/* Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>AI Summary</Text>
+          <Text style={styles.sectionLabel}>Summary</Text>
           <Text style={styles.bodyText}>{summary}</Text>
         </View>
 
         {/* Improvements */}
-        <View style={styles.section}>
+        <View style={styles.section} wrap={false}>
           <Text style={styles.sectionLabel}>Recommended Improvements</Text>
           {improvements.map((item, i) => (
             <View key={i} style={styles.bulletRow}>
@@ -286,6 +184,8 @@ export function PdfDocument({
           ))}
         </View>
 
+        <NextStepSection contact={contact} />
+
         {/* Footer */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
@@ -293,7 +193,7 @@ export function PdfDocument({
             <Link src="https://devartventures.com" style={styles.link}>devartventures.com</Link>
           </Text>
           <Text style={styles.footerText}>
-            <Link src="mailto:contact@devartventures.com" style={styles.link}>contact@devartventures.com</Link>
+            <Link src={`mailto:${contact.email}`} style={styles.link}>{contact.email}</Link>
           </Text>
         </View>
       </Page>
