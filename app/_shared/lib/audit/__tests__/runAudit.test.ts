@@ -70,6 +70,21 @@ describe('runAudit', () => {
     expect(row.checks.site).toEqual({ ok: true, finalUrl: 'https://smiledental.com/', status: 200 });
   });
 
+  it('records the tech stack from the page and headers', async () => {
+    const wp = { ...siteOk('<meta name="generator" content="WordPress 6.2">' + DENTIST_HOME), headers: { 'content-type': 'text/html', server: 'cloudflare' } };
+    const { row } = await runAudit(input, deps({ fetchSite: vi.fn(async () => wp) }));
+    expect(row.checks.tech).toEqual([
+      { name: 'WordPress', category: 'platform', version: '6.2' },
+      { name: 'Cloudflare', category: 'hosting' },
+    ]);
+  });
+
+  it('still reads hosting from the headers of a blocked site', async () => {
+    const blocked = { ...siteBlocked, headers: { 'sg-captcha': 'challenge' } };
+    const { row } = await runAudit(input, deps({ fetchSite: vi.fn(async () => blocked) }));
+    expect(row.checks.tech).toEqual([{ name: 'SiteGround', category: 'hosting' }]);
+  });
+
   it('stores null scores (not 0) when PageSpeed fails, keeping page checks', async () => {
     const { row } = await runAudit(input, deps({ runPageSpeed: vi.fn(async () => psiFail) }));
     expect(row).toMatchObject({ performance_score: null, mobile_score: null, seo_score: null, geo_score: 100 });

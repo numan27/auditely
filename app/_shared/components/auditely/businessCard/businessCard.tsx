@@ -8,6 +8,7 @@ import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
 import { AuditScores } from '@/app/_shared/components/auditely/auditScores/auditScores';
 import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
+import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack';
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
@@ -202,6 +203,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
                   <div className="space-y-6">
                     <AuditScores audit={audit} />
                     <AuditChecklist audit={audit} />
+                    <TechStack items={audit.checks?.tech} />
                   </div>
                 )}
               </div>

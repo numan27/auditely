@@ -13,6 +13,7 @@ import { compareNap, extractNapSignals } from '@/app/_shared/lib/audit/analyzers
 import { analyzeGeo } from '@/app/_shared/lib/audit/analyzers/geo';
 import { analyzeAeo } from '@/app/_shared/lib/audit/analyzers/aeo';
 import { analyzeSeoBasics } from '@/app/_shared/lib/audit/analyzers/seoBasics';
+import { detectTechStack } from '@/app/_shared/lib/audit/analyzers/techStack';
 import { visibleText } from '@/app/_shared/lib/audit/analyzers/text';
 import {
   CURRENT_ENGINE_VERSION,
@@ -22,6 +23,7 @@ import {
   type GeoChecks,
   type SeoBasics,
   type SslCheck,
+  type TechItem,
 } from '@/app/_shared/lib/audit/types';
 
 const PSI_DEADLINE_MS = 240_000;
@@ -128,6 +130,13 @@ export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps)
   const desktopSummary = desktop.ok ? desktop.summary : null;
   const ssl = resolveSsl(tls, [mobile, desktop]);
   const siteReason = site.reason ?? analysisReason ?? page?.limitedReason ?? undefined;
+  // Outside analyzePage: a blocked site's headers still reveal its hosting
+  let tech: TechItem[] = [];
+  try {
+    tech = detectTechStack(site.ok ? site.html : null, site.headers);
+  } catch (err) {
+    console.error('[audit] tech stack detection failed:', err);
+  }
 
   return {
     email,
@@ -150,6 +159,7 @@ export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps)
           ...(siteReason ? { reason: siteReason } : {}),
         },
         psi: { mobile: mobile.ok ? 'ok' : mobile.reason, desktop: desktop.ok ? 'ok' : desktop.reason },
+        tech,
       },
       raw_json: { mobile: mobileSummary, desktop: desktopSummary },
       engine_version: CURRENT_ENGINE_VERSION,

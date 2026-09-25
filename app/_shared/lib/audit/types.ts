@@ -72,6 +72,14 @@ export interface AeoChecks {
   hasFaqSchema: boolean;
 }
 
+export type TechCategory = 'platform' | 'pageBuilder' | 'framework' | 'hosting' | 'analytics' | 'widgets';
+
+export interface TechItem {
+  name: string;
+  category: TechCategory;
+  version?: string;
+}
+
 export interface AuditChecks {
   ssl: SslCheck;
   seo: SeoBasics | null;
@@ -79,6 +87,8 @@ export interface AuditChecks {
   aeo: AeoChecks | null;
   site: { ok: boolean; finalUrl: string | null; status: number | null; reason?: string };
   psi: { mobile: string; desktop: string }; // 'ok' or the failure reason
+  /** Internal only (never in the PDF or AI prompt). Absent on audits made before it existed. */
+  tech?: TechItem[];
 }
 
 export interface AuditInput {
