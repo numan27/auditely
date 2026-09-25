@@ -45,6 +45,33 @@ describe('fetchSite', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('treats a bot-challenge page as blocked, not as the site', async () => {
+    // SiteGround answers 202 with a meta-refresh to its captcha
+    const sg = '<html><head><meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/?r=%2F"></meta></head></html>';
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('/robots.txt')
+        ? new Response('', { status: 404 })
+        : page(sg, 'https://acme.com/', { status: 202, headers: { 'content-type': 'text/html', 'sg-captcha': 'challenge' } })
+    );
+    expect(await fetchSite('https://acme.com/')).toMatchObject({ ok: false, reason: 'Blocked (bot challenge)', html: null });
+  });
+
+  it('spots a Cloudflare challenge from the page alone', async () => {
+    const cf = '<html><body><script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>';
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('/robots.txt') ? new Response('', { status: 404 }) : page(cf, 'https://acme.com/')
+    );
+    expect(await fetchSite('https://acme.com/')).toMatchObject({ ok: false, reason: 'Blocked (bot challenge)' });
+  });
+
+  it('keeps a real page that merely uses a captcha on its form', async () => {
+    const real = `<html><body>${'<p>Welcome to Acme Dental.</p>'.repeat(300)}<div class="g-recaptcha"></div></body></html>`;
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('/robots.txt') ? new Response('', { status: 404 }) : page(real, 'https://acme.com/')
+    );
+    expect((await fetchSite('https://acme.com/')).ok).toBe(true);
+  });
+
   it('rejects non-HTML content', async () => {
     fetchMock.mockResolvedValue(page('%PDF-1.4', 'https://acme.com/menu.pdf', { headers: { 'content-type': 'application/pdf' } }));
     expect(await fetchSite('https://acme.com/menu.pdf')).toMatchObject({ ok: false, reason: 'Not an HTML page' });

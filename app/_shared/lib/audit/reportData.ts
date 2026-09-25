@@ -35,6 +35,15 @@ export const formatScore = (score: number | null | undefined): string =>
 export const formatSsl = (valid: boolean | null | undefined): string =>
   valid === true ? 'valid' : valid === false ? 'invalid or missing' : 'not measured';
 
+/** The site-read failure reason in words a user (or prospect) understands. */
+export function siteReasonText(reason: string): string {
+  // "Blocked (403)" / "Blocked (bot challenge)": the site's bot protection turned the audit away
+  if (reason.startsWith('Blocked')) {
+    return "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
+  }
+  return `Couldn't read site: ${reason}`;
+}
+
 export function scoreTone(score: number | null | undefined): ScoreTone {
   if (typeof score !== 'number') return 'none';
   if (score >= 80) return 'good';

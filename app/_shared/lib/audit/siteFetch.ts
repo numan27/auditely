@@ -25,6 +25,17 @@ export interface SiteFetchResult {
 
 const NO_ROBOTS: RobotsFetch = { status: null, body: null };
 
+// Bot-protection interstitials served in place of the site, often with 200/202.
+// Scoring one would report the captcha page's (missing) schema, NAP and headings.
+const CHALLENGE_MARKERS = /\/\.well-known\/sgcaptcha|\/cdn-cgi\/challenge-platform|_Incapsula_Resource|sucuri_cloudproxy/i;
+const MAX_CHALLENGE_BYTES = 20_000;
+
+function isBotChallenge(headers: Record<string, string>, html: string): boolean {
+  if (headers['sg-captcha'] || headers['cf-mitigated'] === 'challenge') return true;
+  // A real homepage is larger than a challenge stub, even if its form uses a captcha
+  return html.length < MAX_CHALLENGE_BYTES && CHALLENGE_MARKERS.test(html);
+}
+
 function get(url: string): Promise<Response> {
   return fetch(url, {
     redirect: 'follow',
@@ -101,6 +112,7 @@ export async function fetchSite(website: string): Promise<SiteFetchResult> {
       readCapped(res, MAX_HTML_BYTES),
       fetchRobots(new URL(finalUrl).origin),
     ]);
+    if (isBotChallenge(headers, html)) return failure('Blocked (bot challenge)', base);
     return { ok: true, ...base, html, robots };
   } catch {
     return failure('Site timed out while loading', base);

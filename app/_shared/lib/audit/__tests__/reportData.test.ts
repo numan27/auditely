@@ -6,6 +6,7 @@ import {
   formatScore,
   formatSsl,
   scoreTone,
+  siteReasonText,
   sortFindings,
   topLighthouseIssues,
   type AuditLike,
@@ -99,6 +100,20 @@ describe('auditFacts', () => {
     expect(scores).toContain('SEO Score: not measured');
     expect(scores).toContain('SSL Certificate: not measured');
     expect(scores).toContain('Performance Score: 42/100');
+  });
+});
+
+describe('siteReasonText', () => {
+  it('explains bot blocking in plain words, for new and old audits', () => {
+    for (const reason of ['Blocked (403)', 'Blocked (bot challenge)']) {
+      expect(siteReasonText(reason)).toBe(
+        "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected."
+      );
+    }
+  });
+
+  it('passes other reasons through', () => {
+    expect(siteReasonText('Site timed out')).toBe("Couldn't read site: Site timed out");
   });
 });
 

@@ -2,7 +2,7 @@
 
 import type { Audit } from '@/app/_shared/lib/types/auditely';
 import type { Finding } from '@/app/_shared/lib/audit/types';
-import { sortFindings } from '@/app/_shared/lib/audit/reportData';
+import { siteReasonText, sortFindings } from '@/app/_shared/lib/audit/reportData';
 
 const STATUS_STYLES: Record<Finding['status'], { icon: string; className: string }> = {
   fail: { icon: '✗', className: 'text-red-500' },
@@ -54,7 +54,7 @@ export function AuditChecklist({ audit }: { audit: Audit }) {
   const showSeoBasics = audit.seo_score === null && !!seo;
   if (!geo && !aeo && !showSeoBasics) {
     return site?.reason ? (
-      <p className="text-sm text-[var(--color-text-tertiary)]">Couldn&apos;t read site: {site.reason}</p>
+      <p className="text-sm text-[var(--color-text-tertiary)]">{siteReasonText(site.reason)}</p>
     ) : null;
   }
 
