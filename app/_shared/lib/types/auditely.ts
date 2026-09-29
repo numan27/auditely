@@ -57,5 +57,8 @@ export interface BusinessWithData extends Business {
   ai_report?: AiReport;
 }
 
+/** What a business card found or produced, merged back into the results list */
+export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report'>>;
+
 export type AuditStatus = 'idle' | 'loading' | 'done' | 'error';
 export type ReportStatus = 'idle' | 'loading' | 'done' | 'error';

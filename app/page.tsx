@@ -7,9 +7,13 @@ import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noContentCard';
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
-import type { BusinessWithData, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
+import { LeadToolbar } from '@/app/_shared/components/auditely/leadToolbar/leadToolbar';
+import { Button } from '@/app/_shared/components/ui/button/button';
+import type { BusinessWithData, BusinessUpdate, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
 import { useEmailDiscovery, type ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import { useLeadView } from '@/app/_shared/lib/hooks/useLeadView';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
+import { exportFileName } from '@/app/_shared/lib/utils/leadExport';
 import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
@@ -47,8 +51,17 @@ export default function HomePage() {
     );
   }, []);
 
+  // Emails, audits and reports produced inside a card, so sorting and export see them
+  const updateBusiness = useCallback((id: string, update: BusinessUpdate) => {
+    setBusinesses((prev) => prev.map((b) => (b.id === id ? { ...b, ...update } : b)));
+  }, []);
+
   // Auto-discover contacts (scrape-only) whenever a new search/result set loads.
   const discovery = useEmailDiscovery(businesses, mergeContacts, discoveryRun);
+  const discoveryDone = discovery.done >= discovery.total;
+
+  // Re-arranged when a result set loads and again once discovery has found the emails
+  const view = useLeadView(businesses, `${discoveryRun}:${discoveryDone}`);
 
   // Only fires when navigating from Saved Searches (?load=<search_id>)
   useEffect(() => {
@@ -135,8 +148,9 @@ export default function HomePage() {
   };
 
   const withWebsite = businesses.filter((b) => b.website).length;
-  const visibleBusinesses = businesses.slice(0, visibleCount);
-  const hasMore = visibleCount < businesses.length;
+  const visibleBusinesses = view.leads.slice(0, visibleCount);
+  const hasMore = visibleCount < view.leads.length;
+  const isFiltered = view.filters.length > 0;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
@@ -190,9 +204,12 @@ export default function HomePage() {
                 </strong>{' '}
                 of{' '}
                 <strong className="text-[var(--color-text-primary)] font-semibold">
-                  {businesses.length}
+                  {view.leads.length}
                 </strong>{' '}
-                businesses
+                {isFiltered ? 'matching' : 'businesses'}
+                {isFiltered && (
+                  <span className="text-[var(--color-text-tertiary)]"> (of {businesses.length})</span>
+                )}
                 {lastQuery && (
                   <span className="text-[var(--color-text-tertiary)]">
                     {' '}for{' '}
@@ -207,13 +224,25 @@ export default function HomePage() {
                   {businesses.length - withWebsite} without a website
                 </span>
               )}
-              {discovery.total > 0 && discovery.done < discovery.total && (
+              {!discoveryDone && (
                 <span className="flex items-center gap-1.5 text-[var(--color-text-tertiary)]">
                   <Spinner size="sm" />
                   Finding contacts… {discovery.done}/{discovery.total}
                 </span>
               )}
             </div>
+          )}
+
+          {!isSearching && hasSearched && businesses.length > 0 && (
+            <LeadToolbar
+              sort={view.sort}
+              onSortChange={view.setSort}
+              filters={view.filters}
+              counts={view.counts}
+              onToggleFilter={view.toggleFilter}
+              getExportLeads={view.currentLeads}
+              exportFileName={exportFileName(lastQuery)}
+            />
           )}
         </div>
 
@@ -231,6 +260,16 @@ export default function HomePage() {
                 title="No businesses found"
                 description="Try a different niche or location and search again."
               />
+            ) : view.leads.length === 0 ? (
+              <NoContentCard
+                title="No businesses match these filters"
+                description="Turn off a filter to see more results."
+                action={
+                  <Button variant="outline" size="sm" onClick={view.clearFilters}>
+                    Clear filters
+                  </Button>
+                }
+              />
             ) : (
               <>
                 <div className="space-y-5">
@@ -240,6 +279,7 @@ export default function HomePage() {
                       business={business}
                       initialAudit={business.audit}
                       initialReport={business.ai_report}
+                      onUpdate={updateBusiness}
                     />
                   ))}
                 </div>
@@ -250,9 +290,9 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {!hasMore && businesses.length > PAGE_SIZE && (
+                {!hasMore && view.leads.length > PAGE_SIZE && (
                   <p className="text-center text-sm text-[var(--color-text-tertiary)] py-4">
-                    All {businesses.length} businesses loaded
+                    All {view.leads.length} {isFiltered ? 'matching businesses' : 'businesses'} loaded
                   </p>
                 )}
               </>

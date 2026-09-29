@@ -15,12 +15,14 @@ import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/con
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
-import type { Business, Audit, AiReport } from '@/app/_shared/lib/types/auditely';
+import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
 
 interface BusinessCardProps {
   business: Business;
   initialAudit?: Audit;
   initialReport?: AiReport;
+  /** Receives emails, audits and reports this card finds or produces */
+  onUpdate?: (businessId: string, update: BusinessUpdate) => void;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -54,7 +56,7 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate }: BusinessCardProps) {
   const {
     audit,
     report,
@@ -62,14 +64,14 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
     auditError,
     reportStatus,
     email,
-    setEmail,
+    saveEmail,
     pdfLoading,
     runAudit,
     reAudit,
     retryAudit,
     generateReport,
     downloadPdf,
-  } = useBusinessAudit(business, initialAudit, initialReport);
+  } = useBusinessAudit(business, initialAudit, initialReport, onUpdate);
   // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
   const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
 
@@ -112,7 +114,7 @@ export function BusinessCard({ business, initialAudit, initialReport }: Business
             email={email}
             website={business.website}
             businessId={business.id}
-            onFound={setEmail}
+            onFound={saveEmail}
           />
           <ContactLinks contactPage={business.contact_page} socials={business.socials} />
 

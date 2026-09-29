@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
-import type { AiReport, Audit, AuditStatus, Business, ReportStatus } from '@/app/_shared/lib/types/auditely';
+import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
+import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -14,8 +15,15 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
  * - reAudit(): forces a fresh audit; the server replaces the row and drops the
  *   stale report, so the report is regenerated afterwards
  * - retryAudit(): repeats the last request (normal or forced)
+ * Every result is also passed to `onUpdate`, so the results list can sort,
+ * filter and export on it.
  */
-export function useBusinessAudit(business: Business, initialAudit?: Audit, initialReport?: AiReport) {
+export function useBusinessAudit(
+  business: Business,
+  initialAudit?: Audit,
+  initialReport?: AiReport,
+  onUpdate?: (businessId: string, update: BusinessUpdate) => void
+) {
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>(initialAudit ? 'done' : 'idle');
@@ -30,6 +38,28 @@ export function useBusinessAudit(business: Business, initialAudit?: Audit, initi
     if (business.email) setEmail(business.email);
   }, [business.email]);
 
+  // A card sorted or filtered out of view unmounts; results for requests it had
+  // in flight reach the list via onUpdate and come back in through these props.
+  useEffect(() => {
+    if (!initialAudit) return;
+    setAudit(initialAudit);
+    setAuditStatus('done');
+  }, [initialAudit]);
+
+  useEffect(() => {
+    if (!initialReport) return;
+    setReport(initialReport);
+    setReportStatus('done');
+  }, [initialReport]);
+
+  const saveEmail = useCallback(
+    (value: string) => {
+      setEmail(value);
+      onUpdate?.(business.id, { email: value });
+    },
+    [business.id, onUpdate]
+  );
+
   const generateReport = useCallback(async (auditId: string) => {
     setReportStatus('loading');
     try {
@@ -42,10 +72,11 @@ export function useBusinessAudit(business: Business, initialAudit?: Audit, initi
       if (!res.ok) throw new Error(data.error);
       setReport(data.ai_report);
       setReportStatus('done');
+      onUpdate?.(business.id, { ai_report: data.ai_report });
     } catch {
       setReportStatus('error');
     }
-  }, []);
+  }, [business.id, onUpdate]);
 
   const runAudit = useCallback(
     async (force = false) => {
@@ -69,12 +100,17 @@ export function useBusinessAudit(business: Business, initialAudit?: Audit, initi
         if (data.email) setEmail(data.email);
         if (force) setReport(undefined);
         setAuditStatus('done');
+        onUpdate?.(business.id, {
+          audit: data.audit,
+          ...(data.email && { email: data.email }),
+          ...(force && { ai_report: undefined }),
+        });
         generateReport(data.audit.id);
       } catch {
         fail('Audit failed');
       }
     },
-    [audit, business.id, generateReport]
+    [audit, business.id, generateReport, onUpdate]
   );
 
   const reAudit = useCallback(() => runAudit(true), [runAudit]);
@@ -94,14 +130,7 @@ export function useBusinessAudit(business: Business, initialAudit?: Audit, initi
         throw new Error(err.error);
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `audit-${business.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `audit-${business.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`);
     } catch (err) {
       console.error('PDF download failed:', err);
     } finally {
@@ -116,7 +145,7 @@ export function useBusinessAudit(business: Business, initialAudit?: Audit, initi
     auditError,
     reportStatus,
     email,
-    setEmail,
+    saveEmail,
     pdfLoading,
     runAudit,
     reAudit,

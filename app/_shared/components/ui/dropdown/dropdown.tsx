@@ -71,7 +71,14 @@ export const Dropdown = ({
         {trigger}
       </div>
       {isOpen && (
-        <div className={`${styles['dropdown-menu']} ${styles[`dropdown-menu--${align}`]}`} role="menu">
+        <div
+          className={`${styles['dropdown-menu']} ${styles[`dropdown-menu--${align}`]}`}
+          role="menu"
+          // Choosing an item closes the menu
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('[role="menuitem"]')) handleClose();
+          }}
+        >
           {children}
         </div>
       )}
