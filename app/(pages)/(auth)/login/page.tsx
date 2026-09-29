@@ -15,13 +15,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-          Welcome back
+      <div>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+          Sign in to Auditely
         </h1>
-        <p className="text-[var(--color-text-secondary)]">
-          Enter the admin password to continue
-        </p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Enter the admin password to continue.</p>
       </div>
       <LoginForm callbackUrl={callbackUrl} />
     </div>

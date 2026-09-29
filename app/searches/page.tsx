@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
-import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
-import { NoContentCard } from '@/app/_shared/components/ui/noContentCard/noContentCard';
-import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
-import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
+import { Button } from '@/app/_shared/components/ui/button/button';
+import { ChevronRightIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
+import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 
 interface SavedSearch {
   id: string;
@@ -16,86 +16,93 @@ interface SavedSearch {
   business_count: number;
 }
 
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+function ListSkeleton() {
+  return (
+    <div className="divide-y divide-[var(--color-border)]" role="status">
+      <span className="sr-only">Loading saved searches</span>
+      {Array.from({ length: 5 }, (_, i) => (
+        <div key={i} className="flex animate-pulse items-center gap-4 px-5 py-4">
+          <div className="h-9 w-9 rounded-lg bg-[var(--color-bg-tertiary)]" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-60 max-w-full rounded bg-[var(--color-bg-tertiary)]" />
+            <div className="h-3 w-24 rounded bg-[var(--color-bg-tertiary)]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function SearchesPage() {
   const router = useRouter();
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/searches')
+    fetch(API_ROUTES.SEARCHES)
       .then((res) => res.json())
       .then((data) => setSearches(data.searches ?? []))
       .catch(() => setSearches([]))
       .finally(() => setIsLoading(false));
   }, []);
 
-  const handleLoad = (searchId: string) => {
-    router.push(`${ROUTES.HOME}?load=${searchId}`);
-  };
-
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
-      <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/80 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push(ROUTES.HOME)}
-              className="text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              ← Back
-            </button>
-            <span className="text-base font-bold tracking-tight text-[var(--color-text-primary)]">
-              Saved Searches
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LogoutButton />
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-3 py-20 text-[var(--color-text-secondary)]">
-            <Spinner size="md" />
-            <span className="text-sm">Loading searches…</span>
-          </div>
-        ) : searches.length === 0 ? (
-          <NoContentCard
-            title="No saved searches yet"
-            description="Run a search from the dashboard and it will appear here."
-          />
-        ) : (
-          <div className="space-y-3">
-            {searches.map((search) => (
-              <div
-                key={search.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-5 py-4"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)] capitalize">
-                    {search.niche} — {search.location}
-                  </p>
-                  <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
-                    {new Date(search.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}{' '}
-                    · {search.business_count} businesses
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleLoad(search.id)}
-                  className="shrink-0 text-sm font-medium text-[var(--color-primary-600)] hover:underline"
-                >
-                  Load →
-                </button>
+      <main className="mx-auto max-w-5xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16">
+        <h1 className="font-display text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+          Saved searches
+        </h1>
+        <p className="mt-3 max-w-xl text-base leading-relaxed text-[var(--color-text-secondary)]">
+          Every search keeps its businesses, contacts and audits. Open one to pick up where you left off.
+        </p>
+
+        <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          {isLoading ? (
+            <ListSkeleton />
+          ) : searches.length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <p className="font-medium text-[var(--color-text-primary)]">No saved searches yet</p>
+              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">Your searches appear here after you run them.</p>
+              <div className="mt-5">
+                <Button variant="primary" size="sm" onClick={() => router.push(ROUTES.HOME)}>
+                  Find leads
+                </Button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            <ul className="divide-y divide-[var(--color-border)]">
+              {searches.map((search) => (
+                <li key={search.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`${ROUTES.HOME}?load=${search.id}`)}
+                    className="group flex w-full cursor-pointer items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-[var(--color-bg-secondary)]"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--color-bg-primary)] text-[var(--color-text-tertiary)]">
+                      <SearchIcon size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-[var(--color-text-primary)]">{searchTitle(search)}</span>
+                      <span className="text-sm text-[var(--color-text-tertiary)]">{search.business_count} businesses</span>
+                    </span>
+                    <span className="hidden text-sm tabular-nums text-[var(--color-text-tertiary)] sm:block">
+                      {formatDate(search.created_at)}
+                    </span>
+                    <ChevronRightIcon
+                      size={16}
+                      className="shrink-0 text-[var(--color-text-tertiary)] transition-transform group-hover:translate-x-0.5"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </main>
     </div>
   );

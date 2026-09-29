@@ -3,14 +3,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/app/_shared/components/ui/button/button';
-import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
-import { AuditScores } from '@/app/_shared/components/auditely/auditScores/auditScores';
-import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
-import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack';
-import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
+import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon } from '@/app/_shared/components/ui/icons/icons';
+import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPanel';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
+import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
@@ -23,19 +20,25 @@ interface BusinessCardProps {
   initialReport?: AiReport;
   /** Receives emails, audits and reports this card finds or produces */
   onUpdate?: (businessId: string, update: BusinessUpdate) => void;
+  /** Start the audit as soon as the card appears (sites added by URL) */
+  autoRun?: boolean;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
-  good: 'text-emerald-600 dark:text-emerald-400',
-  ok: 'text-amber-600 dark:text-amber-400',
-  poor: 'text-red-600 dark:text-red-400',
-  none: 'text-[var(--color-text-tertiary)]',
+  good: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  ok: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  poor: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  none: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]',
 };
+
+// Host and path only: tracking query strings are noise here
+const displayDomain = (url: string) =>
+  url.replace(/^https?:\/\/(www\.)?/, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 
 // Compact score summary shown when a completed card is collapsed
 function ScorePills({ audit }: { audit: Audit }) {
   const scores: [string, number | null][] = [
-    ['Perf', audit.performance_score],
+    ['Performance', audit.performance_score],
     ['SEO', audit.seo_score],
     ['Mobile', audit.mobile_score],
     ['GEO', audit.geo_score],
@@ -45,33 +48,22 @@ function ScorePills({ audit }: { audit: Audit }) {
   const sslTone: ScoreTone = ssl === null ? 'none' : ssl ? 'good' : 'poor';
 
   return (
-    <div className="flex items-center gap-x-3 gap-y-1 mt-2 flex-wrap text-xs font-semibold">
+    <div className="mt-3 flex flex-wrap gap-1.5 text-xs font-medium">
       {scores.map(([label, score]) => (
-        <span key={label} className={PILL_TONES[scoreTone(score)]}>
-          {label} {score ?? '—'}
+        <span key={label} className={`rounded-md px-2 py-1 ${PILL_TONES[scoreTone(score)]}`}>
+          {label} <span className="font-semibold tabular-nums">{score ?? '—'}</span>
         </span>
       ))}
-      <span className={PILL_TONES[sslTone]}>SSL {ssl === null ? '—' : ssl ? '✓' : '✗'}</span>
+      <span className={`rounded-md px-2 py-1 ${PILL_TONES[sslTone]}`}>
+        SSL <span className="font-semibold">{ssl === null ? '—' : ssl ? 'Valid' : 'Invalid'}</span>
+      </span>
     </div>
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate }: BusinessCardProps) {
-  const {
-    audit,
-    report,
-    auditStatus,
-    auditError,
-    reportStatus,
-    email,
-    saveEmail,
-    pdfLoading,
-    runAudit,
-    reAudit,
-    retryAudit,
-    generateReport,
-    downloadPdf,
-  } = useBusinessAudit(business, initialAudit, initialReport, onUpdate);
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun }: BusinessCardProps) {
+  const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun });
+  const { audit, auditStatus, reportStatus, email, saveEmail } = state;
   // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
   const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
 
@@ -79,183 +71,85 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate }
   const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
 
   return (
-    <div className={`rounded-2xl bg-[var(--color-bg-secondary)] overflow-hidden transition-all ${
-      isCompleted
-        ? 'border-2 border-emerald-400 dark:border-emerald-600'
-        : 'border border-[var(--color-border)]'
-    }`}>
-      {/* Card Header */}
-      <div className="px-6 py-5 flex items-start justify-between gap-4 border-b border-[var(--color-border)]">
+    <article
+      className={`overflow-hidden rounded-2xl border bg-[var(--color-surface)] ${
+        isCompleted ? 'border-emerald-500/40' : 'border-[var(--color-border)]'
+      }`}
+    >
+      <div className="flex items-start gap-3 px-5 py-4 sm:gap-4 sm:px-6 sm:py-5">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)] leading-tight">
-              {business.name}
-            </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold leading-snug text-[var(--color-text-primary)]">{business.name}</h3>
             {isCompleted && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckIcon size={11} strokeWidth={3} />
                 Audited
               </span>
             )}
-            {isOutdated && (
-              <Badge variant="warning" size="sm">Outdated</Badge>
-            )}
+            {isOutdated && <Badge variant="warning" size="sm">Outdated</Badge>}
           </div>
-          <p className="text-sm text-[var(--color-text-tertiary)] mt-1">{business.address}</p>
-          {business.phone && (
-            <a
-              href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
-              className="block w-fit text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-primary-600)] hover:underline"
-            >
-              {business.phone}
-            </a>
-          )}
-          <BusinessEmail
-            email={email}
-            website={business.website}
-            businessId={business.id}
-            onFound={saveEmail}
-          />
-          <ContactLinks contactPage={business.contact_page} socials={business.socials} />
 
+          <div className="mt-2 flex flex-col gap-1.5">
+            {/* On phones the website sits with the other details instead of beside the name */}
+            {business.website && (
+              <span className="sm:hidden">
+                <ContactLine icon={<GlobeIcon size={14} />}>
+                  <a href={business.website} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--color-primary-600)]">
+                    {displayDomain(business.website)}
+                  </a>
+                </ContactLine>
+              </span>
+            )}
+            {business.address && <ContactLine icon={<MapPinIcon size={14} />}>{business.address}</ContactLine>}
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 empty:hidden">
+              {business.phone && (
+                <ContactLine icon={<PhoneIcon size={14} />}>
+                  <a
+                    href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
+                    className="hover:text-[var(--color-primary-600)] hover:underline"
+                  >
+                    {business.phone}
+                  </a>
+                </ContactLine>
+              )}
+              <BusinessEmail email={email} website={business.website} businessId={business.id} onFound={saveEmail} />
+            </div>
+          </div>
+
+          <ContactLinks contactPage={business.contact_page} socials={business.socials} />
           {isCompleted && !isExpanded && audit && <ScorePills audit={audit} />}
         </div>
 
-        <div className="shrink-0 flex items-start gap-2">
+        <div className="flex shrink-0 items-center gap-1">
           {business.website ? (
             <a
               href={business.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[var(--color-primary-600)] hover:underline break-all text-right block max-w-[200px]"
+              className="hidden max-w-[260px] items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-[var(--color-primary-600)] transition-colors hover:bg-[var(--color-bg-secondary)] sm:inline-flex"
             >
-              {business.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              <span className="truncate">{displayDomain(business.website)}</span>
+              <ExternalLinkIcon size={13} className="shrink-0" />
             </a>
           ) : (
-            <Badge variant="warning">No website</Badge>
+            <Badge variant="warning" size="sm">No website</Badge>
           )}
 
-          {/* Accordion toggle — only on completed cards */}
           {isCompleted && (
             <button
+              type="button"
               onClick={() => setIsExpanded((prev) => !prev)}
-              title={isExpanded ? 'Collapse' : 'Expand'}
-              className="cursor-pointer mt-0.5 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors"
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? 'Hide audit details' : 'Show audit details'}
+              className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-              >
-                <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ChevronDownIcon size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Card Body — always visible for in-progress cards, collapsible when completed */}
-      {(!isCompleted || isExpanded) && (
-        <>
-          {!business.website ? (
-            <div className="px-6 py-5">
-              <p className="text-sm text-[var(--color-text-tertiary)]">
-                No website found — skipping audit.
-              </p>
-            </div>
-          ) : (
-            <div className="px-6 py-6 space-y-6">
-              {/* Audit Scores */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-tertiary)]">
-                    Audit Scores
-                  </p>
-                  {auditStatus === 'done' && (
-                    <div className="flex items-center gap-2">
-                      {auditError && <span className="text-xs text-red-500">{auditError}</span>}
-                      <Button variant="ghost" size="sm" onClick={reAudit} disabled={reportStatus === 'loading'}>
-                        Re-audit
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                {auditStatus === 'idle' && (
-                  <Button variant="outline" size="sm" onClick={() => runAudit()}>
-                    Run Audit
-                  </Button>
-                )}
-                {auditStatus === 'loading' && (
-                  <div className="flex items-center gap-2.5 text-sm text-[var(--color-text-secondary)]">
-                    <Spinner size="sm" />
-                    <span>Running audit…</span>
-                  </div>
-                )}
-                {auditStatus === 'error' && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-red-500">{auditError ?? 'Audit failed.'}</span>
-                    <Button variant="ghost" size="sm" onClick={retryAudit}>
-                      Retry
-                    </Button>
-                  </div>
-                )}
-                {auditStatus === 'done' && audit && (
-                  <div className="space-y-6">
-                    <AuditScores audit={audit} />
-                    <AuditChecklist audit={audit} />
-                    <TechStack items={audit.checks?.tech} />
-                  </div>
-                )}
-              </div>
-
-              {/* AI Report */}
-              {auditStatus === 'done' && (
-                <div>
-                  {reportStatus === 'idle' && audit && (
-                    <Button variant="outline" size="sm" onClick={() => generateReport(audit.id)}>
-                      Generate AI Summary
-                    </Button>
-                  )}
-                  {reportStatus === 'loading' && (
-                    <div className="flex items-center gap-2.5 text-sm text-[var(--color-text-secondary)]">
-                      <Spinner size="sm" />
-                      <span>Generating AI report…</span>
-                    </div>
-                  )}
-                  {reportStatus === 'error' && audit && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-red-500">Report generation failed.</span>
-                      <Button variant="ghost" size="sm" onClick={() => generateReport(audit.id)}>
-                        Retry
-                      </Button>
-                    </div>
-                  )}
-                  {reportStatus === 'done' && report && (
-                    <AiReportSection report={report} />
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Card Footer — download button */}
-          {audit && report && (
-            <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-bg-primary)]">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={downloadPdf}
-                isLoading={pdfLoading}
-                disabled={pdfLoading}
-              >
-                {pdfLoading ? 'Generating PDF…' : '↓ Download PDF Report'}
-              </Button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} />}
+    </article>
   );
 }

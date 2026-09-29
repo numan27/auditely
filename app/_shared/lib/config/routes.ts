@@ -12,8 +12,13 @@ export const ROUTES = {
 export const API_ROUTES = {
   AUTH: '/api/auth',
   AUDIT: '/api/audit',
+  AUDIT_URL: '/api/audit-url',
   GENERATE: '/api/generate',
   PDF: '/api/pdf',
+  SEARCH: '/api/search',
+  SEARCHES: '/api/searches',
+  RESULTS: '/api/results',
+  FIND_EMAILS: '/api/find-emails',
 } as const;
 
 // Everything is private (single-admin tool) except these

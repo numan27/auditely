@@ -1,0 +1,57 @@
+// app/_shared/components/auditely/urlAuditPanel/urlAuditPanel.tsx
+
+'use client';
+
+import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
+import { UrlAuditForm } from '@/app/_shared/components/auditely/urlAuditForm/urlAuditForm';
+import { useUrlAudits } from '@/app/_shared/lib/hooks/useUrlAudits';
+
+/** "Audit a website": audit any URL, with every site audited this way listed below */
+export function UrlAuditPanel() {
+  const { businesses, isLoading, isAdding, notice, autoRunId, addWebsite, updateBusiness } = useUrlAudits();
+
+  return (
+    <>
+      <UrlAuditForm onSubmit={addWebsite} isLoading={isAdding} />
+      {notice && (
+        <p
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          className={`mt-3 text-sm ${notice.tone === 'error' ? 'text-red-600 dark:text-red-400' : 'text-[var(--color-text-secondary)]'}`}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      {isLoading ? (
+        <ResultsSkeleton label="Loading your website audits" count={2} />
+      ) : businesses.length === 0 ? (
+        <p className="mt-10 max-w-lg text-sm leading-relaxed text-[var(--color-text-tertiary)]">
+          Paste a prospect&apos;s website to see how it scores on speed, SEO, mobile, SSL and AI search. Every site you
+          audit here is saved in this list.
+        </p>
+      ) : (
+        <section className="mt-10" aria-labelledby="url-audits-title">
+          <h2 id="url-audits-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+            Audited websites
+          </h2>
+          <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
+            {businesses.length} {businesses.length === 1 ? 'site' : 'sites'}, newest first
+          </p>
+          <div className="mt-5 space-y-4">
+            {businesses.map((business) => (
+              <BusinessCard
+                key={business.id}
+                business={business}
+                initialAudit={business.audit}
+                initialReport={business.ai_report}
+                onUpdate={updateBusiness}
+                autoRun={business.id === autoRunId}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}

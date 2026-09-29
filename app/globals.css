@@ -1,17 +1,22 @@
 @import "tailwindcss";
 
+/* `dark:` follows the theme toggle (next-themes puts .dark on <html>), not only the OS setting */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  /* Primary colors */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
+  /* Cobalt accent (light). Dark mode lifts it for contrast on ink surfaces. */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #dde5ff;
+  --color-primary-200: #bccbff;
+  --color-primary-300: #93aaff;
+  --color-primary-400: #6a87fb;
+  --color-primary-500: #4a69f2;
+  --color-primary-600: #2f4fe0;
+  --color-primary-700: #2640bd;
+  --color-primary-800: #213696;
+  --color-primary-900: #1e3178;
+  /* Text on a filled primary surface (buttons, badges) */
+  --color-on-primary: #ffffff;
 
   /* Gray colors */
   --color-gray-50: #f9fafb;
@@ -31,17 +36,18 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
-  /* Background and text */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  /* Surfaces: canvas (page), surface (cards, panels), secondary/tertiary (hover, insets) */
+  --color-bg-primary: #f4f5f9;
+  --color-surface: #ffffff;
+  --color-bg-secondary: #edeff5;
+  --color-bg-tertiary: #e3e6ee;
+  --color-text-primary: #111726;
+  --color-text-secondary: #4b5467;
+  --color-text-tertiary: #6b7489;
 
   /* Border colors */
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
+  --color-border: #e1e4ec;
+  --color-border-hover: #cbd0dc;
 
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -54,17 +60,17 @@
 
   /* Border radius */
   --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(17 23 38 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(17 23 38 / 0.08), 0 2px 4px -2px rgb(17 23 38 / 0.05);
+  --shadow-lg: 0 16px 32px -8px rgb(17 23 38 / 0.14), 0 4px 8px -4px rgb(17 23 38 / 0.06);
+  --shadow-xl: 0 24px 48px -12px rgb(17 23 38 / 0.18);
 
   /* Transitions */
   --transition-fast: 150ms ease-in-out;
@@ -76,16 +82,25 @@
   --foreground: var(--color-text-primary);
 }
 
-/* Dark mode colors */
+/* Dark mode: ink canvas, slate surfaces */
 .dark {
-  --color-bg-primary: #111827;
-  --color-bg-secondary: #1f2937;
-  --color-bg-tertiary: #374151;
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #d1d5db;
-  --color-text-tertiary: #9ca3af;
-  --color-border: #374151;
-  --color-border-hover: #4b5563;
+  --color-primary-400: #93a6ff;
+  --color-primary-500: #8197ff;
+  --color-primary-600: #7089ff;
+  --color-primary-700: #8499ff;
+  --color-on-primary: #0e1320;
+
+  --color-bg-primary: #0e1320;
+  --color-surface: #151b2b;
+  --color-bg-secondary: #1c2336;
+  --color-bg-tertiary: #252d42;
+  --color-text-primary: #eceff6;
+  --color-text-secondary: #a9b1c4;
+  --color-text-tertiary: #8a93a8;
+  --color-border: #262f45;
+  --color-border-hover: #36405a;
+
+  --shadow-lg: 0 16px 32px -8px rgb(0 0 0 / 0.5), 0 4px 8px -4px rgb(0 0 0 / 0.3);
 
   --background: var(--color-bg-primary);
   --foreground: var(--color-text-primary);
@@ -96,12 +111,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -134,7 +151,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gray-400);
+  background: var(--color-border-hover);
   border-radius: var(--radius-full);
 }
 

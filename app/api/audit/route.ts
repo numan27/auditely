@@ -5,6 +5,7 @@ import { supabase } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
 import { isOutdatedAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
+import { isDirectAuditSearch } from '@/app/_shared/lib/config/directAudits';
 
 // PageSpeed can be slow; runAudit keeps PageSpeed inside a 240 s budget.
 export const maxDuration = 300;
@@ -15,7 +16,7 @@ interface BusinessRecord {
   phone: string | null;
   website: string | null;
   email: string | null;
-  searches: { niche: string } | null;
+  searches: { niche: string; location: string } | null;
 }
 
 // Newest audit for this business. Ordered + limited so it still works if
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error: businessError } = await supabase
     .from('businesses')
-    .select('name, address, phone, website, email, searches(niche)')
+    .select('name, address, phone, website, email, searches(niche, location)')
     .eq('id', businessId)
     .single();
 
@@ -113,14 +114,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'GOOGLE_PAGESPEED_API_KEY is not configured' }, { status: 503 });
   }
 
+  // A site added by URL has no business listing: its name is just the domain
+  // and its phone came from the site itself, so there is nothing to compare.
+  const direct = isDirectAuditSearch(business.searches);
+
   let outcome: AuditOutcome;
   try {
     outcome = await runAudit({
       website: business.website,
-      name: business.name,
+      name: direct ? '' : business.name,
       address: business.address,
-      phone: business.phone,
-      niche: business.searches?.niche ?? null,
+      phone: direct ? null : business.phone,
+      niche: direct ? null : (business.searches?.niche ?? null),
       discoverEmail: ensureEmail,
     });
   } catch (err) {

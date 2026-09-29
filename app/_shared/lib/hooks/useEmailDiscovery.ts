@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
+import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 
 const CHUNK_SIZE = 8;
 
@@ -22,6 +23,17 @@ export interface ContactsFound {
 // No email yet, or contact channels never checked (searches from before they existed)
 function pendingIds(businesses: BusinessWithData[]): string[] {
   return businesses.filter((b) => b.website && (!b.email || !b.contacts_checked_at)).map((b) => b.id);
+}
+
+/** Maps a /api/find-emails response to the contacts found per business */
+export function contactsFromResponse(data: { results?: FindResultDto[] }): ContactsFound[] {
+  return (data.results ?? []).map((r) => ({
+    id: r.business_id,
+    email: r.email,
+    phone: r.phone,
+    contact_page: r.contact_page,
+    socials: r.socials ?? {},
+  }));
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -78,7 +90,7 @@ export function useEmailDiscovery(
       for (const ids of chunks) {
         if (cancelled) return;
         try {
-          const res = await fetch('/api/find-emails', {
+          const res = await fetch(API_ROUTES.FIND_EMAILS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ business_ids: ids }),
@@ -86,13 +98,7 @@ export function useEmailDiscovery(
           });
           const data = await res.json();
           if (cancelled) return;
-          const found: ContactsFound[] = (data.results ?? []).map((r: FindResultDto) => ({
-            id: r.business_id,
-            email: r.email,
-            phone: r.phone,
-            contact_page: r.contact_page,
-            socials: r.socials ?? {},
-          }));
+          const found = contactsFromResponse(data);
           if (found.length) onFound(found);
         } catch {
           /* chunk failed (e.g. aborted) — continue with the rest */

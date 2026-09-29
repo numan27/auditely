@@ -66,7 +66,7 @@ const business = {
   phone: '(555) 123-4567',
   website: 'https://smiledental.com',
   email: 'hello@smiledental.com',
-  searches: { niche: 'dentist' },
+  searches: { niche: 'dentist', location: 'springfield' },
 };
 
 const outcome = {
@@ -147,6 +147,22 @@ describe('POST /api/audit', () => {
     expect(db.ops('audits', 'insert')[0].payload).toMatchObject({ business_id: 'biz-1', engine_version: 2 });
     expect(db.ops('audits', 'update')).toHaveLength(0);
     expect(json.audit.id).toBe('audit-1');
+  });
+
+  it('passes the listing (name, phone, niche) for a business found by search', async () => {
+    givenDb({ 'audits.select': [ok(null)], 'audits.insert': [ok(storedAudit())] });
+    await post({ business_id: 'biz-1' });
+    expect(vi.mocked(runAudit).mock.calls[0][0]).toMatchObject({ name: 'Smile Dental', phone: '(555) 123-4567', niche: 'dentist' });
+  });
+
+  it('audits a site added by URL without listing data to compare against', async () => {
+    givenDb({
+      'businesses.select': [ok({ ...business, name: 'smiledental.com', searches: { niche: 'website audits', location: 'added by url' } })],
+      'audits.select': [ok(null)],
+      'audits.insert': [ok(storedAudit())],
+    });
+    await post({ business_id: 'biz-1' });
+    expect(vi.mocked(runAudit).mock.calls[0][0]).toMatchObject({ name: '', phone: null, niche: null });
   });
 
   it('re-reads the stored row when a concurrent insert wins (23505)', async () => {

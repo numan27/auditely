@@ -23,9 +23,12 @@ export function TechStack({ items }: { items?: TechItem[] }) {
 
   return (
     <div>
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-tertiary)]">
-        Built with <span className="normal-case tracking-normal font-normal">(internal)</span>
-      </p>
+      <h4 className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+        Built with
+        <span className="rounded bg-[var(--color-bg-secondary)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-text-tertiary)]">
+          Only you see this
+        </span>
+      </h4>
       <dl className="grid gap-1.5 sm:grid-cols-[auto_1fr] sm:gap-x-4">
         {groups.map((group) => (
           <div key={group.category} className="contents">
@@ -34,7 +37,7 @@ export function TechStack({ items }: { items?: TechItem[] }) {
               {group.items.map((item) => (
                 <span
                   key={item.name}
-                  className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]"
+                  className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]"
                 >
                   {item.name}
                   {item.version ? ` ${item.version}` : ''}

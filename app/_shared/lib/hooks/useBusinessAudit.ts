@@ -16,13 +16,18 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
  *   stale report, so the report is regenerated afterwards
  * - retryAudit(): repeats the last request (normal or forced)
  * Every result is also passed to `onUpdate`, so the results list can sort,
- * filter and export on it.
+ * filter and export on it. With `autoRun`, the audit starts on mount.
  */
+export interface BusinessAuditOptions {
+  initialAudit?: Audit;
+  initialReport?: AiReport;
+  onUpdate?: (businessId: string, update: BusinessUpdate) => void;
+  autoRun?: boolean;
+}
+
 export function useBusinessAudit(
   business: Business,
-  initialAudit?: Audit,
-  initialReport?: AiReport,
-  onUpdate?: (businessId: string, update: BusinessUpdate) => void
+  { initialAudit, initialReport, onUpdate, autoRun = false }: BusinessAuditOptions = {}
 ) {
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
@@ -112,6 +117,15 @@ export function useBusinessAudit(
     },
     [audit, business.id, generateReport, onUpdate]
   );
+
+  // Sites added from the URL form audit straight away. The ref stops Strict
+  // Mode's second effect run from starting a second audit.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoRun || autoStarted.current || initialAudit) return;
+    autoStarted.current = true;
+    runAudit();
+  }, [autoRun, initialAudit, runAudit]);
 
   const reAudit = useCallback(() => runAudit(true), [runAudit]);
   const retryAudit = useCallback(() => runAudit(lastForce.current), [runAudit]);

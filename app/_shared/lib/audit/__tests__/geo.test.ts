@@ -68,6 +68,12 @@ describe('analyzeGeo', () => {
     expect(finding(checks, 'geo.nap.phone')).toMatchObject({ status: 'warn', label: 'Business listing has no phone number' });
   });
 
+  it('leaves out NAP findings when there is no listing at all (site audited by URL)', () => {
+    const { score, checks } = analyzeGeo(structured(entity()), nap({ name: 'n/a', address: 'n/a', phone: 'n/a' }), null);
+    expect(score).toBe(100);
+    expect(checks.findings.some((f) => f.id.startsWith('geo.nap.'))).toBe(false);
+  });
+
   it('shows the site value on a mismatch', () => {
     const { score, checks } = analyzeGeo(
       structured(entity()),

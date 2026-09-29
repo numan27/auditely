@@ -9,8 +9,9 @@ export function LogoutButton() {
 
   return (
     <button
+      type="button"
       onClick={logout}
-      className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+      className="cursor-pointer whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"
     >
       Log out
     </button>

@@ -36,9 +36,9 @@ export function analyzeGeo(
 ): { score: number; checks: GeoChecks } {
   const findings: Finding[] = [];
   let score = 0;
-  const add = (points: number, finding: Finding) => {
+  const add = (points: number, finding: Finding | null) => {
     score += points;
-    findings.push(finding);
+    if (finding) findings.push(finding);
   };
 
   // 1. JSON-LD present (15)
@@ -85,12 +85,15 @@ export function analyzeGeo(
       : { id: 'geo.entityComplete', status: entity ? 'warn' : 'fail', label: `Schema is missing ${missing.join(', ')}` }
   );
 
-  // 4. NAP vs Google (10 / 15 / 15)
-  add(napPoints(nap.name, 10), napFinding('geo.nap.name', 'Business name', nap.name, nap.site.name));
-  add(napPoints(nap.address, 15), napFinding('geo.nap.address', 'Address', nap.address, nap.site.address));
+  // 4. NAP vs Google (10 / 15 / 15). A site audited by URL has no listing at
+  //    all: it keeps the points, without findings about a listing that doesn't exist.
+  const hasListing = [nap.name, nap.address, nap.phone].some((status) => status !== 'n/a');
+  const napCheck = (finding: Finding) => (hasListing ? finding : null);
+  add(napPoints(nap.name, 10), napCheck(napFinding('geo.nap.name', 'Business name', nap.name, nap.site.name)));
+  add(napPoints(nap.address, 15), napCheck(napFinding('geo.nap.address', 'Address', nap.address, nap.site.address)));
   add(
     napPoints(nap.phone, 15),
-    napFinding('geo.nap.phone', 'Phone number', nap.phone, nap.site.phones.map(formatPhone).join(', ') || null)
+    napCheck(napFinding('geo.nap.phone', 'Phone number', nap.phone, nap.site.phones.map(formatPhone).join(', ') || null))
   );
 
   // 5. Extras (5)

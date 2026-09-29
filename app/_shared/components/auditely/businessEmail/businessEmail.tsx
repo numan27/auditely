@@ -3,6 +3,9 @@
 'use client';
 
 import { useState } from 'react';
+import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
+import { CheckIcon, CopyIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 
 interface BusinessEmailProps {
   email: string | null;
@@ -33,7 +36,7 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
     setFinding(true);
     setNotFound(false);
     try {
-      const res = await fetch('/api/find-emails', {
+      const res = await fetch(API_ROUTES.FIND_EMAILS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ business_ids: [businessId], apiFallback: true }),
@@ -51,30 +54,22 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
 
   if (email) {
     return (
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <a
-          href={`mailto:${email}`}
-          className="text-sm text-[var(--color-primary-600)] hover:underline"
-        >
-          {email}
-        </a>
-        <button
-          onClick={copyEmail}
-          title="Copy email"
-          className="cursor-pointer text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors"
-        >
-          {copied ? (
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          ) : (
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          )}
-        </button>
-      </div>
+      <ContactLine icon={<MailIcon size={14} />}>
+        <span className="inline-flex items-center gap-1.5">
+          <a href={`mailto:${email}`} className="font-medium text-[var(--color-text-primary)] hover:text-[var(--color-primary-600)] hover:underline">
+            {email}
+          </a>
+          <button
+            type="button"
+            onClick={copyEmail}
+            title={copied ? 'Copied' : 'Copy email'}
+            aria-label={copied ? 'Email copied' : 'Copy email'}
+            className="cursor-pointer rounded p-0.5 text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+          >
+            {copied ? <CheckIcon size={13} className="text-emerald-500" /> : <CopyIcon size={13} />}
+          </button>
+        </span>
+      </ContactLine>
     );
   }
 
@@ -82,14 +77,15 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
   if (!website) return null;
 
   return (
-    <div className="mt-0.5">
+    <ContactLine icon={<MailIcon size={14} />}>
       <button
+        type="button"
         onClick={handleFind}
         disabled={finding}
-        className="cursor-pointer text-sm text-[var(--color-primary-600)] hover:underline disabled:opacity-60 disabled:cursor-default"
+        className="cursor-pointer font-medium text-[var(--color-primary-600)] hover:underline disabled:cursor-default disabled:opacity-60"
       >
-        {finding ? 'Finding email…' : notFound ? 'No email found — try again' : 'Find email'}
+        {finding ? 'Finding email…' : notFound ? 'No email found. Try again' : 'Find email'}
       </button>
-    </div>
+    </ContactLine>
   );
 }

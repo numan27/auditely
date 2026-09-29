@@ -33,7 +33,12 @@ export function LeadToolbar({
 }: LeadToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter results">
+      {/* One scrollable row on phones, wrapping on wider screens */}
+      <div
+        className="-mx-4 flex w-[calc(100%+2rem)] items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0"
+        role="group"
+        aria-label="Filter results"
+      >
         {FILTER_OPTIONS.map(({ value, label }) => {
           const active = filters.includes(value);
           return (
@@ -42,10 +47,10 @@ export function LeadToolbar({
               type="button"
               aria-pressed={active}
               onClick={() => onToggleFilter(value)}
-              className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 active
                   ? 'border-[var(--color-primary-600)] bg-[var(--color-primary-600)]/10 text-[var(--color-primary-600)]'
-                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
+                  : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
               }`}
             >
               {active && (
@@ -68,7 +73,7 @@ export function LeadToolbar({
           <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value as LeadSort)}
-            className="cursor-pointer rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2 py-1 text-sm text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)]"
+            className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-sm font-medium text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)]"
           >
             {SORT_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>

@@ -3,8 +3,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Input } from '@/app/_shared/components/ui/input/input';
 import { Button } from '@/app/_shared/components/ui/button/button';
+import { CommandField } from '@/app/_shared/components/ui/commandField/commandField';
+import { MapPinIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
 
 interface Suggestion {
   description: string;
@@ -93,42 +94,60 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-      <div className="flex-1">
-        <Input
-          placeholder="Business type (e.g. dentists, plumbers)"
-          value={niche}
-          onChange={(e) => setNiche(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-md sm:flex-row sm:items-center"
+    >
+      <CommandField
+        label="Business type"
+        icon={<SearchIcon size={18} />}
+        placeholder="Dentists, plumbers, law firms…"
+        value={niche}
+        onChange={(e) => setNiche(e.target.value)}
+        disabled={isLoading}
+      />
 
-      <div className="flex-1 relative" ref={containerRef}>
-        <Input
-          placeholder="City or location (e.g. Los Angeles)"
+      <span aria-hidden className="mx-4 h-px bg-[var(--color-border)] sm:mx-0 sm:h-8 sm:w-px" />
+
+      <div className="relative flex min-w-0 flex-1" ref={containerRef}>
+        <CommandField
+          label="Location"
+          icon={<MapPinIcon size={18} />}
+          placeholder="City or area, like Austin, TX"
           value={location}
           onChange={(e) => handleLocationChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
           autoComplete="off"
+          role="combobox"
+          aria-expanded={isOpen && suggestions.length > 0}
+          aria-controls="location-suggestions"
+          aria-autocomplete="list"
         />
         {isOpen && suggestions.length > 0 && (
-          <ul className="absolute z-50 top-full mt-1 left-0 right-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] shadow-lg overflow-hidden">
+          <ul
+            id="location-suggestions"
+            role="listbox"
+            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg"
+          >
             {suggestions.map((s, i) => (
               <li
                 key={s.placeId}
+                role="option"
+                aria-selected={i === activeIndex}
                 onMouseDown={() => handleSelect(s.description)}
-                className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                className={`flex cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
                   i === activeIndex
-                    ? 'bg-[var(--color-primary-600)] text-white'
-                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+                    ? 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
               >
+                <MapPinIcon size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
                 {s.description}
               </li>
             ))}
             {/* Attribution required by Geoapify's free plan */}
-            <li className="px-4 py-1.5 text-[11px] text-right text-[var(--color-text-tertiary)] border-t border-[var(--color-border)]">
+            <li className="border-t border-[var(--color-border)] px-4 pb-1 pt-2 text-right text-[11px] text-[var(--color-text-tertiary)]">
               Powered by{' '}
               <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" className="underline">
                 Geoapify
@@ -141,10 +160,12 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
       <Button
         type="submit"
         variant="primary"
+        size="md"
         isLoading={isLoading}
         disabled={isLoading || !niche.trim() || !location.trim()}
+        className="h-12"
       >
-        {isLoading ? 'Finding…' : 'Find Leads →'}
+        {isLoading ? 'Searching…' : 'Find leads'}
       </Button>
     </form>
   );

@@ -84,7 +84,7 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
       {status && (
         <div
           role="status"
-          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-3 text-sm shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm shadow-lg"
         >
           <div className="flex items-start justify-between gap-3">
             {status.kind === 'copied' ? (
@@ -114,7 +114,7 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
               rel="noopener noreferrer"
               className="mt-2 inline-block font-medium text-[var(--color-primary-600)] hover:underline"
             >
-              Open a new Google Sheet ↗
+              Open a new Google Sheet
             </a>
           )}
         </div>

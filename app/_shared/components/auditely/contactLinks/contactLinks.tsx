@@ -48,14 +48,14 @@ export function ContactLinks({ contactPage, socials }: ContactLinksProps) {
   if (links.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1.5 mt-1.5">
+    <div className="mt-3 flex flex-wrap gap-1.5">
       {links.map((link) => (
         <a
           key={link.label}
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary-600)] hover:text-[var(--color-primary-600)]"
+          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-bg-secondary)] px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
         >
           {link.icon}
           {link.label}

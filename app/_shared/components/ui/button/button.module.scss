@@ -5,8 +5,8 @@
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  font-weight: 500;
-  border-radius: var(--radius-md);
+  font-weight: 600;
+  border-radius: var(--radius-lg);
   transition: all var(--transition-fast);
   cursor: pointer;
   border: none;
@@ -28,8 +28,8 @@
   }
 
   &--md {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 1rem;
+    padding: var(--spacing-sm) 1.25rem;
+    font-size: 0.9375rem;
   }
 
   &--lg {
@@ -40,7 +40,7 @@
   // Variants
   &--primary {
     background-color: var(--color-primary-600);
-    color: white;
+    color: var(--color-on-primary);
 
     &:hover:not(:disabled) {
       background-color: var(--color-primary-700);
