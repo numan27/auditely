@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   contacts_checked_at TIMESTAMPTZ,
   -- When the paid email APIs were tried (once automatically, or via "Find email")
   email_lookup_at     TIMESTAMPTZ,
+  -- Google rating and review count (NULL = unknown)
+  rating              NUMERIC(2, 1),
+  review_count        INTEGER,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -53,6 +56,18 @@ CREATE TABLE IF NOT EXISTS ai_reports (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 5. pagespeed_cache: PageSpeed results shared by every listing of the same
+--    website for 30 days, keyed by websiteKey() (no scheme / "www." / trailing slash)
+CREATE TABLE IF NOT EXISTS pagespeed_cache (
+  url_key        TEXT        NOT NULL,
+  strategy       TEXT        NOT NULL CHECK (strategy IN ('mobile', 'desktop')),
+  summary        JSONB       NOT NULL,
+  is_on_https    BOOLEAN,
+  engine_version INTEGER     NOT NULL,
+  fetched_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (url_key, strategy)
+);
+
 -- Indexes for common lookups (audits/ai_reports are covered by their UNIQUE indexes)
 CREATE INDEX IF NOT EXISTS idx_businesses_search_id  ON businesses(search_id);
 CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location, created_at);
@@ -63,3 +78,4 @@ ALTER TABLE searches   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audits     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagespeed_cache ENABLE ROW LEVEL SECURITY;

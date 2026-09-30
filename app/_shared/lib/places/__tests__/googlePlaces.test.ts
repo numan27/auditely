@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { autocompleteGoogleCities } from '@/app/_shared/lib/places/googlePlaces';
+import { autocompleteGoogleCities, searchGooglePlaces } from '@/app/_shared/lib/places/googlePlaces';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
@@ -31,5 +31,37 @@ describe('autocompleteGoogleCities', () => {
   it('returns nothing when Google errors', async () => {
     fetchMock.mockResolvedValue(json({ error: { status: 'PERMISSION_DENIED' } }, 403));
     expect(await autocompleteGoogleCities('aus', 'key')).toEqual([]);
+  });
+});
+
+describe('searchGooglePlaces', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it("returns each place's Google rating and review count", async () => {
+    // Google leaves rating and userRatingCount out for a place nobody has reviewed
+    fetchMock.mockImplementation(async () =>
+      json({
+        places: [
+          { id: 'a', displayName: { text: 'Smile Dental' }, formattedAddress: '1 Main St', rating: 4.6, userRatingCount: 123 },
+          { id: 'b', displayName: { text: 'New Dental' }, formattedAddress: '2 Main St' },
+        ],
+      })
+    );
+    const outcome = await searchGooglePlaces('dentist', 'austin', 'key');
+
+    expect(outcome).toEqual({
+      ok: true,
+      places: [
+        { name: 'Smile Dental', address: '1 Main St', website: null, phone: null, rating: 4.6, reviewCount: 123 },
+        { name: 'New Dental', address: '2 Main St', website: null, phone: null, rating: null, reviewCount: 0 },
+      ],
+    });
+    const mask: string = fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask'];
+    expect(mask.split(',')).toEqual(expect.arrayContaining(['places.rating', 'places.userRatingCount']));
   });
 });

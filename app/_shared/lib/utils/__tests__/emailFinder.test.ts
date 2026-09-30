@@ -87,6 +87,14 @@ describe('findEmail with prefetched homepage HTML', () => {
     expect(await findEmail('https://smiledental.com/', { homepageHtml })).toBe('christine.hradek@smiledental.com');
   });
 
+  it('stops reading a page after 2 MB, like the homepage fetch', async () => {
+    const huge = `${'<p>Our services</p>\n'.repeat(120_000)}<p>office@smiledental.com</p>`; // ~2.4 MB
+    fetchMock.mockImplementation(async (url: string) =>
+      url === 'https://smiledental.com/contact' ? new Response(huge, { status: 200 }) : new Response('', { status: 404 })
+    );
+    expect(await findEmail('https://smiledental.com/', { homepageHtml: '<p>No email here</p>' })).toBeNull();
+  });
+
   it('reads at most 8 extra pages, contact-like ones first', async () => {
     const links =
       Array.from({ length: 20 }, (_, i) => `<a href="/page-${i}">p</a>`).join('') + '<a href="/new-patients">New patients</a>';

@@ -9,6 +9,25 @@ export const CURRENT_ENGINE_VERSION = 2;
 export const isOutdatedAudit = (engineVersion: number | null | undefined): boolean =>
   (engineVersion ?? 1) < CURRENT_ENGINE_VERSION;
 
+/** Audits older than this are shown as stale and re-run on the next audit request. */
+export const AUDIT_MAX_AGE_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+/**
+ * True once an audit is over 30 days old. Its age counts from the older of the
+ * audit itself and its PageSpeed results, which can be reused from an earlier
+ * test of the same website.
+ */
+export function isStaleAudit(
+  audit: { created_at: string; checks?: { psi?: { measuredAt?: string } } | null },
+  now: number = Date.now()
+): boolean {
+  const measured = [audit.created_at, audit.checks?.psi?.measuredAt]
+    .map((iso) => (iso ? Date.parse(iso) : NaN))
+    .filter((time) => !Number.isNaN(time));
+  return measured.length > 0 && now - Math.min(...measured) > AUDIT_MAX_AGE_DAYS * DAY_MS;
+}
+
 export type FindingStatus = 'pass' | 'warn' | 'fail';
 
 // `id` is stable — Project B keys its plain-English impact translations on it
@@ -86,7 +105,12 @@ export interface AuditChecks {
   geo: GeoChecks | null;
   aeo: AeoChecks | null;
   site: { ok: boolean; finalUrl: string | null; status: number | null; reason?: string };
-  psi: { mobile: string; desktop: string }; // 'ok' or the failure reason
+  psi: {
+    mobile: string; // 'ok' or the failure reason
+    desktop: string;
+    /** When the PageSpeed results were measured, if reused from an earlier test of the same website */
+    measuredAt?: string;
+  };
   /** Internal only (never in the PDF or AI prompt). Absent on audits made before it existed. */
   tech?: TechItem[];
 }
@@ -97,6 +121,8 @@ export interface AuditInput {
   address: string;
   phone: string | null;
   niche: string | null;
+  /** Re-audit: measure PageSpeed afresh instead of reusing a cached result */
+  refreshPageSpeed?: boolean;
   /** Called once the homepage is fetched (html is null if it couldn't be read). */
   discoverEmail?: (homepageHtml: string | null) => Promise<string | null>;
 }

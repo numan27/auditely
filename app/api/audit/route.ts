@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
-import { isOutdatedAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
+import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
+import { isOutdatedAudit, isStaleAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
 import { isDirectAuditSearch } from '@/app/_shared/lib/config/directAudits';
 
 // PageSpeed can be slow; runAudit keeps PageSpeed inside a 240 s budget.
@@ -100,8 +101,8 @@ export async function POST(request: NextRequest) {
 
   const existing = await findLatestAudit(businessId);
 
-  // Current-engine audit and no Re-audit requested → serve the cached audit
-  if (existing && !force && !isOutdatedAudit(existing.engine_version)) {
+  // Current-engine audit under 30 days old and no Re-audit requested → serve the cached audit
+  if (existing && !force && !isOutdatedAudit(existing.engine_version) && !isStaleAudit(existing)) {
     return NextResponse.json({ audit: existing, email: await ensureEmail() });
   }
 
@@ -118,16 +119,22 @@ export async function POST(request: NextRequest) {
   // and its phone came from the site itself, so there is nothing to compare.
   const direct = isDirectAuditSearch(business.searches);
 
+  // PageSpeed results are shared with other listings of the same website for
+  // 30 days; a Re-audit measures afresh.
   let outcome: AuditOutcome;
   try {
-    outcome = await runAudit({
-      website: business.website,
-      name: direct ? '' : business.name,
-      address: business.address,
-      phone: direct ? null : business.phone,
-      niche: direct ? null : (business.searches?.niche ?? null),
-      discoverEmail: ensureEmail,
-    });
+    outcome = await runAudit(
+      {
+        website: business.website,
+        name: direct ? '' : business.name,
+        address: business.address,
+        phone: direct ? null : business.phone,
+        niche: direct ? null : (business.searches?.niche ?? null),
+        refreshPageSpeed: force,
+        discoverEmail: ensureEmail,
+      },
+      { pageSpeedStore }
+    );
   } catch (err) {
     if (err instanceof AuditUnavailableError) {
       return NextResponse.json({ error: `Couldn't audit this site: ${err.message}` }, { status: 502 });

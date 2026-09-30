@@ -6,6 +6,7 @@
 
 import { FREE_MAIL_DOMAINS, isValidBusinessEmail } from '@/app/_shared/lib/utils/emailValidation';
 import { lookupEmailViaApis } from '@/app/_shared/lib/utils/emailApis';
+import { readCapped } from '@/app/_shared/lib/audit/siteFetch';
 
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const MAILTO_REGEX = /href=["']mailto:([^"'?\s]+)/gi;
@@ -27,6 +28,9 @@ const HR_PAGE = /career|job|employment|hiring|recruit/i;
 const NOT_A_PAGE = /\.(pdf|jpe?g|png|gif|svg|webp|ico|css|js|zip|docx?|xlsx?|mp[34])$/i;
 // Machine endpoints (mostly WordPress) that would eat the page budget
 const TECHNICAL_PATH = /\/(feed|wp-json|wp-admin|wp-login\.php|xmlrpc\.php|cdn-cgi|cart|checkout)(\/|$)/i;
+
+// Same cap as the homepage fetch: a huge page can't exhaust the function's memory
+const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 
 const GENERIC_PREFIXES = new Set([
   'info', 'contact', 'hello', 'support', 'admin', 'sales', 'office',
@@ -122,7 +126,11 @@ async function fetchPage(url: string): Promise<string | null> {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Auditely/1.0)' },
       redirect: 'follow',
     });
-    return res.ok ? await res.text() : null;
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
+    return await readCapped(res, MAX_PAGE_BYTES);
   } catch {
     return null;
   }

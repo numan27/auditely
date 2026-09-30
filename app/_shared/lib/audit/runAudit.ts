@@ -6,6 +6,7 @@
 
 import * as cheerio from 'cheerio';
 import { runPageSpeed, categoryScore, type PageSpeedResult } from '@/app/_shared/lib/audit/pageSpeed';
+import { withPageSpeedCache, type PageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedCache';
 import { fetchSite, type SiteFetchResult } from '@/app/_shared/lib/audit/siteFetch';
 import { checkTls } from '@/app/_shared/lib/audit/tlsCheck';
 import { parseStructuredData } from '@/app/_shared/lib/audit/analyzers/structuredData';
@@ -39,6 +40,8 @@ export interface AuditDeps {
   fetchSite: typeof fetchSite;
   checkTls: typeof checkTls;
   now: () => number;
+  /** Shared 30-day PageSpeed cache; without one PageSpeed always runs */
+  pageSpeedStore?: PageSpeedStore;
 }
 
 const defaultDeps: AuditDeps = { runPageSpeed, fetchSite, checkTls, now: () => Date.now() };
@@ -81,7 +84,17 @@ function resolveSsl(tls: SslCheck | null, psi: PageSpeedResult[]): SslCheck {
   };
 }
 
-export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps): Promise<AuditOutcome> {
+// Oldest measurement among PageSpeed results reused from the cache, if any
+function reusedMeasuredAt(psi: PageSpeedResult[]): string | undefined {
+  const times = psi.flatMap((r) => (r.ok && r.measuredAt ? [Date.parse(r.measuredAt)] : []));
+  return times.length ? new Date(Math.min(...times)).toISOString() : undefined;
+}
+
+export async function runAudit(input: AuditInput, overrides: Partial<AuditDeps> = {}): Promise<AuditOutcome> {
+  const deps: AuditDeps = { ...defaultDeps, ...overrides };
+  const pageSpeed = deps.pageSpeedStore
+    ? withPageSpeedCache(deps.runPageSpeed, deps.pageSpeedStore, { refresh: input.refreshPageSpeed, now: deps.now })
+    : deps.runPageSpeed;
   let listedHost: string;
   try {
     listedHost = new URL(input.website).hostname;
@@ -94,8 +107,8 @@ export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps)
   const finalHost = (site: SiteFetchResult) => (site.finalUrl ? new URL(site.finalUrl).hostname : listedHost);
 
   const [mobile, desktop, site, tls, email] = await Promise.all([
-    deps.runPageSpeed(input.website, 'mobile', deadline),
-    deps.runPageSpeed(input.website, 'desktop', deadline),
+    pageSpeed(input.website, 'mobile', deadline),
+    pageSpeed(input.website, 'desktop', deadline),
     sitePromise,
     sitePromise
       .then((s) => deps.checkTls(finalHost(s)))
@@ -129,6 +142,7 @@ export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps)
   const mobileSummary = mobile.ok ? mobile.summary : null;
   const desktopSummary = desktop.ok ? desktop.summary : null;
   const ssl = resolveSsl(tls, [mobile, desktop]);
+  const measuredAt = reusedMeasuredAt([mobile, desktop]);
   const siteReason = site.reason ?? analysisReason ?? page?.limitedReason ?? undefined;
   // Outside analyzePage: a blocked site's headers still reveal its hosting
   let tech: TechItem[] = [];
@@ -158,7 +172,11 @@ export async function runAudit(input: AuditInput, deps: AuditDeps = defaultDeps)
           status: site.status,
           ...(siteReason ? { reason: siteReason } : {}),
         },
-        psi: { mobile: mobile.ok ? 'ok' : mobile.reason, desktop: desktop.ok ? 'ok' : desktop.reason },
+        psi: {
+          mobile: mobile.ok ? 'ok' : mobile.reason,
+          desktop: desktop.ok ? 'ok' : desktop.reason,
+          ...(measuredAt ? { measuredAt } : {}),
+        },
         tech,
       },
       raw_json: { mobile: mobileSummary, desktop: desktopSummary },

@@ -25,6 +25,10 @@ export interface Business {
   contacts_checked_at: string | null;
   /** When the paid email APIs were tried (automatically once, or via "Find email"); null = never */
   email_lookup_at: string | null;
+  /** Google rating (1–5); null when unrated or found before ratings were stored */
+  rating: number | null;
+  /** Google review count; null when unknown (older searches, providers without reviews) */
+  review_count: number | null;
   created_at: string;
 }
 

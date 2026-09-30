@@ -14,6 +14,8 @@ const business = (overrides: Partial<BusinessWithData> = {}): BusinessWithData =
   socials: { facebook: 'https://facebook.com/washdent' },
   contacts_checked_at: null,
   email_lookup_at: null,
+  rating: null,
+  review_count: null,
   created_at: '2026-09-01T00:00:00Z',
   ...overrides,
 });
@@ -29,6 +31,12 @@ describe('leadTable', () => {
     expect(table).toHaveLength(3);
     expect(table[0].slice(0, 4)).toEqual(['Name', 'Email', 'Phone', 'Website']);
     expect(column(table, 'Name')).toEqual(['Washington Center for Dentistry', 'Other']);
+  });
+
+  it("includes the business's Google rating and review count", () => {
+    const table = leadTable([business({ rating: 4.6, review_count: 123 }), business({ rating: null, review_count: 0 })]);
+    expect(column(table, 'Google rating')).toEqual(['4.6', '']);
+    expect(column(table, 'Google reviews')).toEqual(['123', '0']);
   });
 
   it('leaves audit columns blank for unaudited businesses', () => {

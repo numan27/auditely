@@ -4,6 +4,7 @@ import type { PageSpeedResult, PageSpeedStrategy } from '@/app/_shared/lib/audit
 import type { SiteFetchResult } from '@/app/_shared/lib/audit/siteFetch';
 import type { AuditInput } from '@/app/_shared/lib/audit/types';
 import { DENTIST_HOME, JS_SHELL } from '@/app/_shared/lib/audit/__tests__/fixtures';
+import { memoryPageSpeedStore } from '@/app/_shared/lib/audit/__tests__/memoryPageSpeedStore';
 
 const psiOk = (perf: number, seo: number | null, isOnHttps: boolean | null = true): PageSpeedResult => ({
   ok: true,
@@ -156,5 +157,36 @@ describe('runAudit', () => {
 
     const failing = await runAudit({ ...input, discoverEmail: vi.fn(async () => { throw new Error('boom'); }) }, deps());
     expect(failing.email).toBeNull();
+  });
+
+  describe('with the shared PageSpeed cache', () => {
+    const NOW = Date.parse('2026-09-30T12:00:00Z');
+    const daysAgo = (days: number) => new Date(NOW - days * 86_400_000).toISOString();
+    const cached = (perf: number, fetchedAt: string) => {
+      const result = psiOk(perf, 0.8);
+      return { summary: result.ok ? result.summary : null!, isOnHttps: true, engineVersion: 2, fetchedAt };
+    };
+    // Stored by an audit of another listing with the same website
+    const store = () =>
+      memoryPageSpeedStore({
+        'smiledental.com|mobile': cached(0.5, daysAgo(10)),
+        'smiledental.com|desktop': cached(0.6, daysAgo(20)),
+      }).store;
+
+    it('reuses the stored results and records when they were measured', async () => {
+      const d = deps({ pageSpeedStore: store(), now: () => NOW });
+      const { row } = await runAudit(input, d);
+      expect(d.runPageSpeed).not.toHaveBeenCalled();
+      expect(row).toMatchObject({ mobile_score: 50, performance_score: 60, seo_score: 80 });
+      expect(row.checks.psi).toEqual({ mobile: 'ok', desktop: 'ok', measuredAt: daysAgo(20) });
+    });
+
+    it('runs PageSpeed afresh for a Re-audit', async () => {
+      const d = deps({ pageSpeedStore: store(), now: () => NOW });
+      const { row } = await runAudit({ ...input, refreshPageSpeed: true }, d);
+      expect(d.runPageSpeed).toHaveBeenCalledTimes(2);
+      expect(row).toMatchObject({ mobile_score: 38, performance_score: 42 });
+      expect(row.checks.psi).toEqual({ mobile: 'ok', desktop: 'ok' });
+    });
   });
 });

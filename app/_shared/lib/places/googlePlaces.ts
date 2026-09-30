@@ -69,9 +69,17 @@ function buildSubQueries(niche: string, location: string): string[] {
 
 // Places API (New) Text Search returns website + phone inline, so no separate
 // Place Details request is needed. The field mask controls which fields (and
-// billing tier) are returned.
-const FIELD_MASK =
-  'places.id,places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber';
+// billing tier) are returned: website and phone already put the request in the
+// Enterprise tier, which also covers rating and review count at no extra cost.
+const FIELD_MASK = [
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.websiteUri',
+  'places.nationalPhoneNumber',
+  'places.rating',
+  'places.userRatingCount',
+].join(',');
 
 interface NewPlace {
   id: string;
@@ -79,6 +87,8 @@ interface NewPlace {
   formattedAddress?: string;
   websiteUri?: string;
   nationalPhoneNumber?: string;
+  rating?: number;
+  userRatingCount?: number;
 }
 
 interface SearchResponseData {
@@ -136,6 +146,9 @@ export async function searchGooglePlaces(
           address: place.formattedAddress ?? '',
           website: place.websiteUri ?? null,
           phone: place.nationalPhoneNumber ?? null,
+          // Google omits both for a place with no reviews
+          rating: place.rating ?? null,
+          reviewCount: place.userRatingCount ?? 0,
         });
       }
     }

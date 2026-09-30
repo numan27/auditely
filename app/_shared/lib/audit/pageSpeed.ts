@@ -23,7 +23,8 @@ const KEY_AUDIT_IDS = [
 export type PageSpeedStrategy = 'mobile' | 'desktop';
 
 export type PageSpeedResult =
-  | { ok: true; summary: LighthouseSummary; isOnHttps: boolean | null }
+  // measuredAt: set when the result was reused from an earlier test (see pageSpeedCache.ts)
+  | { ok: true; summary: LighthouseSummary; isOnHttps: boolean | null; measuredAt?: string }
   | { ok: false; reason: string };
 
 interface LighthouseResult {

@@ -13,6 +13,8 @@ const COLUMNS: [header: string, value: (b: BusinessWithData) => Cell][] = [
   ['Phone', (b) => b.phone],
   ['Website', (b) => b.website],
   ['Address', (b) => b.address],
+  ['Google rating', (b) => b.rating],
+  ['Google reviews', (b) => b.review_count],
   ['Contact page', (b) => b.contact_page],
   ['Facebook', (b) => b.socials?.facebook],
   ['Instagram', (b) => b.socials?.instagram],
