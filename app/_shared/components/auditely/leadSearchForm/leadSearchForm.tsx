@@ -146,13 +146,18 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
                 {s.description}
               </li>
             ))}
-            {/* Attribution required by Geoapify's free plan */}
+            {/* Google requires attribution when Places suggestions are shown without a map */}
+            <li className="border-t border-[var(--color-border)] px-4 pb-1 pt-2 text-right text-[11px] text-[var(--color-text-tertiary)]">
+              Powered by Google
+            </li>
+            {/* Geoapify attribution (its free plan requires it) — restore if autocomplete switches back:
             <li className="border-t border-[var(--color-border)] px-4 pb-1 pt-2 text-right text-[11px] text-[var(--color-text-tertiary)]">
               Powered by{' '}
               <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" className="underline">
                 Geoapify
               </a>
             </li>
+            */}
           </ul>
         )}
       </div>

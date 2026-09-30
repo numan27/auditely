@@ -1,8 +1,59 @@
 // app/_shared/lib/places/googlePlaces.ts
 
-// Google Places API (New) Text Search — the production provider.
+// Google Places API (New): Text Search for businesses, Autocomplete for cities.
 
-import type { PlaceResult, PlacesSearchOutcome } from '@/app/_shared/lib/places/types';
+import type { CitySuggestion, PlaceResult, PlacesSearchOutcome } from '@/app/_shared/lib/places/types';
+
+// Places API (New) autocomplete response shape (only fields we read).
+interface PlacePrediction {
+  placePrediction?: {
+    placeId?: string;
+    text?: { text?: string };
+  };
+}
+
+export async function autocompleteGoogleCities(input: string, apiKey: string): Promise<CitySuggestion[]> {
+  try {
+    // Places API (New) — legacy `maps/api/place/autocomplete/json` is disabled
+    // for projects created after March 2025 and returns REQUEST_DENIED.
+    const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+      },
+      body: JSON.stringify({
+        input,
+        includedPrimaryTypes: ['(cities)'],
+        includedRegionCodes: ['us'], // US-only results
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error(
+        '[autocomplete] Places API (New) error:',
+        data?.error?.status ?? res.status,
+        data?.error?.message ?? ''
+      );
+      return [];
+    }
+
+    const suggestions: CitySuggestion[] = [];
+    for (const s of (data.suggestions ?? []) as PlacePrediction[]) {
+      const description = s.placePrediction?.text?.text;
+      const placeId = s.placePrediction?.placeId;
+      if (description && placeId) {
+        suggestions.push({ description, placeId });
+      }
+    }
+    return suggestions;
+  } catch {
+    return [];
+  }
+}
 
 // 5 geographic sub-queries to work around Google Places' 20-result-per-query cap.
 // Deduplication by place id gives up to ~100 unique results per search.

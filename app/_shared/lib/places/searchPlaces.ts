@@ -1,9 +1,9 @@
 // app/_shared/lib/places/searchPlaces.ts
 
-// Picks the business-search provider. Staging uses free Geoapify; production
-// sets PLACES_PROVIDER=google to use Google Places.
+// Business search runs on Google Places. The free Geoapify provider is kept but
+// switched off — to use it again, uncomment its import and the block below.
 
-import { searchGeoapifyPlaces } from '@/app/_shared/lib/places/geoapify';
+// import { searchGeoapifyPlaces } from '@/app/_shared/lib/places/geoapify';
 import { searchGooglePlaces } from '@/app/_shared/lib/places/googlePlaces';
 import type { PlacesSearchOutcome } from '@/app/_shared/lib/places/types';
 
@@ -14,13 +14,14 @@ const missingKey = (name: string): PlacesSearchOutcome => ({
 });
 
 export async function searchPlaces(niche: string, location: string): Promise<PlacesSearchOutcome> {
-  if (process.env.PLACES_PROVIDER === 'google') {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    if (!apiKey) return missingKey('GOOGLE_PLACES_API_KEY');
-    return searchGooglePlaces(niche, location, apiKey);
-  }
+  // Geoapify (free, OpenStreetMap data) — disabled; PLACES_PROVIDER is ignored meanwhile.
+  // if (process.env.PLACES_PROVIDER !== 'google') {
+  //   const geoapifyKey = process.env.GEOAPIFY_API_KEY;
+  //   if (!geoapifyKey) return missingKey('GEOAPIFY_API_KEY');
+  //   return searchGeoapifyPlaces(niche, location, geoapifyKey);
+  // }
 
-  const apiKey = process.env.GEOAPIFY_API_KEY;
-  if (!apiKey) return missingKey('GEOAPIFY_API_KEY');
-  return searchGeoapifyPlaces(niche, location, apiKey);
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) return missingKey('GOOGLE_PLACES_API_KEY');
+  return searchGooglePlaces(niche, location, apiKey);
 }
