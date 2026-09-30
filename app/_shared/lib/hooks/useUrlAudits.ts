@@ -5,10 +5,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
-import { contactsFromResponse } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import { contactsFromResponse, type ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import { emailFinderNotice } from '@/app/_shared/lib/utils/emailFinderNotice';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+/** Which button's action is running: "Run audit" or "Find email" */
+export type UrlAuditBusy = 'audit' | 'email' | null;
 
 export interface UrlAuditNotice {
   tone: 'error' | 'info';
@@ -20,12 +24,13 @@ const formatDate = (iso: string) =>
 
 /**
  * The "Audit a website" workspace: websites added by URL, newest first.
- * A newly added site is marked to audit as soon as its card appears.
+ * "Run audit" adds a site and marks it to audit as soon as its card appears;
+ * "Find email" adds it without auditing and runs the full email search.
  */
 export function useUrlAudits() {
   const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList();
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+  const [busy, setBusy] = useState<UrlAuditBusy>(null);
   const [notice, setNotice] = useState<UrlAuditNotice | null>(null);
   const [autoRunId, setAutoRunId] = useState<string | null>(null);
 
@@ -37,50 +42,105 @@ export function useUrlAudits() {
       .finally(() => setIsLoading(false));
   }, [setBusinesses]);
 
-  // Contact page and social profiles for a new site; the audit itself finds the email
-  const discoverContacts = useCallback(
-    (id: string) => {
-      fetch(API_ROUTES.FIND_EMAILS, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ business_ids: [id] }) })
-        .then((res) => res.json())
-        .then((data) => mergeContacts(contactsFromResponse(data)))
-        .catch(() => {});
+  // One business to /api/find-emails; returns what's now known about it
+  const findContacts = useCallback(
+    async (id: string, extra: Record<string, unknown> = {}): Promise<ContactsFound | undefined> => {
+      const res = await fetch(API_ROUTES.FIND_EMAILS, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ business_ids: [id], ...extra }),
+      });
+      const found = contactsFromResponse(await res.json());
+      mergeContacts(found);
+      return found.find((f) => f.id === id);
     },
     [mergeContacts]
   );
 
-  /** Adds a website and starts its audit. Resolves true when the form can be cleared. */
+  // A new site's contacts: scrape its pages, then — once, like the search tab —
+  // Hunter/Snov if there's still no email. (The audit scrapes for email too.)
+  const discoverContacts = useCallback(
+    async (business: BusinessWithData) => {
+      try {
+        const scraped = business.contacts_checked_at ? undefined : await findContacts(business.id);
+        if (!(scraped?.email ?? business.email) && !business.email_lookup_at) {
+          await findContacts(business.id, { apiLookup: 'auto' });
+        }
+      } catch {
+        /* best effort — the card still offers "Find email" */
+      }
+    },
+    [findContacts]
+  );
+
+  // Adds the site (or returns it if it's already listed) and puts it at the top
+  const addSite = useCallback(
+    async (url: string): Promise<{ business: BusinessWithData; existing: boolean } | null> => {
+      const res = await fetch(API_ROUTES.AUDIT_URL, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ url }) });
+      const data = await res.json();
+      if (!res.ok) {
+        setNotice({ tone: 'error', text: data.error ?? "Couldn't add this website. Try again." });
+        return null;
+      }
+      const business: BusinessWithData = data.business;
+      setBusinesses((prev) => [business, ...prev.filter((b) => b.id !== business.id)]);
+      return { business, existing: Boolean(data.existing) };
+    },
+    [setBusinesses]
+  );
+
+  /** "Run audit": adds a website and starts its audit. Resolves true when the form can be cleared. */
   const addWebsite = useCallback(
     async (url: string): Promise<boolean> => {
-      setIsAdding(true);
+      setBusy('audit');
       setNotice(null);
       try {
-        const res = await fetch(API_ROUTES.AUDIT_URL, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ url }) });
-        const data = await res.json();
-        if (!res.ok) {
-          setNotice({ tone: 'error', text: data.error ?? "Couldn't add this website. Try again." });
-          return false;
-        }
-        const business: BusinessWithData = data.business;
-        setBusinesses((prev) => [business, ...prev.filter((b) => b.id !== business.id)]);
-        if (data.existing && business.audit) {
+        const added = await addSite(url);
+        if (!added) return false;
+        const { business, existing } = added;
+        if (existing && business.audit) {
           setNotice({
             tone: 'info',
             text: `${business.name} was audited on ${formatDate(business.audit.created_at)}. Showing that result; use Re-audit for fresh scores.`,
           });
         } else {
           setAutoRunId(business.id);
-          if (!business.contacts_checked_at) discoverContacts(business.id);
+          void discoverContacts(business);
         }
         return true;
       } catch {
         setNotice({ tone: 'error', text: "Couldn't reach Auditely. Check your connection and try again." });
         return false;
       } finally {
-        setIsAdding(false);
+        setBusy(null);
       }
     },
-    [discoverContacts, setBusinesses]
+    [addSite, discoverContacts]
   );
 
-  return { businesses, isLoading, isAdding, notice, autoRunId, addWebsite, updateBusiness };
+  /**
+   * "Find email": adds the website without auditing it, then runs the full
+   * email search — the site (incl. the deeper crawl), then Hunter and Snov.
+   */
+  const findEmail = useCallback(
+    async (url: string): Promise<boolean> => {
+      setBusy('email');
+      setNotice(null);
+      try {
+        const added = await addSite(url);
+        if (!added) return false;
+        const found = await findContacts(added.business.id, { apiFallback: true });
+        setNotice({ tone: 'info', text: emailFinderNotice(added.business.name, found) });
+        return true;
+      } catch {
+        setNotice({ tone: 'error', text: "Couldn't reach Auditely. Check your connection and try again." });
+        return false;
+      } finally {
+        setBusy(null);
+      }
+    },
+    [addSite, findContacts]
+  );
+
+  return { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness };
 }

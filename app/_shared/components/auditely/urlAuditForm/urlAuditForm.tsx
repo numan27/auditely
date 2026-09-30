@@ -5,22 +5,30 @@
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { CommandField } from '@/app/_shared/components/ui/commandField/commandField';
-import { GlobeIcon } from '@/app/_shared/components/ui/icons/icons';
+import { GlobeIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import type { UrlAuditBusy } from '@/app/_shared/lib/hooks/useUrlAudits';
 
 interface UrlAuditFormProps {
-  /** Resolves true when the site was added, which clears the field */
+  /** "Run audit" — resolves true when the site was added, which clears the field */
   onSubmit: (url: string) => Promise<boolean>;
-  isLoading: boolean;
+  /** "Find email" — email search without the full audit; same resolve contract */
+  onFindEmail: (url: string) => Promise<boolean>;
+  busy: UrlAuditBusy;
 }
 
-export function UrlAuditForm({ onSubmit, isLoading }: UrlAuditFormProps) {
+export function UrlAuditForm({ onSubmit, onFindEmail, busy }: UrlAuditFormProps) {
   const [url, setUrl] = useState('');
+  const isLoading = busy !== null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const run = async (action: (url: string) => Promise<boolean>) => {
     const value = url.trim();
     if (!value || isLoading) return;
-    if (await onSubmit(value)) setUrl('');
+    if (await action(value)) setUrl('');
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void run(onSubmit);
   };
 
   return (
@@ -40,16 +48,36 @@ export function UrlAuditForm({ onSubmit, isLoading }: UrlAuditFormProps) {
         autoCapitalize="none"
         spellCheck={false}
       />
-      <Button
-        type="submit"
-        variant="primary"
-        size="md"
-        isLoading={isLoading}
-        disabled={isLoading || !url.trim()}
-        className="h-12"
-      >
-        {isLoading ? 'Adding…' : 'Run audit'}
-      </Button>
+      <div className="flex gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          isLoading={busy === 'email'}
+          disabled={isLoading || !url.trim()}
+          onClick={() => void run(onFindEmail)}
+          className="h-12 flex-1 whitespace-nowrap sm:flex-none"
+        >
+          {busy === 'email' ? (
+            'Finding email…'
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <MailIcon size={16} />
+              Find email
+            </span>
+          )}
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          isLoading={busy === 'audit'}
+          disabled={isLoading || !url.trim()}
+          className="h-12 flex-1 whitespace-nowrap sm:flex-none"
+        >
+          {busy === 'audit' ? 'Adding…' : 'Run audit'}
+        </Button>
+      </div>
     </form>
   );
 }

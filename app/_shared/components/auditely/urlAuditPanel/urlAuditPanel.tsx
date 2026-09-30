@@ -9,11 +9,11 @@ import { useUrlAudits } from '@/app/_shared/lib/hooks/useUrlAudits';
 
 /** "Audit a website": audit any URL, with every site audited this way listed below */
 export function UrlAuditPanel() {
-  const { businesses, isLoading, isAdding, notice, autoRunId, addWebsite, updateBusiness } = useUrlAudits();
+  const { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness } = useUrlAudits();
 
   return (
     <>
-      <UrlAuditForm onSubmit={addWebsite} isLoading={isAdding} />
+      <UrlAuditForm onSubmit={addWebsite} onFindEmail={findEmail} busy={busy} />
       {notice && (
         <p
           role={notice.tone === 'error' ? 'alert' : 'status'}
@@ -27,8 +27,8 @@ export function UrlAuditPanel() {
         <ResultsSkeleton label="Loading your website audits" count={2} />
       ) : businesses.length === 0 ? (
         <p className="mt-10 max-w-lg text-sm leading-relaxed text-[var(--color-text-tertiary)]">
-          Paste a prospect&apos;s website to see how it scores on speed, SEO, mobile, SSL and AI search. Every site you
-          audit here is saved in this list.
+          Paste a prospect&apos;s website to see how it scores on speed, SEO, mobile, SSL and AI search, or use Find email
+          to get their email without a full audit. Every site you check here is saved in this list.
         </p>
       ) : (
         <section className="mt-10" aria-labelledby="url-audits-title">
