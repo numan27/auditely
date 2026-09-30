@@ -4,6 +4,7 @@ import { POST } from '@/app/api/audit/route';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
 import type { AuditOutcome } from '@/app/_shared/lib/audit/types';
 import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
+import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 
 type Result = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -181,6 +182,18 @@ describe('POST /api/audit', () => {
     givenDb({ 'audits.select': [ok(storedAudit())], 'audits.update': [ok(storedAudit())] });
     await post({ business_id: 'biz-1', force: true });
     expect(vi.mocked(runAudit).mock.calls[1][0]).toMatchObject({ refreshPageSpeed: true });
+  });
+
+  it("hands the audit's key pages to the email finder", async () => {
+    givenDb({
+      'businesses.select': [ok({ ...business, email: null })],
+      'audits.select': [ok(null)],
+      'audits.insert': [ok(storedAudit())],
+    });
+    await post({ business_id: 'biz-1' });
+    const pages = [{ url: 'https://smiledental.com/contact', html: '<p>office@smiledental.com</p>' }];
+    await vi.mocked(runAudit).mock.calls[0][0].discoverEmail?.('<p>home</p>', pages);
+    expect(findEmail).toHaveBeenCalledWith('https://smiledental.com', { homepageHtml: '<p>home</p>', pages });
   });
 
   it('audits a site added by URL without listing data to compare against', async () => {

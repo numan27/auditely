@@ -13,6 +13,7 @@ const SCORE_DEFINITIONS: [string, string][] = [
   ['SSL', 'secure (https) connection'],
   ['GEO', 'how clearly AI search tools like ChatGPT can identify the business'],
   ['AEO', 'how ready the content is to be quoted as a direct answer'],
+  ['Leads', 'how easily visitors can call, message or book'],
 ];
 
 function LegendItem({ dot, text }: { dot: typeof styles.dotGreen; text: string }) {
@@ -85,6 +86,15 @@ export function SearchReadinessSection({ geoScore, aeoScore, geoFindings, aeoFin
         <ReadinessBlock title="GEO — AI search visibility" score={geoScore} findings={geoFindings} />
       </View>
       <ReadinessBlock title="AEO — Answer-engine readiness" score={aeoScore} findings={aeoFindings} />
+    </View>
+  );
+}
+
+export function LeadCaptureSection({ score, findings }: { score: number | null; findings: PdfFinding[] }) {
+  return (
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionLabel}>Lead Capture</Text>
+      <ReadinessBlock title="Can visitors reach you?" score={score} findings={findings} />
     </View>
   );
 }

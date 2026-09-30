@@ -3,6 +3,7 @@
 import { Document, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
 import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
 import {
+  LeadCaptureSection,
   NextStepSection,
   ScoreLegend,
   SearchReadinessSection,
@@ -71,6 +72,8 @@ export interface PdfDocumentProps {
   topIssues?: { title: string; displayValue?: string }[];
   geoFindings: PdfFinding[];
   aeoFindings: PdfFinding[];
+  leadScore: number | null;
+  leadFindings: PdfFinding[];
   summary: string;
   improvements: string[];
   contact: PdfContact;
@@ -91,6 +94,8 @@ export function PdfDocument({
   topIssues,
   geoFindings,
   aeoFindings,
+  leadScore,
+  leadFindings,
   summary,
   improvements,
   contact,
@@ -127,6 +132,7 @@ export function PdfDocument({
             <SslTile valid={sslValid} />
             <ScoreTile label="GEO" score={geoScore} />
             <ScoreTile label="AEO" score={aeoScore} />
+            <ScoreTile label="Leads" score={leadScore} />
           </View>
           <ScoreLegend />
         </View>
@@ -163,6 +169,14 @@ export function PdfDocument({
               geoFindings={geoFindings}
               aeoFindings={aeoFindings}
             />
+            <View style={styles.divider} />
+          </>
+        )}
+
+        {/* Lead capture — audits made before it show nothing */}
+        {leadScore !== null && (
+          <>
+            <LeadCaptureSection score={leadScore} findings={leadFindings} />
             <View style={styles.divider} />
           </>
         )}

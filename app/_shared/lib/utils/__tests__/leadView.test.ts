@@ -84,6 +84,10 @@ describe('matchesFilters', () => {
 });
 
 describe('averageScore', () => {
+  it('includes the lead capture score when measured', () => {
+    expect(averageScore({ ...scores(null), performance_score: 40, lead_score: 100 })).toBe(70);
+  });
+
   it('averages only the measured scores', () => {
     expect(averageScore({ ...scores(null), performance_score: 40, seo_score: 80 })).toBe(60);
   });

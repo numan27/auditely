@@ -110,13 +110,14 @@ export function AuditScores({ audit }: { audit: Audit }) {
   const siteReason = audit.checks?.site?.reason;
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         <ScoreTile label="Performance" score={audit.performance_score} reason={psiReason(audit, 'desktop')} />
         <ScoreTile label="SEO" score={audit.seo_score} reason={psiReason(audit, 'mobile')} />
         <ScoreTile label="Mobile" score={audit.mobile_score} reason={psiReason(audit, 'mobile')} />
         <SslTile audit={audit} />
         <ScoreTile label="GEO" score={audit.geo_score} reason={siteReason} />
         <ScoreTile label="AEO" score={audit.aeo_score} reason={siteReason} />
+        <ScoreTile label="Lead capture" score={audit.lead_score} reason={siteReason} />
       </div>
       <KeyIssues rawJson={audit.raw_json} />
     </div>

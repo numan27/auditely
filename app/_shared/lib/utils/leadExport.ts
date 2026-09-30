@@ -25,6 +25,7 @@ const COLUMNS: [header: string, value: (b: BusinessWithData) => Cell][] = [
   ['SSL', (b) => (b.audit?.ssl_valid == null ? null : b.audit.ssl_valid ? 'Yes' : 'No')],
   ['GEO', (b) => b.audit?.geo_score],
   ['AEO', (b) => b.audit?.aeo_score],
+  ['Lead capture', (b) => b.audit?.lead_score],
   ['Audited on', (b) => b.audit?.created_at.slice(0, 10)],
   ['AI summary', (b) => b.ai_report?.summary],
   ['Cold email', (b) => b.ai_report?.cold_email],

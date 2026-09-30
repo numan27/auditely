@@ -42,6 +42,8 @@ export interface Audit {
   ssl_valid: boolean | null;
   geo_score: number | null;
   aeo_score: number | null;
+  /** null = not measured; absent on rows read before the lead-capture migration */
+  lead_score?: number | null;
   /** `{}` on audits written before engine v2 */
   checks: Partial<AuditChecks>;
   engine_version: number;

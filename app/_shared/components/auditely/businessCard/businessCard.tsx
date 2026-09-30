@@ -44,6 +44,7 @@ function ScorePills({ audit }: { audit: Audit }) {
     ['Mobile', audit.mobile_score],
     ['GEO', audit.geo_score],
     ['AEO', audit.aeo_score],
+    ['Leads', audit.lead_score ?? null],
   ];
   const ssl = audit.ssl_valid;
   const sslTone: ScoreTone = ssl === null ? 'none' : ssl ? 'good' : 'poor';

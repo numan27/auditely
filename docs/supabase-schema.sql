@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS audits (
   ssl_valid           BOOLEAN,
   geo_score           INTEGER,
   aeo_score           INTEGER,
+  lead_score          INTEGER,
   checks              JSONB       NOT NULL DEFAULT '{}',
   engine_version      INTEGER     NOT NULL DEFAULT 1,
   raw_json            JSONB       NOT NULL DEFAULT '{}',

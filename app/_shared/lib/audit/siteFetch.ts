@@ -6,7 +6,7 @@
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const MAX_ROBOTS_BYTES = 256 * 1024;
-const USER_AGENT = 'Mozilla/5.0 (compatible; Auditely/1.0; +https://devartventures.com)';
+export const USER_AGENT = 'Mozilla/5.0 (compatible; Auditely/1.0; +https://devartventures.com)';
 
 export interface RobotsFetch {
   status: number | null;
@@ -116,5 +116,44 @@ export async function fetchSite(website: string): Promise<SiteFetchResult> {
     return { ok: true, ...base, html, robots };
   } catch {
     return failure('Site timed out while loading', base);
+  }
+}
+
+export interface PageFetchResult {
+  ok: boolean;
+  /** HTTP status; null when the page couldn't be reached */
+  status: number | null;
+  finalUrl: string | null;
+  html: string | null;
+  reason?: string;
+}
+
+/** One more page of a site (the lead-capture key pages): the homepage's rules, without robots.txt. */
+export async function fetchPage(url: string): Promise<PageFetchResult> {
+  let res: Response;
+  try {
+    res = await get(url);
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === 'TimeoutError';
+    return { ok: false, status: null, finalUrl: null, html: null, reason: timedOut ? 'Page timed out' : 'Page unreachable' };
+  }
+
+  const finalUrl = res.url || url;
+  const headers = Object.fromEntries(res.headers.entries());
+  const contentType = headers['content-type'] ?? '';
+  const notHtml = !!contentType && !contentType.includes('html');
+  if (!res.ok || notHtml) {
+    await res.body?.cancel().catch(() => {});
+    return { ok: false, status: res.status, finalUrl, html: null, reason: res.ok ? 'Not an HTML page' : `HTTP ${res.status}` };
+  }
+
+  try {
+    const html = await readCapped(res, MAX_HTML_BYTES);
+    if (isBotChallenge(headers, html)) {
+      return { ok: false, status: res.status, finalUrl, html: null, reason: 'Blocked (bot challenge)' };
+    }
+    return { ok: true, status: res.status, finalUrl, html };
+  } catch {
+    return { ok: false, status: res.status, finalUrl, html: null, reason: 'Page timed out while loading' };
   }
 }

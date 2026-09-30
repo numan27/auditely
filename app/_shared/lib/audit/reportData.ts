@@ -20,6 +20,7 @@ export interface AuditLike {
   ssl_valid: boolean | null;
   geo_score?: number | null;
   aeo_score?: number | null;
+  lead_score?: number | null;
   raw_json: unknown;
   checks?: Partial<AuditChecks> | null;
   engine_version?: number | null;
@@ -61,9 +62,9 @@ export function topLighthouseIssues(rawJson: unknown, limit: number): IssueSumma
     .map((a) => ({ title: a.title, ...(a.displayValue && { displayValue: a.displayValue }) }));
 }
 
-/** Failing (status 'fail') GEO findings, then AEO findings. */
+/** Failing (status 'fail') lead capture findings, then GEO, then AEO. */
 export function failingFindings(checks: Partial<AuditChecks> | null | undefined, limit: number): Finding[] {
-  return [...(checks?.geo?.findings ?? []), ...(checks?.aeo?.findings ?? [])]
+  return [...(checks?.lead?.findings ?? []), ...(checks?.geo?.findings ?? []), ...(checks?.aeo?.findings ?? [])]
     .filter((finding) => finding.status === 'fail')
     .slice(0, limit);
 }
@@ -90,12 +91,14 @@ export function auditFacts(audit: AuditLike): { scores: string; issues: string }
     `SSL Certificate: ${formatSsl(ssl)}`,
     `GEO Score (visibility in AI search engines): ${formatScore(audit.geo_score)}`,
     `AEO Score (readiness for answer engines like ChatGPT and Perplexity): ${formatScore(audit.aeo_score)}`,
+    `Lead capture (can visitors call, message or book): ${formatScore(audit.lead_score)}`,
   ].join('\n');
 
   const issues =
     [
       ...topLighthouseIssues(audit.raw_json, 6).map((a) => `- ${a.title}${a.displayValue ? ` (${a.displayValue})` : ''}`),
-      ...failingFindings(audit.checks, 3).map((finding) => `- ${finding.label}`),
+      // Details (e.g. which links are broken) let the email name the problem
+      ...failingFindings(audit.checks, 4).map((finding) => `- ${finding.label}${finding.detail ? ` (${finding.detail})` : ''}`),
     ].join('\n') || 'No specific issues identified.';
 
   return { scores, issues };
@@ -161,6 +164,8 @@ export function buildPdfProps(
         : undefined,
     geoFindings: pdfFindings(audit.checks?.geo?.findings),
     aeoFindings: pdfFindings(audit.checks?.aeo?.findings),
+    leadScore: audit.lead_score ?? null,
+    leadFindings: pdfFindings(audit.checks?.lead?.findings),
     summary: pdfText(report.summary),
     improvements,
     contact,

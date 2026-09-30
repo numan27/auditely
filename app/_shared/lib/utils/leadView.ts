@@ -9,7 +9,7 @@ export type LeadFilter = 'email' | 'phone' | 'website' | 'audited';
 
 type LeadLike = Pick<BusinessWithData, 'name' | 'email' | 'phone' | 'website'> & {
   review_count?: number | null;
-  audit?: Pick<Audit, 'performance_score' | 'seo_score' | 'mobile_score' | 'geo_score' | 'aeo_score'>;
+  audit?: Pick<Audit, 'performance_score' | 'seo_score' | 'mobile_score' | 'geo_score' | 'aeo_score' | 'lead_score'>;
 };
 
 export const SORT_OPTIONS: { value: LeadSort; label: string }[] = [
@@ -37,7 +37,7 @@ const MATCHES: Record<LeadFilter, (b: LeadLike) => boolean> = {
 /** Mean of the measured scores; null when the business is unaudited or nothing was measured */
 export function averageScore(audit: LeadLike['audit']): number | null {
   if (!audit) return null;
-  const scores = [audit.performance_score, audit.seo_score, audit.mobile_score, audit.geo_score, audit.aeo_score]
+  const scores = [audit.performance_score, audit.seo_score, audit.mobile_score, audit.geo_score, audit.aeo_score, audit.lead_score]
     .filter((s): s is number => typeof s === 'number');
   return scores.length ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
 }

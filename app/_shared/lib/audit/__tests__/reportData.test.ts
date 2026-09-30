@@ -191,3 +191,60 @@ describe('buildPdfProps', () => {
     expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
   });
 });
+
+describe('lead capture in the report', () => {
+  // Same PDF arguments as the buildPdfProps tests (declared inside that block)
+  const contact = { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null };
+  const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
+  const noReport = { summary: '', improvements: [] };
+  const leadChecks: Partial<AuditChecks> = {
+    ...checks,
+    lead: {
+      findings: [f('lead.form', 'fail'), f('lead.booking', 'warn'), f('lead.clickToCall', 'pass')],
+      pages: [],
+      links: { checked: 0, broken: [] },
+    },
+  };
+  const withLead: AuditLike = { ...audit, lead_score: 30, checks: leadChecks };
+
+  it('adds the lead capture score to the AI facts, and lists its failures first', () => {
+    const { scores, issues } = auditFacts(withLead);
+    expect(scores).toContain('Lead capture (can visitors call, message or book): 30/100');
+    expect(issues.split('\n')).toEqual([
+      '- Largest Contentful Paint (12.8 s)',
+      '- Cumulative Layout Shift',
+      '- lead.form',
+      '- geo.b',
+      '- aeo.a',
+      '- aeo.c',
+    ]);
+  });
+
+  it("gives the AI a failing check's details, so the email can name the broken links", () => {
+    const broken: AuditLike = {
+      ...audit,
+      checks: {
+        lead: {
+          findings: [{ id: 'lead.brokenLinks', status: 'fail', label: '2 broken links', detail: '/book-now, /team' }],
+          pages: [],
+          links: { checked: 5, broken: [] },
+        },
+      },
+    };
+    expect(auditFacts(broken).issues.split('\n')).toContain('- 2 broken links (/book-now, /team)');
+  });
+
+  it('says "not measured" for audits made before lead capture', () => {
+    expect(auditFacts(audit).scores).toContain('Lead capture (can visitors call, message or book): not measured');
+  });
+
+  it('passes the lead capture score and its problems to the PDF', () => {
+    const props = buildPdfProps(withLead, business, noReport, contact);
+    expect(props.leadScore).toBe(30);
+    expect(props.leadFindings).toEqual([
+      { status: 'fail', label: 'lead.form' },
+      { status: 'warn', label: 'lead.booking' },
+    ]);
+    expect(buildPdfProps(audit, business, noReport, contact)).toMatchObject({ leadScore: null, leadFindings: [] });
+  });
+});

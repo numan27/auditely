@@ -30,6 +30,10 @@ export function isStaleAudit(
 
 export type FindingStatus = 'pass' | 'warn' | 'fail';
 
+/** Key pages the lead-capture checks read, besides the homepage */
+export type KeyPageKind = 'contact' | 'booking' | 'services' | 'about';
+export type LeadPageKind = 'home' | KeyPageKind;
+
 // `id` is stable — Project B keys its plain-English impact translations on it
 export interface Finding {
   id: string;
@@ -91,6 +95,14 @@ export interface AeoChecks {
   hasFaqSchema: boolean;
 }
 
+export interface LeadChecks {
+  findings: Finding[];
+  /** The homepage and the key pages read; ok = the page loaded */
+  pages: { url: string; kind: LeadPageKind; ok: boolean }[];
+  /** Links whose status is known, and the broken ones */
+  links: { checked: number; broken: string[] };
+}
+
 export type TechCategory = 'platform' | 'pageBuilder' | 'framework' | 'hosting' | 'analytics' | 'widgets';
 
 export interface TechItem {
@@ -104,6 +116,8 @@ export interface AuditChecks {
   seo: SeoBasics | null;
   geo: GeoChecks | null;
   aeo: AeoChecks | null;
+  /** Absent on audits made before lead capture; null when not measured */
+  lead?: LeadChecks | null;
   site: { ok: boolean; finalUrl: string | null; status: number | null; reason?: string };
   psi: {
     mobile: string; // 'ok' or the failure reason
@@ -123,8 +137,8 @@ export interface AuditInput {
   niche: string | null;
   /** Re-audit: measure PageSpeed afresh instead of reusing a cached result */
   refreshPageSpeed?: boolean;
-  /** Called once the homepage is fetched (html is null if it couldn't be read). */
-  discoverEmail?: (homepageHtml: string | null) => Promise<string | null>;
+  /** Called once the homepage and key pages are fetched (html is null if the homepage couldn't be read). */
+  discoverEmail?: (homepageHtml: string | null, pages: { url: string; html: string }[]) => Promise<string | null>;
 }
 
 /** Columns written to `audits` (besides id / business_id / created_at). */
@@ -135,6 +149,7 @@ export interface AuditRow {
   ssl_valid: boolean | null;
   geo_score: number | null;
   aeo_score: number | null;
+  lead_score: number | null;
   checks: AuditChecks;
   raw_json: { mobile: LighthouseSummary | null; desktop: LighthouseSummary | null };
   engine_version: number;

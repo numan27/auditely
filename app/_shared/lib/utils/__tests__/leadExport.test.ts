@@ -39,6 +39,18 @@ describe('leadTable', () => {
     expect(column(table, 'Google reviews')).toEqual(['123', '0']);
   });
 
+  it('includes the lead capture score, blank before it existed', () => {
+    const audited = (lead_score?: number | null) =>
+      business({
+        audit: {
+          id: 'a1', business_id: 'b1', performance_score: 98, seo_score: 100, mobile_score: 35,
+          ssl_valid: true, geo_score: null, aeo_score: 45, checks: {}, engine_version: 2, raw_json: {},
+          created_at: '2026-09-28T10:00:00Z', lead_score,
+        },
+      });
+    expect(column(leadTable([audited(65), audited(undefined)]), 'Lead capture')).toEqual(['65', '']);
+  });
+
   it('leaves audit columns blank for unaudited businesses', () => {
     const table = leadTable([business({ email: null })]);
     expect(column(table, 'Email')).toEqual(['']);

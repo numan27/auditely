@@ -7,7 +7,10 @@
 import * as cheerio from 'cheerio';
 import { runPageSpeed, categoryScore, type PageSpeedResult } from '@/app/_shared/lib/audit/pageSpeed';
 import { withPageSpeedCache, type PageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedCache';
-import { fetchSite, type SiteFetchResult } from '@/app/_shared/lib/audit/siteFetch';
+import { fetchSite, fetchPage, type SiteFetchResult } from '@/app/_shared/lib/audit/siteFetch';
+import { checkLinks, type LinkResult } from '@/app/_shared/lib/audit/linkCheck';
+import { crawlKeyPages, keyPageLinks, linkTargets, type CrawledPage } from '@/app/_shared/lib/audit/leadCrawl';
+import { analyzeLeadCapture } from '@/app/_shared/lib/audit/analyzers/leadCapture';
 import { checkTls } from '@/app/_shared/lib/audit/tlsCheck';
 import { parseStructuredData } from '@/app/_shared/lib/audit/analyzers/structuredData';
 import { compareNap, extractNapSignals } from '@/app/_shared/lib/audit/analyzers/nap';
@@ -22,6 +25,7 @@ import {
   type AuditInput,
   type AuditOutcome,
   type GeoChecks,
+  type LeadChecks,
   type SeoBasics,
   type SslCheck,
   type TechItem,
@@ -38,13 +42,15 @@ export class AuditUnavailableError extends Error {}
 export interface AuditDeps {
   runPageSpeed: typeof runPageSpeed;
   fetchSite: typeof fetchSite;
+  fetchPage: typeof fetchPage;
   checkTls: typeof checkTls;
+  checkLinks: typeof checkLinks;
   now: () => number;
   /** Shared 30-day PageSpeed cache; without one PageSpeed always runs */
   pageSpeedStore?: PageSpeedStore;
 }
 
-const defaultDeps: AuditDeps = { runPageSpeed, fetchSite, checkTls, now: () => Date.now() };
+const defaultDeps: AuditDeps = { runPageSpeed, fetchSite, fetchPage, checkTls, checkLinks, now: () => Date.now() };
 
 interface PageAnalysis {
   seo: SeoBasics;
@@ -84,6 +90,10 @@ function resolveSsl(tls: SslCheck | null, psi: PageSpeedResult[]): SslCheck {
   };
 }
 
+// Key pages that loaded, for the email finder
+const loadedKeyPages = (pages: CrawledPage[] | null) =>
+  (pages ?? []).flatMap((p) => (p.kind !== 'home' && p.html !== null ? [{ url: p.url, html: p.html }] : []));
+
 // Oldest measurement among PageSpeed results reused from the cache, if any
 function reusedMeasuredAt(psi: PageSpeedResult[]): string | undefined {
   const times = psi.flatMap((r) => (r.ok && r.measuredAt ? [Date.parse(r.measuredAt)] : []));
@@ -106,7 +116,19 @@ export async function runAudit(input: AuditInput, overrides: Partial<AuditDeps> 
   const sitePromise = deps.fetchSite(input.website);
   const finalHost = (site: SiteFetchResult) => (site.finalUrl ? new URL(site.finalUrl).hostname : listedHost);
 
-  const [mobile, desktop, site, tls, email] = await Promise.all([
+  // Lead capture: the key pages the homepage links to, then a check of the
+  // site's links — all while PageSpeed runs. Email discovery reuses the pages.
+  const crawlPromise: Promise<CrawledPage[] | null> = sitePromise
+    .then((s) => (s.ok && s.html !== null ? crawlKeyPages(s.finalUrl ?? input.website, s.html, deps.fetchPage) : null))
+    .catch((err) => {
+      console.warn('[audit] key page crawl failed:', err);
+      return null;
+    });
+  const linksPromise: Promise<LinkResult[]> = crawlPromise.then(async (pages) =>
+    pages ? [...keyPageLinks(pages), ...(await deps.checkLinks(linkTargets(pages)))] : []
+  );
+
+  const [mobile, desktop, site, tls, email, crawl, links] = await Promise.all([
     pageSpeed(input.website, 'mobile', deadline),
     pageSpeed(input.website, 'desktop', deadline),
     sitePromise,
@@ -116,12 +138,14 @@ export async function runAudit(input: AuditInput, overrides: Partial<AuditDeps> 
         console.warn('[audit] TLS check failed:', err);
         return null;
       }),
-    sitePromise
-      .then((s) => (input.discoverEmail ? input.discoverEmail(s.ok ? s.html : null) : null))
+    Promise.all([sitePromise, crawlPromise])
+      .then(([s, pages]) => (input.discoverEmail ? input.discoverEmail(s.ok ? s.html : null, loadedKeyPages(pages)) : null))
       .catch((err) => {
         console.warn('[audit] email discovery failed:', err);
         return null;
       }),
+    crawlPromise,
+    linksPromise,
   ]);
 
   if (!mobile.ok && !desktop.ok && !site.ok) {
@@ -139,6 +163,16 @@ export async function runAudit(input: AuditInput, overrides: Partial<AuditDeps> 
       analysisReason = ANALYSIS_FAILED_REASON;
     }
   }
+  // Same "not measured" rule as GEO/AEO: a readable, non-JavaScript-only homepage
+  let lead: { score: number; checks: LeadChecks } | null = null;
+  if (crawl && page && !page.limitedReason) {
+    try {
+      lead = analyzeLeadCapture(crawl, links);
+    } catch (err) {
+      console.error('[audit] lead capture analysis failed:', err);
+    }
+  }
+
   const mobileSummary = mobile.ok ? mobile.summary : null;
   const desktopSummary = desktop.ok ? desktop.summary : null;
   const ssl = resolveSsl(tls, [mobile, desktop]);
@@ -161,11 +195,13 @@ export async function runAudit(input: AuditInput, overrides: Partial<AuditDeps> 
       ssl_valid: ssl.valid,
       geo_score: page?.geo?.score ?? null,
       aeo_score: page?.aeo?.score ?? null,
+      lead_score: lead?.score ?? null,
       checks: {
         ssl,
         seo: page?.seo ?? null,
         geo: page?.geo?.checks ?? null,
         aeo: page?.aeo?.checks ?? null,
+        lead: lead?.checks ?? null,
         site: {
           ok: site.ok,
           finalUrl: site.finalUrl,

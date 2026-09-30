@@ -89,10 +89,13 @@ export async function POST(request: NextRequest) {
   // Email discovery is the core value of the app, so attempt it on EVERY audit
   // request until an email is stored — including cache hits. Reuses the
   // homepage HTML when the audit already fetched it.
-  const ensureEmail = async (homepageHtml?: string | null): Promise<string | null> => {
+  const ensureEmail = async (
+    homepageHtml?: string | null,
+    pages?: { url: string; html: string }[]
+  ): Promise<string | null> => {
     if (business.email) return business.email;
     if (!business.website) return null;
-    const found = await findEmail(business.website, { homepageHtml });
+    const found = await findEmail(business.website, { homepageHtml, pages });
     if (found) {
       await supabase.from('businesses').update({ email: found }).eq('id', businessId);
     }
