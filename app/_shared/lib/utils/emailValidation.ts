@@ -25,6 +25,12 @@ const FAKE_LOCAL_PREFIXES = [
   'name', 'user', 'username', 'email', 'test', 'testing', 'noreply', 'no-reply',
 ];
 
+// HR / recruiting inboxes aren't sales contacts: hr@, contacthr@, dallas-hr@,
+// careers@, jobs.dallas@, recruiting@, voe@ (verification of employment)…
+// "hr" only counts as a whole word, so names like christine.hradek@ stay.
+const HR_LOCAL_PART =
+  /^(contact)?hr$|(^|[._-])hr([._-]|$)|^(human-?resources|careers?|jobs?|recruit(ing|ment|ers?)?|talent|hiring|employment|resumes?|voe|payroll)([._-]|$)/;
+
 export function isValidBusinessEmail(email: string): boolean {
   if (!email || email.length < 5 || email.length > 100) return false;
   if (!email.includes('@')) return false;
@@ -39,6 +45,7 @@ export function isValidBusinessEmail(email: string): boolean {
 
   if (BLACKLISTED_DOMAINS.includes(domain)) return false;
   if (FAKE_LOCAL_PREFIXES.includes(local)) return false;
+  if (HR_LOCAL_PART.test(local)) return false;
 
   return true;
 }

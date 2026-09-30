@@ -54,7 +54,7 @@ async function discover(b: BusinessRow, apiFallback: boolean): Promise<FindResul
 }
 
 // The automatic after-search pass: the paid APIs once per business, in 'auto'
-// mode (Hunter only, and only when its free count says it has an email).
+// mode (Hunter, then Snov, each only when its free count says it has an email).
 async function lookupOnce(b: BusinessRow): Promise<FindResult> {
   if (!b.website || b.email || b.email_lookup_at) return toResult(b);
   const domain = new URL(b.website).hostname.replace(/^www\./, '');
@@ -65,7 +65,7 @@ async function lookupOnce(b: BusinessRow): Promise<FindResult> {
 // Batch contact discovery. Called three ways:
 //   - Bulk background discovery (no flags) → scrape-only, quota-safe.
 //   - Automatic API pass after it (apiLookup: 'auto') → paid APIs once per
-//     business, Hunter only and only when it has an email for the domain.
+//     business; Hunter then Snov, each only when it has an email for the domain.
 //   - On-demand single business (apiFallback: true) → scrape + full API cascade.
 // Never overwrites an email or phone already on file. Always returns 200.
 export async function POST(request: NextRequest) {

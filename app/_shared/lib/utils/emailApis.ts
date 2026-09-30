@@ -2,7 +2,8 @@
 
 // Paid email-finder APIs, used when scraping a business's website finds nothing.
 //   'auto': safe to run automatically after a search — only providers that can
-//           check for free whether they have any email for the domain (Hunter).
+//           check for free whether they have any email for the domain first
+//           (Hunter, then Snov), so a credit is spent only on a likely hit.
 //   'all':  the manual "Find email" action — Hunter, Tomba, Snov, then Apollo.
 // Each provider runs only if its keys are set; the first email found wins.
 
@@ -22,7 +23,26 @@ function validApiEmail(email: unknown): string | null {
   return typeof email === 'string' && isValidBusinessEmail(email) ? email.toLowerCase() : null;
 }
 
-async function findViaSnov(domain: string): Promise<string | null> {
+// General inboxes beat a random employee from a chain's list (info@ vs jane.doe@)
+const GENERAL_INBOX = /^(info|contact|contactus|office|hello|frontdesk|front\.desk|reception|appointments?|admin)$/;
+
+// Snov's email count is free; a domain search costs a credit only when it finds emails
+async function snovEmailCount(domain: string, accessToken: string): Promise<number | null> {
+  try {
+    const res = await fetch('https://api.snov.io/v1/get-domain-emails-count', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ access_token: accessToken, domain }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const result = (await res.json()).result;
+    return typeof result === 'number' ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+async function findViaSnov(domain: string, mode: EmailLookupMode): Promise<string | null> {
   const clientId = process.env.SNOV_CLIENT_ID;
   const clientSecret = process.env.SNOV_CLIENT_SECRET;
   if (!clientId || !clientSecret || !configured(clientId, clientSecret)) return null;
@@ -41,6 +61,11 @@ async function findViaSnov(domain: string): Promise<string | null> {
     const tokenData = await tokenRes.json();
     const accessToken: string | undefined = tokenData.access_token;
     if (!accessToken) return null;
+
+    // Only search when Snov has something; if the count can't be read, the
+    // automatic pass stays frugal and a manual lookup tries anyway.
+    const count = await snovEmailCount(domain, accessToken);
+    if (count === 0 || (count === null && mode === 'auto')) return null;
 
     const auth = {
       'Content-Type': 'application/json',
@@ -69,8 +94,8 @@ async function findViaSnov(domain: string): Promise<string | null> {
       const data = await res.json();
       const emails: Array<{ email?: string }> = Array.isArray(data.data) ? data.data : [];
       if (emails.length > 0 || data.status === 'completed') {
-        const email = emails[0]?.email;
-        return validApiEmail(email);
+        const usable = emails.map((e) => validApiEmail(e.email)).filter((e): e is string => e !== null);
+        return usable.find((e) => GENERAL_INBOX.test(e.split('@')[0])) ?? usable[0] ?? null;
       }
     }
     return null;
@@ -160,6 +185,7 @@ async function findViaApollo(domain: string): Promise<string | null> {
 
 export async function lookupEmailViaApis(domain: string, mode: EmailLookupMode): Promise<string | null> {
   const hunter = await findViaHunter(domain, mode);
-  if (hunter || mode === 'auto') return hunter;
-  return (await findViaTomba(domain)) ?? (await findViaSnov(domain)) ?? (await findViaApollo(domain));
+  if (hunter) return hunter;
+  if (mode === 'auto') return findViaSnov(domain, mode);
+  return (await findViaTomba(domain)) ?? (await findViaSnov(domain, mode)) ?? (await findViaApollo(domain));
 }

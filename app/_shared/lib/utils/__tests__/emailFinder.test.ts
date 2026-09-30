@@ -59,6 +59,34 @@ describe('findEmail with prefetched homepage HTML', () => {
     expect(fetched.some((url) => /feed|wp-json|xmlrpc/.test(url))).toBe(false);
   });
 
+  it('reads careers and jobs pages last', async () => {
+    const homepageHtml = '<a href="/careers/">Careers</a><a href="/services/">Services</a><a href="/meet-our-team/">Team</a>';
+    fetchMock.mockResolvedValue(new Response('', { status: 404 }));
+    await findEmail('https://smiledental.com/', { homepageHtml });
+    const extra = fetchMock.mock.calls.map(([url]) => url as string).filter((url) => /careers|services|meet-our-team/.test(url));
+    expect(extra).toEqual([
+      'https://smiledental.com/meet-our-team/',
+      'https://smiledental.com/services/',
+      'https://smiledental.com/careers/',
+    ]);
+  });
+
+  it('skips HR and recruiting addresses, which are not sales contacts', async () => {
+    const html = (emails: string) => emails.split(',').map((e) => `<a href="mailto:${e}">x</a>`).join('');
+    expect(await findEmail('https://smiledental.com/', { homepageHtml: html('contacthr@smiledental.com,info@smiledental.com') })).toBe(
+      'info@smiledental.com'
+    );
+    fetchMock.mockResolvedValue(new Response('', { status: 404 }));
+    for (const hr of ['hr@smiledental.com', 'voe@smiledental.com', 'careers@smiledental.com', 'jobs.dallas@smiledental.com', 'recruiting@smiledental.com']) {
+      expect(await findEmail('https://smiledental.com/', { homepageHtml: html(hr) })).toBeNull();
+    }
+  });
+
+  it('keeps names that merely contain the letters "hr"', async () => {
+    const homepageHtml = '<a href="mailto:christine.hradek@smiledental.com">x</a>';
+    expect(await findEmail('https://smiledental.com/', { homepageHtml })).toBe('christine.hradek@smiledental.com');
+  });
+
   it('reads at most 8 extra pages, contact-like ones first', async () => {
     const links =
       Array.from({ length: 20 }, (_, i) => `<a href="/page-${i}">p</a>`).join('') + '<a href="/new-patients">New patients</a>';

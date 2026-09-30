@@ -21,7 +21,9 @@ const PAGES_TO_TRY = [
 
 // Extra same-site pages to read when the usual ones have no email, likely ones first
 const MAX_EXTRA_PAGES = 8;
-const LIKELY_EMAIL_PAGE = /contact|about|team|staff|doctor|provider|privacy|new-patient|patient|career|job|location|office/i;
+const LIKELY_EMAIL_PAGE = /contact|about|team|staff|doctor|provider|privacy|new-patient|patient|location|office/i;
+// Careers pages mostly list HR inboxes, not sales contacts — read them last
+const HR_PAGE = /career|job|employment|hiring|recruit/i;
 const NOT_A_PAGE = /\.(pdf|jpe?g|png|gif|svg|webp|ico|css|js|zip|docx?|xlsx?|mp[34])$/i;
 // Machine endpoints (mostly WordPress) that would eat the page budget
 const TECHNICAL_PATH = /\/(feed|wp-json|wp-admin|wp-login\.php|xmlrpc\.php|cdn-cgi|cart|checkout)(\/|$)/i;
@@ -148,8 +150,9 @@ function siteLinks(html: string, website: string, alreadyRead: Set<string>): str
     seen.add(pageKey(url.href));
     links.push(url.href);
   }
-  // Stable sort: likely pages first, the rest in page order
-  return links.sort((a, b) => Number(!LIKELY_EMAIL_PAGE.test(a)) - Number(!LIKELY_EMAIL_PAGE.test(b)));
+  // Stable sort: likely pages first, then the rest in page order, careers pages last
+  const rank = (link: string) => (HR_PAGE.test(link) ? 2 : LIKELY_EMAIL_PAGE.test(link) ? 0 : 1);
+  return links.sort((a, b) => rank(a) - rank(b));
 }
 
 async function emailsFrom(urls: string[]): Promise<string[]> {

@@ -57,8 +57,8 @@ function chunk<T>(arr: T[], size: number): T[][] {
  * for a freshly loaded search, in two passes:
  *   1. Scrape every business's website (free).
  *   2. For those still without an email, the paid email APIs — once per
- *      business ever (email_lookup_at), and in 'auto' mode, which only spends
- *      a Hunter search when Hunter's free count says it has an email.
+ *      business ever (email_lookup_at), and in 'auto' mode: Hunter then Snov,
+ *      each spending a credit only when its free count says it has an email.
  * Businesses are processed in sequential chunks so each request stays well
  * under serverless time limits, and discovered contacts are merged into the
  * list as each chunk returns.
