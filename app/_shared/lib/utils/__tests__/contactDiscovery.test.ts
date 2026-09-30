@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { contactsUpdate, discoverContacts, type DiscoveredContacts } from '@/app/_shared/lib/utils/contactDiscovery';
+import { contactsUpdate, discoverContacts, emailLookupUpdate, type DiscoveredContacts } from '@/app/_shared/lib/utils/contactDiscovery';
 
 const found: DiscoveredContacts = {
   fetched: true,
@@ -62,5 +62,12 @@ describe('discoverContacts', () => {
     });
     const homepageFetches = fetchMock.mock.calls.filter(([url]) => url === 'https://smiledental.com/');
     expect(homepageFetches).toHaveLength(1);
+  });
+});
+
+describe('emailLookupUpdate', () => {
+  it('records the lookup so it never runs twice, saving any email found', () => {
+    expect(emailLookupUpdate('hello@smiledental.com', NOW)).toEqual({ email: 'hello@smiledental.com', email_lookup_at: NOW });
+    expect(emailLookupUpdate(null, NOW)).toEqual({ email_lookup_at: NOW });
   });
 });

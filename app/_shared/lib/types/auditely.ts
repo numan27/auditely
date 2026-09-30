@@ -23,6 +23,8 @@ export interface Business {
   socials: Socials;
   /** When contact discovery last loaded the homepage; null = never */
   contacts_checked_at: string | null;
+  /** When the paid email APIs were tried (automatically once, or via "Find email"); null = never */
+  email_lookup_at: string | null;
   created_at: string;
 }
 

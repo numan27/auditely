@@ -44,3 +44,8 @@ export function contactsUpdate(
       : {}),
   };
 }
+
+/** The `businesses` update after the paid-API email lookup — recorded so it never runs twice. */
+export function emailLookupUpdate(email: string | null, lookedUpAt: string) {
+  return { ...(email ? { email } : {}), email_lookup_at: lookedUpAt };
+}

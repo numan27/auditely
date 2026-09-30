@@ -25,6 +25,16 @@ function pendingIds(businesses: BusinessWithData[]): string[] {
   return businesses.filter((b) => b.website && (!b.email || !b.contacts_checked_at)).map((b) => b.id);
 }
 
+/** Businesses the paid-API email lookup should still run for: once each, after scraping. */
+export function emailLookupCandidates(businesses: BusinessWithData[], foundEmail: Set<string>): string[] {
+  return businesses
+    .filter((b) => b.website && !b.email && !b.email_lookup_at && !foundEmail.has(b.id))
+    .map((b) => b.id);
+}
+
+const initialTotal = (businesses: BusinessWithData[]) =>
+  pendingIds(businesses).length + emailLookupCandidates(businesses, new Set()).length;
+
 /** Maps a /api/find-emails response to the contacts found per business */
 export function contactsFromResponse(data: { results?: FindResultDto[] }): ContactsFound[] {
   return (data.results ?? []).map((r) => ({
@@ -44,12 +54,14 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 /**
  * Background contact discovery (email, phone, contact page, social profiles)
- * for a freshly loaded search.
- *
- * Scrape-only (no API fallback) so it can run automatically across every
- * business without burning quota. Businesses are processed in sequential
- * chunks so each request stays well under serverless time limits, and
- * discovered contacts are merged into the list as each chunk returns.
+ * for a freshly loaded search, in two passes:
+ *   1. Scrape every business's website (free).
+ *   2. For those still without an email, the paid email APIs — once per
+ *      business ever (email_lookup_at), and in 'auto' mode, which only spends
+ *      a Hunter search when Hunter's free count says it has an email.
+ * Businesses are processed in sequential chunks so each request stays well
+ * under serverless time limits, and discovered contacts are merged into the
+ * list as each chunk returns.
  *
  * @param businesses      current business list (read via an effect event — merging
  *                         contacts back in does NOT restart discovery)
@@ -64,47 +76,68 @@ export function useEmailDiscovery(
   const [progress, setProgress] = useState(() => ({
     runKey,
     done: 0,
-    total: pendingIds(businesses).length,
+    total: initialTotal(businesses),
   }));
 
   // A new run resets progress. Adjusting state during render (instead of in the
   // effect) avoids an extra cascading render.
   if (progress.runKey !== runKey) {
-    setProgress({ runKey, done: 0, total: pendingIds(businesses).length });
+    setProgress({ runKey, done: 0, total: initialTotal(businesses) });
   }
 
   // Effect events always see the latest props without being effect dependencies
   const onFound = useEffectEvent(onContactsFound);
   const getPendingIds = useEffectEvent(() => pendingIds(businesses));
+  const getLookupIds = useEffectEvent((foundEmail: Set<string>) => emailLookupCandidates(businesses, foundEmail));
 
   useEffect(() => {
     const pending = getPendingIds();
-    if (pending.length === 0) return;
+    const lookupAtStart = getLookupIds(new Set());
+    if (pending.length === 0 && lookupAtStart.length === 0) return;
 
     let cancelled = false;
     const controller = new AbortController();
-    const chunks = chunk(pending, CHUNK_SIZE);
+    const foundEmail = new Set<string>();
+
+    // One chunk to /api/find-emails; false once the run was cancelled
+    const post = async (ids: string[], extra: Record<string, unknown>): Promise<boolean> => {
+      try {
+        const res = await fetch(API_ROUTES.FIND_EMAILS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ business_ids: ids, ...extra }),
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (cancelled) return false;
+        const found = contactsFromResponse(data);
+        found.forEach((f) => f.email && foundEmail.add(f.id));
+        if (found.length) onFound(found);
+      } catch {
+        /* chunk failed (e.g. aborted) — continue with the rest */
+      }
+      return !cancelled;
+    };
 
     (async () => {
       let done = 0;
-      for (const ids of chunks) {
-        if (cancelled) return;
-        try {
-          const res = await fetch(API_ROUTES.FIND_EMAILS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ business_ids: ids }),
-            signal: controller.signal,
-          });
-          const data = await res.json();
-          if (cancelled) return;
-          const found = contactsFromResponse(data);
-          if (found.length) onFound(found);
-        } catch {
-          /* chunk failed (e.g. aborted) — continue with the rest */
-        }
+      let total = pending.length + lookupAtStart.length;
+
+      // 1. Scrape (free)
+      for (const ids of chunk(pending, CHUNK_SIZE)) {
+        if (!(await post(ids, {}))) return;
         done += ids.length;
-        if (!cancelled) setProgress({ runKey, done, total: pending.length });
+        setProgress({ runKey, done, total });
+      }
+
+      // 2. Paid APIs once, for those scraping didn't find an email for
+      const lookup = getLookupIds(foundEmail);
+      total = done + lookup.length;
+      setProgress({ runKey, done, total });
+      for (const ids of chunk(lookup, CHUNK_SIZE)) {
+        if (!(await post(ids, { apiLookup: 'auto' }))) return;
+        done += ids.length;
+        setProgress({ runKey, done, total });
       }
     })();
 

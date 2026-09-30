@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   contact_page        TEXT,
   socials             JSONB       NOT NULL DEFAULT '{}',
   contacts_checked_at TIMESTAMPTZ,
+  -- When the paid email APIs were tried (once automatically, or via "Find email")
+  email_lookup_at     TIMESTAMPTZ,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

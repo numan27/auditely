@@ -13,6 +13,7 @@ const business = (overrides: Partial<BusinessWithData> = {}): BusinessWithData =
   contact_page: 'https://washdent.com/contact',
   socials: { facebook: 'https://facebook.com/washdent' },
   contacts_checked_at: null,
+  email_lookup_at: null,
   created_at: '2026-09-01T00:00:00Z',
   ...overrides,
 });
