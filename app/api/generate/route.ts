@@ -3,7 +3,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { supabase } from '@/app/_shared/lib/supabase/client';
-import { auditFacts } from '@/app/_shared/lib/audit/reportData';
+import { rankedProblems } from '@/app/_shared/lib/audit/impact';
+import { InvalidReplyError, reportFixes, writeReport, type WrittenReport } from '@/app/_shared/lib/audit/aiReport';
+import { reportContact } from '@/app/_shared/lib/config/reportContact';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
@@ -51,45 +53,15 @@ export async function POST(request: NextRequest) {
 
   const groq = new Groq({ apiKey });
 
-  const biz = audit.businesses as { name: string; website: string } | null;
+  const biz = audit.businesses as { name: string; website: string | null } | null;
   if (!biz) {
     return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   }
 
-  const { scores, issues } = auditFacts(audit);
-
-  const prompt = `Analyze this website audit and respond in JSON only.
-
-Business: ${biz.name}
-Website: ${biz.website}
-${scores}
-
-Specific Issues Found:
-${issues}
-
-Only mention metrics that were measured. Never claim a problem for a metric marked "not measured".
-
-Instructions:
-1. Write a 2-3 sentence summary referencing 1-2 of the specific issues above in plain business language
-2. List exactly 4 actionable improvements directly tied to the issues above
-3. Write a personalized cold email exactly 2 paragraphs long:
-   - Paragraph 1: Introduce yourself briefly, mention you audited their website, and call out 2-3 specific issues found (reference the actual issue names above and their business impact).
-   - Paragraph 2: Explain the value of fixing these issues for their business (more customers, better Google ranking, faster site), offer a free consultation or quick call, and end with a clear call to action.
-   - Include a subject line at the very top prefixed with "Subject: "
-   - Do NOT use bullet points inside the email — flowing prose only.
-
-Tone: professional, warm, specific, value-focused. Never generic. Never pushy.
-
-Respond with ONLY valid JSON in this exact format:
-{
-  "summary": "...",
-  "improvements": ["...", "...", "...", "..."],
-  "cold_email": "..."
-}`;
-
-  let completion;
-  try {
-    completion = await groq.chat.completions.create({
+  // The model only sees the impact library's facts; the fixes come from the library
+  const problems = rankedProblems(audit);
+  const complete = async (prompt: string): Promise<string> => {
+    const completion = await groq.chat.completions.create({
       // llama-3.3-70b-versatile is no longer served by Groq (model_not_found)
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: prompt }],
@@ -101,27 +73,32 @@ Respond with ONLY valid JSON in this exact format:
       reasoning_effort: 'low',
       max_tokens: 4096,
     });
+    return completion.choices[0]?.message?.content ?? '{}';
+  };
+
+  let written: WrittenReport;
+  try {
+    written = await writeReport(complete, {
+      businessName: biz.name,
+      website: biz.website ?? '',
+      problems,
+      sender: reportContact().name,
+    });
   } catch (err) {
+    if (err instanceof InvalidReplyError) {
+      return NextResponse.json({ error: 'AI returned invalid JSON' }, { status: 500 });
+    }
     console.error('[generate] Groq request failed:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
-  }
-
-  const content = completion.choices[0]?.message?.content ?? '{}';
-  let parsed: { summary?: string; improvements?: string[]; cold_email?: string } = {};
-
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return NextResponse.json({ error: 'AI returned invalid JSON' }, { status: 500 });
   }
 
   const { data: aiReport, error } = await supabase
     .from('ai_reports')
     .insert({
       audit_id: auditId,
-      summary: parsed.summary ?? '',
-      improvements: parsed.improvements ?? [],
-      cold_email: parsed.cold_email ?? '',
+      summary: written.summary,
+      improvements: reportFixes(problems),
+      cold_email: written.cold_email,
     })
     .select()
     .single();

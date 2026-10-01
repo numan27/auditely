@@ -65,7 +65,8 @@ describe('analyzeLeadCapture', () => {
   it("never claims there's no contact form when the contact page couldn't be read", () => {
     const unread = keyPage('contact', null);
     const withEmail = run([home('<a href="mailto:office@smiledental.com">Email</a><a href="/contact">Contact</a>'), unread], [link('/contact', 'unknown')]);
-    expect(finding(withEmail, 'lead.form')).toMatchObject({ status: 'warn', label: "Couldn't check the contact page for a form" });
+    expect(finding(withEmail, 'lead.formUnchecked')).toMatchObject({ status: 'warn', label: "Couldn't check the contact page for a form" });
+    expect(finding(withEmail, 'lead.form')).toBeUndefined();
     const without = run([home('<a href="/contact">Contact</a>'), unread], [link('/contact', 'unknown')]);
     expect(without.score).toBe(60); // form 30 kept + contact page 10 + links 20
   });
@@ -116,7 +117,7 @@ describe('analyzeLeadCapture', () => {
 
   it('says it could not check an unknown embedded widget on the contact page, but ignores maps', () => {
     const contactWith = (html: string) => run([home('<a href="/contact">Contact</a>'), keyPage('contact', html)]);
-    expect(finding(contactWith('<iframe src="https://widgets.formbuilder.example/f/1"></iframe>'), 'lead.form')).toMatchObject({
+    expect(finding(contactWith('<iframe src="https://widgets.formbuilder.example/f/1"></iframe>'), 'lead.formUnchecked')).toMatchObject({
       status: 'warn',
       label: "Couldn't read the embedded widget on the contact page — it may be a form",
     });

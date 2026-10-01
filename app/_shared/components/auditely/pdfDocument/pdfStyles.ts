@@ -226,6 +226,12 @@ export const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 1,
   },
+  problemTitle: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: '#111827',
+    marginBottom: 1,
+  },
   noIssues: {
     fontSize: 10,
     color: '#16a34a',

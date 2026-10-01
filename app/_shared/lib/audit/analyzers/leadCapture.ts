@@ -192,7 +192,8 @@ export function analyzeLeadCapture(pages: LeadPage[], links: LinkResult[]): { sc
   if (formPage) {
     add(30, { id: 'lead.form', status: 'pass', label: `Contact form on the ${PAGE_NAMES[formPage.kind]}` });
   } else if (unchecked) {
-    add(30, { id: 'lead.form', status: 'warn', label: unchecked });
+    // Its own id: never mistaken for "only an email link" (see impactLibrary.ts)
+    add(30, { id: 'lead.formUnchecked', status: 'warn', label: unchecked });
   } else if (loaded.some(hasEmailLink)) {
     add(10, { id: 'lead.form', status: 'warn', label: 'Only an email link — no contact form found' });
   } else {

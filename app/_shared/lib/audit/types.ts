@@ -53,6 +53,8 @@ export interface KeyAudit {
 export interface LighthouseSummary {
   categories: Record<string, { score: number | null; title: string }>;
   keyAudits: Record<string, KeyAudit>;
+  /** Real-visitor load time (LCP, 75th percentile) from Chrome data; absent when Google has too few visits */
+  field?: { lcpMs: number; scope: 'page' | 'origin' };
 }
 
 export interface SslCheck {
