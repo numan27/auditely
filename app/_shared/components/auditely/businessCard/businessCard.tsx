@@ -10,6 +10,7 @@ import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/b
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
@@ -65,6 +66,7 @@ function ScorePills({ audit }: { audit: Audit }) {
 
 export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun }: BusinessCardProps) {
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun });
+  const crm = useCrmSend(business, onUpdate);
   const { audit, auditStatus, reportStatus, email, saveEmail } = state;
   // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
   const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
@@ -156,7 +158,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
         </div>
       </div>
 
-      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} />}
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} />}
     </article>
   );
 }

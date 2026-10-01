@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- Google rating and review count (NULL = unknown)
   rating              NUMERIC(2, 1),
   review_count        INTEGER,
+  -- The HubSpot company this lead was sent to, and when
+  hubspot_company_id  TEXT,
+  crm_sent_at         TIMESTAMPTZ,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

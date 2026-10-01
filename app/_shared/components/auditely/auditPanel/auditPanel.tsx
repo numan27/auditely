@@ -5,17 +5,21 @@
 import type { ReactNode } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
-import { DownloadIcon, GaugeIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
+import { GaugeIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
 import { AuditScores } from '@/app/_shared/components/auditely/auditScores/auditScores';
 import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
 import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack';
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
+import { ReportActions } from '@/app/_shared/components/auditely/reportActions/reportActions';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import type { Business } from '@/app/_shared/lib/types/auditely';
 
 interface AuditPanelProps {
   business: Business;
   state: ReturnType<typeof useBusinessAudit>;
+  /** "Send to HubSpot", owned by the card so it survives collapsing */
+  crm: ReturnType<typeof useCrmSend>;
 }
 
 const ROW = 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between';
@@ -49,8 +53,8 @@ function Failed({ message, onRetry }: { message: string; onRetry: () => void }):
 }
 
 /** The body of a business card: audit states, scores, findings and the AI report */
-export function AuditPanel({ business, state }: AuditPanelProps) {
-  const { audit, report, auditStatus, auditError, reportStatus, pdfLoading } = state;
+export function AuditPanel({ business, state, crm }: AuditPanelProps) {
+  const { audit, report, auditStatus, auditError, reportStatus } = state;
 
   if (!business.website) {
     return (
@@ -136,20 +140,7 @@ export function AuditPanel({ business, state }: AuditPanelProps) {
         </section>
       </div>
 
-      {report && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] bg-[var(--color-bg-primary)] px-5 py-3 sm:px-6">
-          <p className="text-sm text-[var(--color-text-tertiary)]">A branded PDF of this audit, ready to send.</p>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={state.downloadPdf}
-            isLoading={pdfLoading}
-            leftIcon={<DownloadIcon size={14} />}
-          >
-            {pdfLoading ? 'Preparing PDF…' : 'Download PDF report'}
-          </Button>
-        </div>
-      )}
+      {report && <ReportActions state={state} crm={crm} />}
     </>
   );
 }

@@ -6,6 +6,8 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  // Private PDF report links (/report/{signed token}) — public, the token is the key
+  REPORT: '/report',
 } as const;
 
 // API route paths. Only AUTH is public (see PUBLIC_ROUTES below).
@@ -19,10 +21,11 @@ export const API_ROUTES = {
   SEARCHES: '/api/searches',
   RESULTS: '/api/results',
   FIND_EMAILS: '/api/find-emails',
+  CRM: '/api/crm',
 } as const;
 
-// Everything is private (single-admin tool) except these
-export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH] as const;
+// Everything is private (single-admin tool) except these; /report/{token} is checked by its signature
+export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT] as const;
 
 // Pages a logged-in user should be bounced away from
 export const AUTH_ROUTES = [ROUTES.LOGIN] as const;

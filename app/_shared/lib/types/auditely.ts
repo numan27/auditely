@@ -29,6 +29,10 @@ export interface Business {
   rating: number | null;
   /** Google review count; null when unknown (older searches, providers without reviews) */
   review_count: number | null;
+  /** The HubSpot company this lead was sent to; absent before the HubSpot migration */
+  hubspot_company_id?: string | null;
+  /** When the lead was last sent to HubSpot */
+  crm_sent_at?: string | null;
   created_at: string;
 }
 
@@ -66,7 +70,7 @@ export interface BusinessWithData extends Business {
 }
 
 /** What a business card found or produced, merged back into the results list */
-export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report'>>;
+export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report' | 'crm_sent_at'>>;
 
 export type AuditStatus = 'idle' | 'loading' | 'done' | 'error';
 export type ReportStatus = 'idle' | 'loading' | 'done' | 'error';
