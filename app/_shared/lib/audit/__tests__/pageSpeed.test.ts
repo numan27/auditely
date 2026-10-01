@@ -53,6 +53,26 @@ describe('runPageSpeed', () => {
     expect(result.summary.keyAudits['largest-contentful-paint'].displayValue).toBe('12.8 s');
   });
 
+  it('reads the real-visitor load time when Google has it', async () => {
+    const lcp = (percentile: number) => ({ LARGEST_CONTENTFUL_PAINT_MS: { percentile, category: 'SLOW', distributions: [] } });
+    fetchMock.mockResolvedValueOnce(json({ ...lighthouse(), loadingExperience: { id: 'https://acme.com/', metrics: lcp(4100), overall_category: 'SLOW' } }));
+    const page = await runPageSpeed('https://acme.com/', 'mobile', deadline);
+    if (!page.ok) throw new Error('expected ok');
+    expect(page.summary.field).toEqual({ lcpMs: 4100, scope: 'page' });
+
+    fetchMock.mockResolvedValueOnce(json({ ...lighthouse(), loadingExperience: { id: 'https://acme.com', metrics: lcp(2600), origin_fallback: true } }));
+    const origin = await runPageSpeed('https://acme.com/', 'mobile', deadline);
+    if (!origin.ok) throw new Error('expected ok');
+    expect(origin.summary.field).toEqual({ lcpMs: 2600, scope: 'origin' });
+  });
+
+  it('leaves real-visitor data out when Google has none', async () => {
+    fetchMock.mockResolvedValue(json({ ...lighthouse(), loadingExperience: { id: 'https://acme.com/' } }));
+    const result = await runPageSpeed('https://acme.com/', 'mobile', deadline);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.summary).not.toHaveProperty('field');
+  });
+
   it('keeps a null category score as null instead of 0', async () => {
     fetchMock.mockResolvedValue(
       json(lighthouse({ categories: { performance: { score: 0.5, title: 'Performance' }, seo: { score: null, title: 'SEO' } } }))

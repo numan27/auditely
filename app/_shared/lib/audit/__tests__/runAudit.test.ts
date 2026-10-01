@@ -4,6 +4,9 @@ import type { PageSpeedResult, PageSpeedStrategy } from '@/app/_shared/lib/audit
 import type { SiteFetchResult } from '@/app/_shared/lib/audit/siteFetch';
 import type { AuditInput } from '@/app/_shared/lib/audit/types';
 import { DENTIST_HOME, JS_SHELL } from '@/app/_shared/lib/audit/__tests__/fixtures';
+import { memoryPageSpeedStore } from '@/app/_shared/lib/audit/__tests__/memoryPageSpeedStore';
+import type { PageFetchResult } from '@/app/_shared/lib/audit/siteFetch';
+import type { LinkResult } from '@/app/_shared/lib/audit/linkCheck';
 
 const psiOk = (perf: number, seo: number | null, isOnHttps: boolean | null = true): PageSpeedResult => ({
   ok: true,
@@ -48,6 +51,9 @@ function deps(over: Partial<AuditDeps> = {}): AuditDeps {
     ),
     fetchSite: vi.fn(async () => siteOk(DENTIST_HOME)),
     checkTls: vi.fn(async () => ({ valid: true, daysToExpiry: 60, issuer: "Let's Encrypt" })),
+    // Offline by default: key pages 404, every link ok
+    fetchPage: vi.fn(async (url: string): Promise<PageFetchResult> => ({ ok: false, status: 404, finalUrl: url, html: null, reason: 'HTTP 404' })),
+    checkLinks: vi.fn(async (urls: string[]): Promise<LinkResult[]> => urls.map((url) => ({ url, status: 'ok' }))),
     now: () => 0,
     ...over,
   };
@@ -152,9 +158,91 @@ describe('runAudit', () => {
     const discoverEmail = vi.fn(async () => 'hello@smiledental.com');
     const found = await runAudit({ ...input, discoverEmail }, deps());
     expect(found.email).toBe('hello@smiledental.com');
-    expect(discoverEmail).toHaveBeenCalledWith(DENTIST_HOME);
+    expect(discoverEmail).toHaveBeenCalledWith(DENTIST_HOME, []);
 
     const failing = await runAudit({ ...input, discoverEmail: vi.fn(async () => { throw new Error('boom'); }) }, deps());
     expect(failing.email).toBeNull();
+  });
+
+  describe('lead capture', () => {
+    // DENTIST_HOME already has a tap-to-call link; add a contact link
+    const HOME_WITH_CONTACT = DENTIST_HOME.replace('</footer>', '<a href="/contact">Contact us</a></footer>');
+    const CONTACT_PAGE = '<form><input name="name"><textarea name="msg"></textarea></form><p>office@smiledental.com</p>';
+    const contactSite = () =>
+      deps({
+        fetchSite: vi.fn(async () => siteOk(HOME_WITH_CONTACT)),
+        fetchPage: vi.fn(async (url: string): Promise<PageFetchResult> => ({ ok: true, status: 200, finalUrl: url, html: CONTACT_PAGE })),
+      });
+
+    it('scores the homepage and the key pages it links to', async () => {
+      const d = contactSite();
+      const { row } = await runAudit(input, d);
+      expect(d.fetchPage).toHaveBeenCalledWith('https://smiledental.com/contact');
+      // call 25 + form 30 + booking 0 (warn) + contact page 10 + links 20
+      expect(row.lead_score).toBe(85);
+      expect(row.checks.lead?.pages.map((p) => p.kind)).toEqual(['home', 'contact']);
+    });
+
+    it('hands the key pages to email discovery instead of fetching them again', async () => {
+      const discoverEmail = vi.fn(async () => null);
+      await runAudit({ ...input, discoverEmail }, contactSite());
+      expect(discoverEmail).toHaveBeenCalledWith(HOME_WITH_CONTACT, [
+        { url: 'https://smiledental.com/contact', html: CONTACT_PAGE },
+      ]);
+    });
+
+    it('is not measured for a JavaScript-only homepage', async () => {
+      const { row } = await runAudit(input, deps({ fetchSite: vi.fn(async () => siteOk(JS_SHELL)) }));
+      expect(row.lead_score).toBeNull();
+      expect(row.checks.lead).toBeNull();
+    });
+
+    it('is not measured when the site blocks the crawler, and fetches no key pages', async () => {
+      const d = deps({ fetchSite: vi.fn(async () => siteBlocked) });
+      const { row } = await runAudit(input, d);
+      expect(row.lead_score).toBeNull();
+      expect(d.fetchPage).not.toHaveBeenCalled();
+    });
+
+    it('keeps the rest of the audit when fetching the key pages fails', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const d = contactSite();
+      vi.mocked(d.fetchPage).mockRejectedValue(new Error('boom'));
+      const { row } = await runAudit(input, d);
+      expect(row.lead_score).toBeNull();
+      expect(row.performance_score).toBe(42);
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('with the shared PageSpeed cache', () => {
+    const NOW = Date.parse('2026-09-30T12:00:00Z');
+    const daysAgo = (days: number) => new Date(NOW - days * 86_400_000).toISOString();
+    const cached = (perf: number, fetchedAt: string) => {
+      const result = psiOk(perf, 0.8);
+      return { summary: result.ok ? result.summary : null!, isOnHttps: true, engineVersion: 2, fetchedAt };
+    };
+    // Stored by an audit of another listing with the same website
+    const store = () =>
+      memoryPageSpeedStore({
+        'smiledental.com|mobile': cached(0.5, daysAgo(10)),
+        'smiledental.com|desktop': cached(0.6, daysAgo(20)),
+      }).store;
+
+    it('reuses the stored results and records when they were measured', async () => {
+      const d = deps({ pageSpeedStore: store(), now: () => NOW });
+      const { row } = await runAudit(input, d);
+      expect(d.runPageSpeed).not.toHaveBeenCalled();
+      expect(row).toMatchObject({ mobile_score: 50, performance_score: 60, seo_score: 80 });
+      expect(row.checks.psi).toEqual({ mobile: 'ok', desktop: 'ok', measuredAt: daysAgo(20) });
+    });
+
+    it('runs PageSpeed afresh for a Re-audit', async () => {
+      const d = deps({ pageSpeedStore: store(), now: () => NOW });
+      const { row } = await runAudit({ ...input, refreshPageSpeed: true }, d);
+      expect(d.runPageSpeed).toHaveBeenCalledTimes(2);
+      expect(row).toMatchObject({ mobile_score: 38, performance_score: 42 });
+      expect(row.checks.psi).toEqual({ mobile: 'ok', desktop: 'ok' });
+    });
   });
 });

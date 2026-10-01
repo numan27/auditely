@@ -3,7 +3,9 @@
 import { Document, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
 import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
 import {
+  LeadCaptureSection,
   NextStepSection,
+  ProblemsSection,
   ScoreLegend,
   SearchReadinessSection,
 } from '@/app/_shared/components/auditely/pdfDocument/pdfSections';
@@ -48,6 +50,15 @@ export interface PdfFinding {
   detail?: string;
 }
 
+/** A problem in owner language (see impact.ts) */
+export interface PdfProblem {
+  problem: string;
+  cost: string;
+  evidence?: string;
+  /** A statistic with its source in brackets */
+  stat?: string;
+}
+
 /** Who the prospect contacts — see reportContact() */
 export interface PdfContact {
   name: string | null;
@@ -68,9 +79,11 @@ export interface PdfDocumentProps {
   sslValid: boolean | null;
   geoScore: number | null;
   aeoScore: number | null;
-  topIssues?: { title: string; displayValue?: string }[];
+  problems: PdfProblem[];
   geoFindings: PdfFinding[];
   aeoFindings: PdfFinding[];
+  leadScore: number | null;
+  leadFindings: PdfFinding[];
   summary: string;
   improvements: string[];
   contact: PdfContact;
@@ -88,9 +101,11 @@ export function PdfDocument({
   sslValid,
   geoScore,
   aeoScore,
-  topIssues,
+  problems,
   geoFindings,
   aeoFindings,
+  leadScore,
+  leadFindings,
   summary,
   improvements,
   contact,
@@ -127,29 +142,17 @@ export function PdfDocument({
             <SslTile valid={sslValid} />
             <ScoreTile label="GEO" score={geoScore} />
             <ScoreTile label="AEO" score={aeoScore} />
+            <ScoreTile label="Leads" score={leadScore} />
           </View>
           <ScoreLegend />
         </View>
 
         <View style={styles.divider} />
 
-        {/* Top Issues */}
-        {topIssues && topIssues.length > 0 && (
+        {/* What it costs them, worst first */}
+        {problems.length > 0 && (
           <>
-            <View style={styles.section} wrap={false}>
-              <Text style={styles.sectionLabel}>Top Issues Found</Text>
-              {topIssues.map((issue, i) => (
-                <View key={i} style={styles.issueRow}>
-                  <View style={[styles.bulletDot, styles.dotRed]} />
-                  <Text style={styles.issueText}>
-                    {issue.title}
-                    {issue.displayValue ? (
-                      <Text style={styles.issueValue}> ({issue.displayValue})</Text>
-                    ) : null}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <ProblemsSection problems={problems} />
             <View style={styles.divider} />
           </>
         )}
@@ -167,22 +170,32 @@ export function PdfDocument({
           </>
         )}
 
+        {/* Lead capture — audits made before it show nothing */}
+        {leadScore !== null && (
+          <>
+            <LeadCaptureSection score={leadScore} findings={leadFindings} />
+            <View style={styles.divider} />
+          </>
+        )}
+
         {/* Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Summary</Text>
           <Text style={styles.bodyText}>{summary}</Text>
         </View>
 
-        {/* Improvements */}
-        <View style={styles.section} wrap={false}>
-          <Text style={styles.sectionLabel}>Recommended Improvements</Text>
-          {improvements.map((item, i) => (
-            <View key={i} style={styles.bulletRow}>
-              <Text style={styles.bulletNum}>{i + 1}.</Text>
-              <Text style={styles.bulletText}>{item}</Text>
-            </View>
-          ))}
-        </View>
+        {/* Improvements: the library's fixes for the problems above */}
+        {improvements.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionLabel}>How We&apos;d Fix It</Text>
+            {improvements.map((item, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Text style={styles.bulletNum}>{i + 1}.</Text>
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <NextStepSection contact={contact} />
 

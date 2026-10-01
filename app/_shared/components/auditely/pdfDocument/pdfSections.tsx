@@ -4,7 +4,7 @@
 
 import { Link, Text, View } from '@react-pdf/renderer';
 import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
-import type { PdfContact, PdfFinding } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import type { PdfContact, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 const SCORE_DEFINITIONS: [string, string][] = [
   ['Performance', 'page speed on desktop'],
@@ -13,6 +13,7 @@ const SCORE_DEFINITIONS: [string, string][] = [
   ['SSL', 'secure (https) connection'],
   ['GEO', 'how clearly AI search tools like ChatGPT can identify the business'],
   ['AEO', 'how ready the content is to be quoted as a direct answer'],
+  ['Leads', 'how easily visitors can call, message or book'],
 ];
 
 function LegendItem({ dot, text }: { dot: typeof styles.dotGreen; text: string }) {
@@ -89,6 +90,15 @@ export function SearchReadinessSection({ geoScore, aeoScore, geoFindings, aeoFin
   );
 }
 
+export function LeadCaptureSection({ score, findings }: { score: number | null; findings: PdfFinding[] }) {
+  return (
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionLabel}>Lead Capture</Text>
+      <ReadinessBlock title="Can visitors reach you?" score={score} findings={findings} />
+    </View>
+  );
+}
+
 export function NextStepSection({ contact }: { contact: PdfContact }) {
   const details = [contact.name, contact.phone, contact.email].filter(Boolean).join('  ·  ');
   return (
@@ -109,6 +119,25 @@ export function NextStepSection({ contact }: { contact: PdfContact }) {
           </Link>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+export function ProblemsSection({ problems }: { problems: PdfProblem[] }) {
+  return (
+    <View style={styles.section} wrap={false}>
+      <Text style={styles.sectionLabel}>What&apos;s Costing You Customers</Text>
+      {problems.map((p, i) => (
+        <View key={i} style={styles.issueRow}>
+          <View style={[styles.bulletDot, styles.dotRed]} />
+          <View style={styles.findingBody}>
+            <Text style={styles.problemTitle}>{p.problem}</Text>
+            {p.cost ? <Text style={styles.findingLabel}>{p.cost}</Text> : null}
+            {p.stat ? <Text style={styles.findingDetail}>{p.stat}</Text> : null}
+            {p.evidence ? <Text style={styles.findingDetail}>{p.evidence}</Text> : null}
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

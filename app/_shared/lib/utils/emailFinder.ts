@@ -6,6 +6,8 @@
 
 import { FREE_MAIL_DOMAINS, isValidBusinessEmail } from '@/app/_shared/lib/utils/emailValidation';
 import { lookupEmailViaApis } from '@/app/_shared/lib/utils/emailApis';
+import { readCapped } from '@/app/_shared/lib/audit/siteFetch';
+import { pageKey, sameSiteLinks } from '@/app/_shared/lib/audit/siteLinks';
 
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const MAILTO_REGEX = /href=["']mailto:([^"'?\s]+)/gi;
@@ -24,9 +26,9 @@ const MAX_EXTRA_PAGES = 8;
 const LIKELY_EMAIL_PAGE = /contact|about|team|staff|doctor|provider|privacy|new-patient|patient|location|office/i;
 // Careers pages mostly list HR inboxes, not sales contacts — read them last
 const HR_PAGE = /career|job|employment|hiring|recruit/i;
-const NOT_A_PAGE = /\.(pdf|jpe?g|png|gif|svg|webp|ico|css|js|zip|docx?|xlsx?|mp[34])$/i;
-// Machine endpoints (mostly WordPress) that would eat the page budget
-const TECHNICAL_PATH = /\/(feed|wp-json|wp-admin|wp-login\.php|xmlrpc\.php|cdn-cgi|cart|checkout)(\/|$)/i;
+
+// Same cap as the homepage fetch: a huge page can't exhaust the function's memory
+const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 
 const GENERIC_PREFIXES = new Set([
   'info', 'contact', 'hello', 'support', 'admin', 'sales', 'office',
@@ -122,34 +124,21 @@ async function fetchPage(url: string): Promise<string | null> {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Auditely/1.0)' },
       redirect: 'follow',
     });
-    return res.ok ? await res.text() : null;
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
+    return await readCapped(res, MAX_PAGE_BYTES);
   } catch {
     return null;
   }
 }
 
-// Same page regardless of scheme, "www." or a trailing slash
-const pageKey = (url: string) => url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').toLowerCase();
-
-/** The site's own page links (<a> only) from its homepage, likely contact/about/team pages first. */
-function siteLinks(html: string, website: string, alreadyRead: Set<string>): string[] {
-  const base = new URL(website);
-  const host = base.hostname.replace(/^www\./, '');
-  const seen = new Set(alreadyRead);
-  const links: string[] = [];
-  for (const [, href] of html.matchAll(/<a\s[^>]*href=["']([^"'#]+)/gi)) {
-    if (/^(mailto|tel|javascript|sms):/i.test(href)) continue;
-    let url: URL;
-    try {
-      url = new URL(href, base);
-    } catch {
-      continue;
-    }
-    if (!url.protocol.startsWith('http') || url.hostname.replace(/^www\./, '') !== host) continue;
-    if (NOT_A_PAGE.test(url.pathname) || TECHNICAL_PATH.test(url.pathname) || seen.has(pageKey(url.href))) continue;
-    seen.add(pageKey(url.href));
-    links.push(url.href);
-  }
+/** The site's own page links from its homepage, likely contact/about/team pages first, careers last. */
+function extraPageLinks(html: string, website: string, alreadyRead: Set<string>): string[] {
+  const links = sameSiteLinks(html, website)
+    .map((link) => link.url)
+    .filter((url) => !alreadyRead.has(pageKey(url)));
   // Stable sort: likely pages first, then the rest in page order, careers pages last
   const rank = (link: string) => (HR_PAGE.test(link) ? 2 : LIKELY_EMAIL_PAGE.test(link) ? 0 : 1);
   return links.sort((a, b) => rank(a) - rank(b));
@@ -160,7 +149,9 @@ async function emailsFrom(urls: string[]): Promise<string[]> {
   return pages.flatMap((html) => (html ? extractEmails(html) : []));
 }
 
-async function scrapeWebsite(website: string, homepageHtml?: string | null): Promise<string | null> {
+type KnownPage = { url: string; html: string };
+
+async function scrapeWebsite(website: string, homepageHtml?: string | null, pages: KnownPage[] = []): Promise<string | null> {
   const url = new URL(website);
   const domain = url.hostname;
 
@@ -170,15 +161,21 @@ async function scrapeWebsite(website: string, homepageHtml?: string | null): Pro
   const homepageBest = pickBestEmail([...found], domain);
   if (homepageBest) return homepageBest;
 
-  // Then the usual contact/about pages, concurrently
-  const usualPages = PAGES_TO_TRY.map((p) => `${url.origin}${p}`);
+  // Then pages the audit already downloaded (contact, about…), without fetching them again
+  pages.forEach((page) => extractEmails(page.html).forEach((e) => found.add(e)));
+  const givenBest = pickBestEmail([...found], domain);
+  if (givenBest) return givenBest;
+
+  // Then the usual contact/about pages not read yet, concurrently
+  const given = new Set(pages.map((page) => pageKey(page.url)));
+  const usualPages = PAGES_TO_TRY.map((p) => `${url.origin}${p}`).filter((u) => !given.has(pageKey(u)));
   (await emailsFrom(usualPages)).forEach((e) => found.add(e));
   const usualBest = pickBestEmail([...found], domain);
   if (usualBest || !homepage) return usualBest;
 
   // Last, a few more of the site's own pages (privacy, new patients, careers…)
-  const alreadyRead = new Set([website, ...usualPages].map(pageKey));
-  const extraPages = siteLinks(homepage, website, alreadyRead).slice(0, MAX_EXTRA_PAGES);
+  const alreadyRead = new Set([website, ...usualPages].map(pageKey).concat([...given]));
+  const extraPages = extraPageLinks(homepage, website, alreadyRead).slice(0, MAX_EXTRA_PAGES);
   (await emailsFrom(extraPages)).forEach((e) => found.add(e));
   return pickBestEmail([...found], domain);
 }
@@ -187,7 +184,7 @@ async function scrapeWebsite(website: string, homepageHtml?: string | null): Pro
 
 export async function findEmail(
   website: string,
-  opts: { apiFallback?: boolean; homepageHtml?: string | null } = {}
+  opts: { apiFallback?: boolean; homepageHtml?: string | null; pages?: KnownPage[] } = {}
 ): Promise<string | null> {
   let domain: string;
   try {
@@ -197,7 +194,7 @@ export async function findEmail(
   }
 
   // 1. Scrape the website (free, fastest, highest trust)
-  const scraped = await scrapeWebsite(website, opts.homepageHtml);
+  const scraped = await scrapeWebsite(website, opts.homepageHtml, opts.pages);
   if (scraped) return scraped;
 
   // 2. The paid APIs only when asked: the manual "Find email" action runs the

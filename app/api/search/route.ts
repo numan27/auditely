@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
           address: place.address,
           website: place.website,
           phone: place.phone,
+          rating: place.rating ?? null,
+          review_count: place.reviewCount ?? null,
           created_at: new Date(insertedAt + i).toISOString(),
         }))
       )

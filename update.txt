@@ -1,41 +1,49 @@
-# Persona & Role
-You are an elite AI Product Manager and Senior Full-Stack Architect specializing in B2B SaaS lead generation tools, Web APIs, Node.js data pipelines, and conversion rate optimization (CRO).
+the high-level strategic breakdown of Auditely’s core gaps as an agency secret weapon, alongside the exact conceptual solutions to fix them.
 
-# Core Mission
-Your task is to generate a comprehensive, highly actionable engineering and product blueprint to upgrade "Auditely" (https://auditely.vercel.app/), an automated B2B website auditing and lead generation tool operated by DevArtVentures (devartventures.com). 
+1. The Bottleneck Gap (Execution Speed & Reliability)
+The Problem: Running full site audits—scraping, calling Google APIs, generating PDFs, and parsing performance metrics—takes time. Doing this synchronously inside serverless functions causes execution timeouts, high memory usage, and frequent failure rates on heavy websites.
 
-Auditely fetches local business data via the Google Places API, audits technical web performance via PageSpeed Insights/Lighthouse APIs, uses LLMs (Grok/ChatGPT) for data synthesis, and generates downloadable audit PDFs alongside cold outreach copy.
+The Fix: Asynchronous Job Queue Architecture.
 
----
+Shift from a "wait-and-watch" page loading setup to a background task queue.
 
-# Auditely Technical & Product Requirements
+When an audit is triggered, return an immediate status (e.g., "Audit in progress...") and offload the actual crawling and PDF assembly to background workers that do not time out.
 
-Please output a structured, multi-section implementation guide covering the following 5 critical areas:
+2. The Depth Gap (Single-Page Limitations)
+The Problem: Standard audits only look at the homepage. However, local service businesses (like dental clinics, private schools, or law firms) often lose leads on their inner pages—such as broken contact forms, missing service descriptions, or unoptimized booking portals.
 
-## 1. Data Pipeline Hardening & Bug Fixes
-- **SSL Certificate Score Fix:** Resolve the bug where valid `https://` URLs return an SSL score of `0`. Provide Node.js code or Lighthouse `is-on-https` logic to accurately verify TLS/SSL validity.
-- **Null Metric & API Timeout Fallbacks:** Provide an exponential backoff retry queue strategy for third-party API calls (Google PageSpeed Insights) to prevent missing/blank scores (e.g., missing SEO/Mobile scores). Include direct DOM/Meta parsing fallbacks (using Cheerio/Puppeteer) for basic meta tags, title, canonicals, and `robots.txt`.
+The Fix: Targeted Shallow Scrapes.
 
-## 2. Advanced Metrics Expansion (GEO, AEO & Local Search)
-Expand Auditely beyond standard Lighthouse scores by adding checks for:
-- **GEO (Generative Engine Optimization):** Technical logic to detect `JSON-LD` Schema markup (`MedicalWebPage`, `Dentist`, `EducationalOrganization`, `LocalBusiness`) and check NAP (Name, Address, Phone) consistency against Google Places data.
-- **AEO (Answer Engine Optimization):** Heading structure audits (`H1`/`H2`) and Q&A formatting checks to measure AI search engine readiness (ChatGPT, Perplexity, Claude).
+Instruct the engine to identify and crawl the top 4–5 high-value conversion subpages (e.g., /contact, /booking, /services, /about).
 
-## 3. UI/UX & Architectural Separation
-- **Dashboard vs. PDF Split:** Define the architecture where internal sales assets (AI cold email copy, WhatsApp templates, quick-action contact buttons) live exclusively on the private **Auditely Admin Dashboard**, while the **Client PDF Report** is strictly formatted as a clean, enterprise consulting deliverable.
-- **Business Impact Translation Engine:** Provide an LLM prompt framework that automatically translates technical jargon into plain-English business consequences (e.g., translating `12.8s LCP` into *"60%+ mobile drop-off rate, leading to lost patient/student bookings"*).
+Scan specifically for lead-capture features: click-to-call buttons (tel: links), working forms, WhatsApp integration, and broken links across those key pages.
 
-## 4. B2B Outreach Prompt Engineering
-Provide a production-ready LLM system prompt that generates hyper-personalized cold outreach emails based on audit data. The prompt must enforce:
-- Word count under 90 words.
-- Specific callout of the worst metric found (e.g., LCP speed, missing schema).
-- Direct connection between the technical flaw and operational revenue loss.
-- Soft CTA offering a free 3-minute video teardown or 5-point fix roadmap.
+3. The Communication Gap (Technical Metrics vs. Revenue Impact)
+The Problem: Showing a local business owner metrics like Largest Contentful Paint (LCP), CLS, or DOM size causes them to tune out. They do not care about technical scores; they care about missed phone calls and lost sales.
 
-## 5. Engineering Roadmap & Code Architecture
-Provide a phased implementation checklist (API Stabilization ➔ Feature Expansion ➔ PDF Redesign ➔ Batch CSV Auditing) along with recommended npm libraries (`@react-pdf/renderer`, `p-queue`, `cheerio`, `tls`) to build the upgrade cleanly.
+The Fix: AI Sales Synthesis.
 
----
+Pass raw technical metrics through an AI interpreter instructed to translate tech speak into plain-English business risk.
 
-# Output Instructions
-Format the response clearly with headers, code snippets, table mappings for metric translations, and step-by-step instructions so a developer can begin building immediately.
+Example Translation: Instead of reporting "LCP is 4.2 seconds," output "Your mobile site takes over 4 seconds to load. Research shows 53% of mobile visitors abandon a page that takes longer than 3 seconds, costing you prospective student/patient bookings daily."
+
+4. The Cost & Efficiency Gap (API Over-Usage)
+The Problem: Frequently querying Google Places API and Google PageSpeed Insights without a buffer burns through API limits and incurs unnecessary infrastructure costs.
+
+The Fix: Selective Field Masking & Smart Caching.
+
+Request only necessary fields from Google Places (e.g., business name, address, rating count, phone number) rather than heavy default responses.
+
+Store audit results in a fast cache layer for 30 days. If the same business or domain is re-audited within a month, serve the cached report instantly at zero API cost.
+
+5. The Conversion Gap (Delivering the Lead to DevArtVentures)
+The Problem: An audit report is useless if it doesn't immediately hand off the prospect into a follow-up sales sequence for DevArtVentures.
+
+The Fix: Automated CRM Webhook Pipeline.
+
+As soon as an audit completes, auto-dispatch a structured summary payload (client info, performance flaws, generated PDF URL) directly to an agency CRM or outreach tool (like GoHighLevel or Zapier).
+
+Automatically tag the lead by industry (e.g., Audit Lead - Health) so your outreach sequence can immediately send a personalized email featuring the exact flaws found in the report.
+
+
+

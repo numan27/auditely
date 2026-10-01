@@ -87,6 +87,34 @@ describe('findEmail with prefetched homepage HTML', () => {
     expect(await findEmail('https://smiledental.com/', { homepageHtml })).toBe('christine.hradek@smiledental.com');
   });
 
+  it('searches pages the audit already downloaded, without fetching them again', async () => {
+    const email = await findEmail('https://smiledental.com/', {
+      homepageHtml: '<p>No email here</p>',
+      pages: [{ url: 'https://smiledental.com/contact-us', html: '<p>office@smiledental.com</p>' }],
+    });
+    expect(email).toBe('office@smiledental.com');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('skips the usual pages it was already given', async () => {
+    fetchMock.mockResolvedValue(new Response('', { status: 404 }));
+    await findEmail('https://smiledental.com/', {
+      homepageHtml: '<p>No email here</p>',
+      pages: [{ url: 'https://www.smiledental.com/contact/', html: '<p>Call us</p>' }],
+    });
+    const fetched = fetchMock.mock.calls.map(([url]) => url as string);
+    expect(fetched).toContain('https://smiledental.com/about');
+    expect(fetched).not.toContain('https://smiledental.com/contact');
+  });
+
+  it('stops reading a page after 2 MB, like the homepage fetch', async () => {
+    const huge = `${'<p>Our services</p>\n'.repeat(120_000)}<p>office@smiledental.com</p>`; // ~2.4 MB
+    fetchMock.mockImplementation(async (url: string) =>
+      url === 'https://smiledental.com/contact' ? new Response(huge, { status: 200 }) : new Response('', { status: 404 })
+    );
+    expect(await findEmail('https://smiledental.com/', { homepageHtml: '<p>No email here</p>' })).toBeNull();
+  });
+
   it('reads at most 8 extra pages, contact-like ones first', async () => {
     const links =
       Array.from({ length: 20 }, (_, i) => `<a href="/page-${i}">p</a>`).join('') + '<a href="/new-patients">New patients</a>';

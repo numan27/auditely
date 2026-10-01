@@ -6,6 +6,9 @@ export interface PlaceResult {
   address: string;
   website: string | null;
   phone: string | null;
+  /** Google rating and review count; left out by providers without reviews (Geoapify, OpenStreetMap) */
+  rating?: number | null;
+  reviewCount?: number | null;
 }
 
 export type PlacesSearchOutcome =

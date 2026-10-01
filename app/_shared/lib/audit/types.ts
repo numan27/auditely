@@ -9,7 +9,30 @@ export const CURRENT_ENGINE_VERSION = 2;
 export const isOutdatedAudit = (engineVersion: number | null | undefined): boolean =>
   (engineVersion ?? 1) < CURRENT_ENGINE_VERSION;
 
+/** Audits older than this are shown as stale and re-run on the next audit request. */
+export const AUDIT_MAX_AGE_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+/**
+ * True once an audit is over 30 days old. Its age counts from the older of the
+ * audit itself and its PageSpeed results, which can be reused from an earlier
+ * test of the same website.
+ */
+export function isStaleAudit(
+  audit: { created_at: string; checks?: { psi?: { measuredAt?: string } } | null },
+  now: number = Date.now()
+): boolean {
+  const measured = [audit.created_at, audit.checks?.psi?.measuredAt]
+    .map((iso) => (iso ? Date.parse(iso) : NaN))
+    .filter((time) => !Number.isNaN(time));
+  return measured.length > 0 && now - Math.min(...measured) > AUDIT_MAX_AGE_DAYS * DAY_MS;
+}
+
 export type FindingStatus = 'pass' | 'warn' | 'fail';
+
+/** Key pages the lead-capture checks read, besides the homepage */
+export type KeyPageKind = 'contact' | 'booking' | 'services' | 'about';
+export type LeadPageKind = 'home' | KeyPageKind;
 
 // `id` is stable — Project B keys its plain-English impact translations on it
 export interface Finding {
@@ -30,6 +53,8 @@ export interface KeyAudit {
 export interface LighthouseSummary {
   categories: Record<string, { score: number | null; title: string }>;
   keyAudits: Record<string, KeyAudit>;
+  /** Real-visitor load time (LCP, 75th percentile) from Chrome data; absent when Google has too few visits */
+  field?: { lcpMs: number; scope: 'page' | 'origin' };
 }
 
 export interface SslCheck {
@@ -72,6 +97,14 @@ export interface AeoChecks {
   hasFaqSchema: boolean;
 }
 
+export interface LeadChecks {
+  findings: Finding[];
+  /** The homepage and the key pages read; ok = the page loaded */
+  pages: { url: string; kind: LeadPageKind; ok: boolean }[];
+  /** Links whose status is known, and the broken ones */
+  links: { checked: number; broken: string[] };
+}
+
 export type TechCategory = 'platform' | 'pageBuilder' | 'framework' | 'hosting' | 'analytics' | 'widgets';
 
 export interface TechItem {
@@ -85,8 +118,15 @@ export interface AuditChecks {
   seo: SeoBasics | null;
   geo: GeoChecks | null;
   aeo: AeoChecks | null;
+  /** Absent on audits made before lead capture; null when not measured */
+  lead?: LeadChecks | null;
   site: { ok: boolean; finalUrl: string | null; status: number | null; reason?: string };
-  psi: { mobile: string; desktop: string }; // 'ok' or the failure reason
+  psi: {
+    mobile: string; // 'ok' or the failure reason
+    desktop: string;
+    /** When the PageSpeed results were measured, if reused from an earlier test of the same website */
+    measuredAt?: string;
+  };
   /** Internal only (never in the PDF or AI prompt). Absent on audits made before it existed. */
   tech?: TechItem[];
 }
@@ -97,8 +137,10 @@ export interface AuditInput {
   address: string;
   phone: string | null;
   niche: string | null;
-  /** Called once the homepage is fetched (html is null if it couldn't be read). */
-  discoverEmail?: (homepageHtml: string | null) => Promise<string | null>;
+  /** Re-audit: measure PageSpeed afresh instead of reusing a cached result */
+  refreshPageSpeed?: boolean;
+  /** Called once the homepage and key pages are fetched (html is null if the homepage couldn't be read). */
+  discoverEmail?: (homepageHtml: string | null, pages: { url: string; html: string }[]) => Promise<string | null>;
 }
 
 /** Columns written to `audits` (besides id / business_id / created_at). */
@@ -109,6 +151,7 @@ export interface AuditRow {
   ssl_valid: boolean | null;
   geo_score: number | null;
   aeo_score: number | null;
+  lead_score: number | null;
   checks: AuditChecks;
   raw_json: { mobile: LighthouseSummary | null; desktop: LighthouseSummary | null };
   engine_version: number;

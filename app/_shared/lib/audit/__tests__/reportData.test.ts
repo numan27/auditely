@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  auditFacts,
   buildPdfProps,
-  failingFindings,
   formatScore,
   formatSsl,
   scoreTone,
@@ -12,6 +10,8 @@ import {
   type AuditLike,
 } from '@/app/_shared/lib/audit/reportData';
 import type { AuditChecks, Finding } from '@/app/_shared/lib/audit/types';
+import { STATS } from '@/app/_shared/lib/audit/impactLibrary';
+import { impactFor } from '@/app/_shared/lib/audit/impact';
 
 const rawJson = {
   mobile: {
@@ -70,36 +70,8 @@ describe('issue selection', () => {
     expect(topLighthouseIssues({ mobile: null }, 4)).toEqual([]);
   });
 
-  it('picks failing GEO then AEO findings', () => {
-    expect(failingFindings(checks, 2).map((x) => x.id)).toEqual(['geo.b', 'aeo.a']);
-    expect(failingFindings({}, 3)).toEqual([]);
-  });
-
   it('sorts findings fail → warn → pass', () => {
     expect(sortFindings([f('a', 'pass'), f('b', 'warn'), f('c', 'fail')]).map((x) => x.id)).toEqual(['c', 'b', 'a']);
-  });
-});
-
-describe('auditFacts', () => {
-  it('builds the prompt facts with GEO/AEO and "not measured"', () => {
-    const { scores, issues } = auditFacts(audit);
-    expect(scores).toContain('SEO Score: not measured');
-    expect(scores).toContain('SSL Certificate: not measured');
-    expect(scores).toContain('GEO Score (visibility in AI search engines): 25/100');
-    expect(issues.split('\n')).toEqual([
-      '- Largest Contentful Paint (12.8 s)',
-      '- Cumulative Layout Shift',
-      '- geo.b',
-      '- aeo.a',
-      '- aeo.c',
-    ]);
-  });
-
-  it('treats SEO and SSL from an outdated v1 audit as not measured', () => {
-    const { scores } = auditFacts(v1Audit);
-    expect(scores).toContain('SEO Score: not measured');
-    expect(scores).toContain('SSL Certificate: not measured');
-    expect(scores).toContain('Performance Score: 42/100');
   });
 });
 
@@ -135,7 +107,8 @@ describe('buildPdfProps', () => {
       aeoScore: 40,
       improvements: ['Compress images'],
     });
-    expect(props.topIssues).toHaveLength(2);
+    // The fixture's checks aren't in the library: shown by their own labels
+    expect(props.problems.map((p) => p.problem)).toEqual(['geo.b', 'aeo.a', 'aeo.c']);
   });
 
   it('drops SEO and SSL from an outdated v1 audit', () => {
@@ -164,10 +137,10 @@ describe('buildPdfProps', () => {
   it('lists GEO and AEO problems, failures first, without passes', () => {
     const props = buildPdfProps(audit, business, noReport, contact);
     expect(props.geoFindings).toEqual([{ status: 'fail', label: 'geo.b' }]);
+    // aeo.b is a warning the library doesn't treat as a problem
     expect(props.aeoFindings.map((finding) => [finding.status, finding.label])).toEqual([
       ['fail', 'aeo.a'],
       ['fail', 'aeo.c'],
-      ['warn', 'aeo.b'],
     ]);
   });
 
@@ -186,8 +159,95 @@ describe('buildPdfProps', () => {
     expect(props.aeoFindings).toEqual([{ status: 'fail', label: 'Heading levels skip (e.g. H1 -> H3)', detail: 'Site shows: 1' }]);
   });
 
+  it('tells the top 4 problems in owner language, with what was measured and each statistic sourced', () => {
+    const story: AuditLike = {
+      ...audit,
+      raw_json: { mobile: { categories: {}, keyAudits: {}, field: { lcpMs: 4100, scope: 'page' } }, desktop: null },
+      checks: {
+        lead: {
+          findings: [
+            { id: 'lead.form', status: 'fail', label: 'x' },
+            { id: 'lead.clickToCall', status: 'fail', label: 'x' },
+            { id: 'lead.brokenLinks', status: 'fail', label: 'x', detail: '/book-now' },
+            { id: 'lead.contactPage', status: 'fail', label: 'x' },
+          ],
+          pages: [],
+          links: { checked: 3, broken: [] },
+        },
+      },
+    };
+    const props = buildPdfProps(story, business, noReport, contact);
+    expect(props.problems).toHaveLength(4);
+    expect(props.problems[0]).toEqual({ problem: impactFor('lead.form', 'fail')?.problem, cost: impactFor('lead.form', 'fail')?.cost });
+    expect(props.problems[2]).toMatchObject({ evidence: '/book-now' });
+    // Each statistic carries its source, right beside the claim
+    expect(props.problems[1].stat).toBe(`${STATS.nearbyVisit.text} (${STATS.nearbyVisit.source})`);
+  });
+
+  it('shows plain labels in the GEO, AEO and lead capture blocks', () => {
+    const plain: AuditLike = {
+      ...audit,
+      checks: { ...checks, lead: { findings: [{ id: 'lead.form', status: 'warn', label: 'Only an email link' }], pages: [], links: { checked: 0, broken: [] } } },
+    };
+    const props = buildPdfProps(plain, business, noReport, contact);
+    expect(props.leadFindings[0].label).toBe(impactFor('lead.form', 'warn')?.problem);
+    expect(props.geoFindings[0].label).toBe('geo.b');
+  });
+
+  it("leaves couldn't-check results and listing gaps out of the PDF's sections", () => {
+    const unknowns: AuditLike = {
+      ...audit,
+      checks: {
+        geo: { ...checks.geo!, findings: [{ id: 'geo.nap.phone', status: 'warn', label: 'Business listing has no phone number' }] },
+        lead: {
+          findings: [
+            { id: 'lead.formUnchecked', status: 'warn', label: "Couldn't check the contact page for a form" },
+            { id: 'lead.brokenLinks', status: 'warn', label: "Couldn't check the site's links" },
+            { id: 'lead.booking', status: 'warn', label: 'No online booking' },
+          ],
+          pages: [],
+          links: { checked: 0, broken: [] },
+        },
+      },
+    };
+    const props = buildPdfProps(unknowns, business, noReport, contact);
+    expect(props.geoFindings).toEqual([]);
+    expect(props.leadFindings.map((finding) => finding.label)).toEqual([impactFor('lead.booking', 'warn')?.problem]);
+  });
+
+  it('still builds the report for an outdated audit with no checks', () => {
+    const props = buildPdfProps({ ...v1Audit, checks: {}, raw_json: {} }, business, noReport, contact);
+    expect(props.problems).toEqual([]);
+  });
+
   it('passes the report contact through', () => {
     const withBooking = { ...contact, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
     expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
+  });
+});
+
+describe('lead capture in the report', () => {
+  // Same PDF arguments as the buildPdfProps tests (declared inside that block)
+  const contact = { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null };
+  const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
+  const noReport = { summary: '', improvements: [] };
+  const leadChecks: Partial<AuditChecks> = {
+    ...checks,
+    lead: {
+      findings: [f('lead.form', 'fail'), f('lead.booking', 'warn'), f('lead.clickToCall', 'pass')],
+      pages: [],
+      links: { checked: 0, broken: [] },
+    },
+  };
+  const withLead: AuditLike = { ...audit, lead_score: 30, checks: leadChecks };
+
+  it('passes the lead capture score and its problems to the PDF', () => {
+    const props = buildPdfProps(withLead, business, noReport, contact);
+    expect(props.leadScore).toBe(30);
+    expect(props.leadFindings).toEqual([
+      { status: 'fail', label: impactFor('lead.form', 'fail')?.problem },
+      { status: 'warn', label: impactFor('lead.booking', 'warn')?.problem },
+    ]);
+    expect(buildPdfProps(audit, business, noReport, contact)).toMatchObject({ leadScore: null, leadFindings: [] });
   });
 });

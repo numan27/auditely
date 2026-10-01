@@ -25,6 +25,14 @@ export interface Business {
   contacts_checked_at: string | null;
   /** When the paid email APIs were tried (automatically once, or via "Find email"); null = never */
   email_lookup_at: string | null;
+  /** Google rating (1–5); null when unrated or found before ratings were stored */
+  rating: number | null;
+  /** Google review count; null when unknown (older searches, providers without reviews) */
+  review_count: number | null;
+  /** The HubSpot company this lead was sent to; absent before the HubSpot migration */
+  hubspot_company_id?: string | null;
+  /** When the lead was last sent to HubSpot */
+  crm_sent_at?: string | null;
   created_at: string;
 }
 
@@ -38,6 +46,8 @@ export interface Audit {
   ssl_valid: boolean | null;
   geo_score: number | null;
   aeo_score: number | null;
+  /** null = not measured; absent on rows read before the lead-capture migration */
+  lead_score?: number | null;
   /** `{}` on audits written before engine v2 */
   checks: Partial<AuditChecks>;
   engine_version: number;
@@ -60,7 +70,7 @@ export interface BusinessWithData extends Business {
 }
 
 /** What a business card found or produced, merged back into the results list */
-export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report'>>;
+export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report' | 'crm_sent_at'>>;
 
 export type AuditStatus = 'idle' | 'loading' | 'done' | 'error';
 export type ReportStatus = 'idle' | 'loading' | 'done' | 'error';

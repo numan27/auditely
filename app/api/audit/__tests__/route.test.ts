@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/audit/route';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
 import type { AuditOutcome } from '@/app/_shared/lib/audit/types';
+import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
+import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 
 type Result = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -73,10 +75,14 @@ const outcome = {
   row: { performance_score: 80, engine_version: 2 },
   email: 'hello@smiledental.com',
 } as unknown as AuditOutcome;
+const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+const RECENTLY = daysAgo(3);
 const storedAudit = (over: Record<string, unknown> = {}) => ({
   id: 'audit-1',
   business_id: 'biz-1',
   engine_version: 2,
+  created_at: RECENTLY,
+  checks: {},
   ...over,
 });
 
@@ -131,6 +137,18 @@ describe('POST /api/audit', () => {
     expect(json.audit.id).toBe('audit-1');
   });
 
+  it('re-runs an audit older than 30 days and updates the same row', async () => {
+    givenDb({
+      'audits.select': [ok(storedAudit({ created_at: daysAgo(31) }))],
+      'audits.update': [ok(storedAudit())],
+    });
+    const { status } = await post({ business_id: 'biz-1' });
+    expect(status).toBe(200);
+    expect(runAudit).toHaveBeenCalledOnce();
+    expect(db.ops('audits', 'update')[0].filters).toEqual([['id', 'audit-1']]);
+    expect(db.ops('audits', 'insert')).toHaveLength(0);
+  });
+
   it('re-runs a current audit when force is set', async () => {
     givenDb({ 'audits.select': [ok(storedAudit())], 'audits.update': [ok(storedAudit())] });
     const { status } = await post({ business_id: 'biz-1', force: true });
@@ -153,6 +171,29 @@ describe('POST /api/audit', () => {
     givenDb({ 'audits.select': [ok(null)], 'audits.insert': [ok(storedAudit())] });
     await post({ business_id: 'biz-1' });
     expect(vi.mocked(runAudit).mock.calls[0][0]).toMatchObject({ name: 'Smile Dental', phone: '(555) 123-4567', niche: 'dentist' });
+  });
+
+  it('lets a first audit reuse cached PageSpeed results, but not a Re-audit', async () => {
+    givenDb({ 'audits.select': [ok(null)], 'audits.insert': [ok(storedAudit())] });
+    await post({ business_id: 'biz-1' });
+    expect(vi.mocked(runAudit).mock.calls[0][0]).toMatchObject({ refreshPageSpeed: false });
+    expect(vi.mocked(runAudit).mock.calls[0][1]).toEqual({ pageSpeedStore });
+
+    givenDb({ 'audits.select': [ok(storedAudit())], 'audits.update': [ok(storedAudit())] });
+    await post({ business_id: 'biz-1', force: true });
+    expect(vi.mocked(runAudit).mock.calls[1][0]).toMatchObject({ refreshPageSpeed: true });
+  });
+
+  it("hands the audit's key pages to the email finder", async () => {
+    givenDb({
+      'businesses.select': [ok({ ...business, email: null })],
+      'audits.select': [ok(null)],
+      'audits.insert': [ok(storedAudit())],
+    });
+    await post({ business_id: 'biz-1' });
+    const pages = [{ url: 'https://smiledental.com/contact', html: '<p>office@smiledental.com</p>' }];
+    await vi.mocked(runAudit).mock.calls[0][0].discoverEmail?.('<p>home</p>', pages);
+    expect(findEmail).toHaveBeenCalledWith('https://smiledental.com', { homepageHtml: '<p>home</p>', pages });
   });
 
   it('audits a site added by URL without listing data to compare against', async () => {

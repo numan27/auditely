@@ -1,10 +1,11 @@
 // app/_shared/lib/audit/reportData.ts
 
-// Shared formatting for everything that presents an audit: the AI prompt, the
-// PDF and the dashboard. Client-safe (no Node-only imports).
+// Shared formatting for everything that presents an audit: the PDF and the
+// dashboard. Client-safe (no Node-only imports).
 
 import { isOutdatedAudit, type AuditChecks, type Finding, type KeyAudit } from '@/app/_shared/lib/audit/types';
-import type { PdfContact, PdfDocumentProps, PdfFinding } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { impactFor, plainLabel, rankedProblems } from '@/app/_shared/lib/audit/impact';
+import type { PdfContact, PdfDocumentProps, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 export interface IssueSummary {
   title: string;
@@ -20,6 +21,7 @@ export interface AuditLike {
   ssl_valid: boolean | null;
   geo_score?: number | null;
   aeo_score?: number | null;
+  lead_score?: number | null;
   raw_json: unknown;
   checks?: Partial<AuditChecks> | null;
   engine_version?: number | null;
@@ -61,13 +63,6 @@ export function topLighthouseIssues(rawJson: unknown, limit: number): IssueSumma
     .map((a) => ({ title: a.title, ...(a.displayValue && { displayValue: a.displayValue }) }));
 }
 
-/** Failing (status 'fail') GEO findings, then AEO findings. */
-export function failingFindings(checks: Partial<AuditChecks> | null | undefined, limit: number): Finding[] {
-  return [...(checks?.geo?.findings ?? []), ...(checks?.aeo?.findings ?? [])]
-    .filter((finding) => finding.status === 'fail')
-    .slice(0, limit);
-}
-
 /** fail → warn → pass, keeping the original order within each group. */
 export function sortFindings(findings: Finding[]): Finding[] {
   return [...findings].sort((a, b) => FINDING_ORDER[a.status] - FINDING_ORDER[b.status]);
@@ -80,27 +75,6 @@ function measuredSeoAndSsl(audit: AuditLike): { seo: number | null; ssl: boolean
     : { seo: audit.seo_score, ssl: audit.ssl_valid };
 }
 
-/** Score lines and issue bullets for the AI prompt. */
-export function auditFacts(audit: AuditLike): { scores: string; issues: string } {
-  const { seo, ssl } = measuredSeoAndSsl(audit);
-  const scores = [
-    `Performance Score: ${formatScore(audit.performance_score)}`,
-    `SEO Score: ${formatScore(seo)}`,
-    `Mobile Score: ${formatScore(audit.mobile_score)}`,
-    `SSL Certificate: ${formatSsl(ssl)}`,
-    `GEO Score (visibility in AI search engines): ${formatScore(audit.geo_score)}`,
-    `AEO Score (readiness for answer engines like ChatGPT and Perplexity): ${formatScore(audit.aeo_score)}`,
-  ].join('\n');
-
-  const issues =
-    [
-      ...topLighthouseIssues(audit.raw_json, 6).map((a) => `- ${a.title}${a.displayValue ? ` (${a.displayValue})` : ''}`),
-      ...failingFindings(audit.checks, 3).map((finding) => `- ${finding.label}`),
-    ].join('\n') || 'No specific issues identified.';
-
-  return { scores, issues };
-}
-
 // The PDF uses the built-in Helvetica (WinAnsi encoding): Unicode spaces render
 // as "/", non-breaking hyphens vanish and arrows don't exist. The AI model emits
 // the first two; finding labels use the arrow.
@@ -111,14 +85,20 @@ const pdfText = (text: string): string =>
     .replace(/[\u2010-\u2012\u2212]/g, '-');
 
 const PDF_FINDINGS_LIMIT = 6;
+const PDF_PROBLEMS_LIMIT = 4;
+
+// A failure, or a warning the impact library treats as a problem. "Couldn't
+// check" results and listing gaps have no entry, so they never reach a prospect.
+const isProblem = (finding: Finding) =>
+  finding.status === 'fail' || (finding.status === 'warn' && !!impactFor(finding.id, 'warn'));
 
 // Problems only (fail, then warn) — the PDF is a list of what to fix
 function pdfFindings(findings: Finding[] | undefined): PdfFinding[] {
-  return sortFindings((findings ?? []).filter((finding) => finding.status !== 'pass'))
+  return sortFindings((findings ?? []).filter(isProblem))
     .slice(0, PDF_FINDINGS_LIMIT)
     .map((finding) => ({
       status: finding.status as PdfFinding['status'],
-      label: pdfText(finding.label),
+      label: pdfText(plainLabel(finding)),
       ...(finding.detail && { detail: pdfText(finding.detail) }),
     }));
 }
@@ -129,7 +109,7 @@ export function buildPdfProps(
   report: { summary: string; improvements: unknown },
   contact: PdfContact
 ): PdfDocumentProps {
-  const topIssues = topLighthouseIssues(audit.raw_json, 4);
+  const problems = rankedProblems(audit).slice(0, PDF_PROBLEMS_LIMIT);
   const { seo, ssl } = measuredSeoAndSsl(audit);
   const improvements = Array.isArray(report.improvements)
     ? report.improvements.filter((item): item is string => typeof item === 'string').map(pdfText)
@@ -152,15 +132,19 @@ export function buildPdfProps(
     sslValid: ssl,
     geoScore: audit.geo_score ?? null,
     aeoScore: audit.aeo_score ?? null,
-    topIssues:
-      topIssues.length > 0
-        ? topIssues.map((issue) => ({
-            title: pdfText(issue.title),
-            ...(issue.displayValue && { displayValue: pdfText(issue.displayValue) }),
-          }))
-        : undefined,
+    problems: problems.map(
+      (p): PdfProblem => ({
+        problem: pdfText(p.problem),
+        cost: pdfText(p.cost),
+        ...(p.evidence && { evidence: pdfText(p.evidence) }),
+        // The source sits right beside the claim
+        ...(p.stat && { stat: pdfText(`${p.stat.text} (${p.stat.source})`) }),
+      })
+    ),
     geoFindings: pdfFindings(audit.checks?.geo?.findings),
     aeoFindings: pdfFindings(audit.checks?.aeo?.findings),
+    leadScore: audit.lead_score ?? null,
+    leadFindings: pdfFindings(audit.checks?.lead?.findings),
     summary: pdfText(report.summary),
     improvements,
     contact,

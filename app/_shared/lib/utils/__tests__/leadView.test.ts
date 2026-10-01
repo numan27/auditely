@@ -7,12 +7,16 @@ const scores = (s: number | null): Scores => ({
   performance_score: s, seo_score: s, mobile_score: s, geo_score: s, aeo_score: s,
 });
 
-const lead = (name: string, fields: { email?: string; phone?: string; website?: string; audit?: Scores } = {}) => ({
+const lead = (
+  name: string,
+  fields: { email?: string; phone?: string; website?: string; audit?: Scores; reviews?: number | null } = {}
+) => ({
   name,
   email: fields.email ?? null,
   phone: fields.phone ?? null,
   website: fields.website ?? null,
   audit: fields.audit,
+  review_count: fields.reviews ?? null,
 });
 
 const names = (list: { name: string }[]) => list.map((b) => b.name);
@@ -47,6 +51,16 @@ describe('arrangeLeads', () => {
     expect(names(arrangeLeads(audited, 'score', []))).toEqual(['weak', 'strong', 'unaudited', 'unmeasured']);
   });
 
+  it('fewest reviews first ranks by Google review count and puts unknown counts last', () => {
+    const reviewed = [
+      lead('unknown'),
+      lead('popular', { reviews: 480 }),
+      lead('none', { reviews: 0 }),
+      lead('few', { reviews: 7 }),
+    ];
+    expect(names(arrangeLeads(reviewed, 'reviews', []))).toEqual(['none', 'few', 'popular', 'unknown']);
+  });
+
   it('keeps only businesses that pass every active filter', () => {
     expect(names(arrangeLeads(list, 'default', ['website']))).toEqual(['Delta', 'alpha', 'bravo']);
     expect(names(arrangeLeads(list, 'default', ['email', 'phone']))).toEqual(['alpha']);
@@ -70,6 +84,10 @@ describe('matchesFilters', () => {
 });
 
 describe('averageScore', () => {
+  it('includes the lead capture score when measured', () => {
+    expect(averageScore({ ...scores(null), performance_score: 40, lead_score: 100 })).toBe(70);
+  });
+
   it('averages only the measured scores', () => {
     expect(averageScore({ ...scores(null), performance_score: 40, seo_score: 80 })).toBe(60);
   });

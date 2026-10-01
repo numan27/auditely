@@ -4,14 +4,16 @@
 
 import { useState } from 'react';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon } from '@/app/_shared/components/ui/icons/icons';
+import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon } from '@/app/_shared/components/ui/icons/icons';
 import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPanel';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
-import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
+import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
+import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
 import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
 
 interface BusinessCardProps {
@@ -43,6 +45,7 @@ function ScorePills({ audit }: { audit: Audit }) {
     ['Mobile', audit.mobile_score],
     ['GEO', audit.geo_score],
     ['AEO', audit.aeo_score],
+    ['Leads', audit.lead_score ?? null],
   ];
   const ssl = audit.ssl_valid;
   const sslTone: ScoreTone = ssl === null ? 'none' : ssl ? 'good' : 'poor';
@@ -63,12 +66,16 @@ function ScorePills({ audit }: { audit: Audit }) {
 
 export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun }: BusinessCardProps) {
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun });
+  const crm = useCrmSend(business, onUpdate);
   const { audit, auditStatus, reportStatus, email, saveEmail } = state;
   // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
   const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
   const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
+  // Outdated already says "re-audit"; stale only needs saying for a current-engine audit
+  const isStale = auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
+  const reviews = reviewsLabel(business.rating, business.review_count);
 
   return (
     <article
@@ -87,6 +94,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
               </span>
             )}
             {isOutdated && <Badge variant="warning" size="sm">Outdated</Badge>}
+            {isStale && <Badge variant="warning" size="sm">Over 30 days old</Badge>}
           </div>
 
           <div className="mt-2 flex flex-col gap-1.5">
@@ -113,6 +121,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
                 </ContactLine>
               )}
               <BusinessEmail email={email} website={business.website} businessId={business.id} onFound={saveEmail} />
+              {reviews && <ContactLine icon={<StarIcon size={14} />}>{reviews}</ContactLine>}
             </div>
           </div>
 
@@ -149,7 +158,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
         </div>
       </div>
 
-      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} />}
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} />}
     </article>
   );
 }

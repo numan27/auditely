@@ -66,11 +66,11 @@ function FindingGroup({ title, score, findings }: FindingGroupProps) {
   );
 }
 
-/** GEO / AEO findings, plus HTML-based SEO basics when PageSpeed's SEO score is missing. */
+/** GEO / AEO / lead capture findings, plus HTML-based SEO basics when PageSpeed's SEO score is missing. */
 export function AuditChecklist({ audit }: { audit: Audit }) {
-  const { geo, aeo, seo, site } = audit.checks ?? {};
+  const { geo, aeo, seo, site, lead } = audit.checks ?? {};
   const showSeoBasics = audit.seo_score === null && !!seo;
-  if (!geo && !aeo && !showSeoBasics) {
+  if (!geo && !aeo && !lead && !showSeoBasics) {
     return site?.reason ? (
       <p className="text-sm text-[var(--color-text-tertiary)]">{siteReasonText(site.reason)}</p>
     ) : null;
@@ -80,6 +80,7 @@ export function AuditChecklist({ audit }: { audit: Audit }) {
     <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
       {geo && <FindingGroup title="Visible to AI search (GEO)" score={audit.geo_score} findings={geo.findings} />}
       {aeo && <FindingGroup title="Ready for answer engines (AEO)" score={audit.aeo_score} findings={aeo.findings} />}
+      {lead && <FindingGroup title="Can visitors reach you? (Lead capture)" score={audit.lead_score} findings={lead.findings} />}
       {showSeoBasics && seo && <FindingGroup title="SEO basics, read from the page" findings={seo.findings} />}
     </div>
   );

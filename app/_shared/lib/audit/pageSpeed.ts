@@ -23,13 +23,26 @@ const KEY_AUDIT_IDS = [
 export type PageSpeedStrategy = 'mobile' | 'desktop';
 
 export type PageSpeedResult =
-  | { ok: true; summary: LighthouseSummary; isOnHttps: boolean | null }
+  // measuredAt: set when the result was reused from an earlier test (see pageSpeedCache.ts)
+  | { ok: true; summary: LighthouseSummary; isOnHttps: boolean | null; measuredAt?: string }
   | { ok: false; reason: string };
 
 interface LighthouseResult {
   categories?: Record<string, { score: number | null; title: string }>;
   audits?: Record<string, KeyAudit>;
   runtimeError?: { code?: string };
+}
+
+// PageSpeed's real-visitor (Chrome UX Report) data for the URL, or its whole site (origin_fallback)
+interface LoadingExperience {
+  origin_fallback?: boolean;
+  metrics?: Record<string, { percentile?: number; category?: string }>;
+}
+
+/** Real-visitor LCP when Google has it */
+function fieldLcp(experience: LoadingExperience | undefined): LighthouseSummary['field'] {
+  const ms = experience?.metrics?.LARGEST_CONTENTFUL_PAINT_MS?.percentile;
+  return typeof ms === 'number' ? { lcpMs: ms, scope: experience?.origin_fallback ? 'origin' : 'page' } : undefined;
 }
 
 // Failures that retrying won't fix (bad URL, page won't load, daily quota)
@@ -57,7 +70,10 @@ export function categoryScore(summary: LighthouseSummary | null, key: string): n
   return typeof score === 'number' ? Math.round(score * 100) : null;
 }
 
-async function requestOnce(url: string, deadline: number): Promise<{ lighthouseResult?: LighthouseResult }> {
+async function requestOnce(
+  url: string,
+  deadline: number
+): Promise<{ lighthouseResult?: LighthouseResult; loadingExperience?: LoadingExperience }> {
   const timeout = Math.max(1, Math.min(ATTEMPT_TIMEOUT_MS, deadline - Date.now()));
   let res: Response;
   try {
@@ -108,9 +124,10 @@ export async function runPageSpeed(
     if (runtimeCode && runtimeCode !== 'NO_ERROR') return { ok: false, reason: runtimeCode };
 
     const httpsScore = lr.audits?.['is-on-https']?.score;
+    const field = fieldLcp(data.loadingExperience);
     return {
       ok: true,
-      summary: trimLighthouseData(lr),
+      summary: { ...trimLighthouseData(lr), ...(field && { field }) },
       isOnHttps: typeof httpsScore === 'number' ? httpsScore === 1 : null,
     };
   } catch (err) {

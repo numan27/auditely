@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchSite } from '@/app/_shared/lib/audit/siteFetch';
+import { fetchSite, fetchPage } from '@/app/_shared/lib/audit/siteFetch';
 
 // Response.url can't be set via the constructor; define it to simulate redirects
 function page(body: string, url: string, init: ResponseInit = {}): Response {
@@ -94,5 +94,48 @@ describe('fetchSite', () => {
   it('rejects invalid URLs without fetching', async () => {
     expect(await fetchSite('not a url')).toMatchObject({ ok: false, reason: 'Invalid website URL' });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchPage', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it('returns the HTML and final address of a page, without fetching robots.txt', async () => {
+    fetchMock.mockResolvedValue(page('<h1>Contact us</h1>', 'https://www.acme.com/contact/'));
+    expect(await fetchPage('https://acme.com/contact')).toEqual({
+      ok: true,
+      status: 200,
+      finalUrl: 'https://www.acme.com/contact/',
+      html: '<h1>Contact us</h1>',
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('reports a missing page with its status', async () => {
+    fetchMock.mockResolvedValue(page('Not found', 'https://acme.com/book', { status: 404 }));
+    expect(await fetchPage('https://acme.com/book')).toMatchObject({ ok: false, status: 404, html: null, reason: 'HTTP 404' });
+  });
+
+  it('treats a bot-challenge page as blocked', async () => {
+    fetchMock.mockResolvedValue(
+      page('<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/jsch/v1"></script>', 'https://acme.com/contact')
+    );
+    expect(await fetchPage('https://acme.com/contact')).toMatchObject({ ok: false, html: null, reason: 'Blocked (bot challenge)' });
+  });
+
+  it('reports unreachable pages', async () => {
+    fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+    expect(await fetchPage('https://acme.com/contact')).toEqual({
+      ok: false,
+      status: null,
+      finalUrl: null,
+      html: null,
+      reason: 'Page unreachable',
+    });
   });
 });
