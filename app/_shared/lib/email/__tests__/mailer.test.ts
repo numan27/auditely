@@ -87,6 +87,13 @@ describe('sendEmail through the mailbox (SMTP)', () => {
     expect(resend.send).not.toHaveBeenCalled();
   });
 
+  it('sends the designed email with its logo placed inside the message', async () => {
+    const logo = { filename: 'logo.png', content: PDF, cid: 'devartventures-logo' };
+    const designed = { ...email, html: '<p>Hi</p>', attachments: [...email.attachments, logo] };
+    await sendEmail(designed);
+    expect(smtp.sendMail).toHaveBeenCalledWith({ from: FROM, ...designed });
+  });
+
   it('upgrades the connection before logging in on another port', async () => {
     vi.stubEnv('SMTP_PORT', '587');
     await sendEmail(email);
@@ -194,6 +201,18 @@ describe('sendEmail through Resend', () => {
     vi.stubEnv('EMAIL_BCC', 'log@bcc.hubspot.com');
     await sendEmail(email);
     expect(resend.send.mock.calls[0][0]).toMatchObject({ replyTo: 'contact@devartventures.com', bcc: 'log@bcc.hubspot.com' });
+  });
+
+  // Resend names an inline image's id differently
+  it('sends the designed email with its logo placed inside the message', async () => {
+    const logo = { filename: 'logo.png', content: PDF, cid: 'devartventures-logo' };
+    await sendEmail({ ...email, html: '<p>Hi</p>', attachments: [...email.attachments, logo] });
+    expect(resend.send).toHaveBeenCalledWith({
+      from: FROM,
+      ...email,
+      html: '<p>Hi</p>',
+      attachments: [...email.attachments, { filename: 'logo.png', content: PDF, contentId: 'devartventures-logo' }],
+    });
   });
 
   it("passes on Resend's reason when it refuses", async () => {

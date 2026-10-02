@@ -126,7 +126,7 @@ export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
 
         <section className="border-t border-[var(--color-border)] pt-6">
           {reportStatus === 'done' && report ? (
-            <AiReportSection report={report} />
+            <AiReportSection report={report} businessName={business.name} audit={audit} emailedAt={mail.sentAt} />
           ) : (
             <div className={ROW}>
               {reportStatus === 'loading' ? (

@@ -5,6 +5,7 @@
 // numbers or writes a long email. Server-side (used by /api/generate).
 
 import type { Problem } from '@/app/_shared/lib/audit/impact';
+import { OFFER_CLOSING } from '@/app/_shared/lib/email/outreach';
 
 export interface ReportInput {
   businessName: string;
@@ -27,6 +28,8 @@ const MAX_FIXES = 5;
 const PROMPT_PROBLEMS = 5;
 // The prompt asks for under 90 words; only a clearly longer body is sent back
 const MAX_EMAIL_WORDS = 110;
+// The prompt asks for 6 words at most; a subject this long gets cut off in an inbox
+const MAX_SUBJECT_CHARS = 50;
 const NUMBER = /\d+(?:[.,]\d+)*/g;
 // No dollar figures: we don't know a prospect's traffic or sales
 const MONEY = /[$£€]|\bdollars?\b|\bthousands?\b|\bmillions?\b/i;
@@ -37,12 +40,12 @@ export function reportFixes(problems: Problem[]): string[] {
   return problems.map((p) => p.fix).filter(Boolean).slice(0, MAX_FIXES);
 }
 
-/** The email's closing offer, used word for word */
+/** The email's closing offer, used word for word. The PDF report goes with the email. */
 export function offerSentence({ businessName, problems }: ReportInput): string {
   const fixes = reportFixes(problems).length;
-  return fixes > 0
-    ? `I put together a short report with ${fixes} fix${fixes === 1 ? '' : 'es'} for ${businessName} — want me to send it over?`
-    : `I put together a short report on ${businessName}'s website — want me to send it over?`;
+  const report =
+    fixes > 0 ? `a short report with ${fixes} fix${fixes === 1 ? '' : 'es'} for ${businessName}` : `a short report on ${businessName}'s website`;
+  return `I've attached ${report} — ${OFFER_CLOSING}`;
 }
 
 const signOff = (sender: string | null) => (sender ? `${sender}, DevArtVentures` : 'The DevArtVentures team');
@@ -83,7 +86,7 @@ ${factLines(input.problems)}
 Write:
 1. "summary": 2-3 sentences for the business owner, in plain language, ${summaryAsk}
 2. "cold_email": a short cold email to the owner.
-   - First line: "Subject: " and a short, specific subject.
+   - First line: "Subject: " and a subject of at most 6 words that names their biggest problem.
    - Body under 90 words. ${opening}
    - End the body with this sentence, word for word: "${offerSentence(input)}"
    - Sign off with: ${signOff(input.sender)}
@@ -123,6 +126,8 @@ export function replyProblem(reply: WrittenReport, input: ReportInput): string |
   if (MONEY.test(written)) return "It talked about money, which isn't in the facts.";
   const words = emailBody(reply.cold_email).split(/\s+/).filter(Boolean).length;
   if (words > MAX_EMAIL_WORDS) return `The email body is ${words} words; keep it under 90.`;
+  const subject = reply.cold_email.trimStart().match(/^subject:\s*([^\n]*)/i)?.[1].trim() ?? '';
+  if (subject.length > MAX_SUBJECT_CHARS) return `The subject is ${subject.length} characters; keep it to 6 words at most.`;
   if (!bare(reply.cold_email).includes(bare(offerSentence(input)))) return "It didn't end with the offer sentence.";
   const signature = signOff(input.sender);
   return bare(reply.cold_email).includes(bare(signature)) ? null : `It didn't sign off as ${signature}.`;

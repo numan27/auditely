@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["@react-pdf/renderer"],
+  // Read from disk at run time (the outreach email's logo), so the build can't see it's needed
+  outputFileTracingIncludes: {
+    "/api/send-email": ["./app/_shared/assets/images/devartventuresLogo.png"],
+  },
   images: {
     formats: ["image/webp", "image/avif"],
     // No remote images are used. Add explicit hostnames here if that changes;

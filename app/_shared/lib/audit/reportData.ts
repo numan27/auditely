@@ -69,7 +69,7 @@ export function sortFindings(findings: Finding[]): Finding[] {
 }
 
 // v1 audits never measured SEO or SSL (their 0 / false meant "unknown")
-function measuredSeoAndSsl(audit: AuditLike): { seo: number | null; ssl: boolean | null } {
+export function measuredSeoAndSsl(audit: AuditLike): { seo: number | null; ssl: boolean | null } {
   return isOutdatedAudit(audit.engine_version)
     ? { seo: null, ssl: null }
     : { seo: audit.seo_score, ssl: audit.ssl_valid };

@@ -12,7 +12,10 @@ export interface OutgoingEmail {
   to: string;
   subject: string;
   text: string;
-  attachments: { filename: string; content: Buffer }[];
+  /** The designed version; `text` is what mail clients without HTML show */
+  html?: string;
+  /** With a `cid`, an image placed inside the message (<img src="cid:…">) instead of listed as a file */
+  attachments: { filename: string; content: Buffer; cid?: string }[];
 }
 export type SendResult = { ok: true } | { ok: false; status: number; error: string };
 
@@ -91,7 +94,9 @@ async function viaSmtp(message: Message): Promise<SendResult> {
 async function viaResend(message: Message, apiKey: string): Promise<SendResult> {
   try {
     // Resend reports a refusal (unverified domain, bad address) in `error` instead of throwing
-    const { error } = await new Resend(apiKey).emails.send(message);
+    // Resend calls an inline image's id `contentId`
+    const attachments = message.attachments.map(({ cid, ...file }) => (cid ? { ...file, contentId: cid } : file));
+    const { error } = await new Resend(apiKey).emails.send({ ...message, attachments });
     if (!error) return { ok: true };
     console.error('[send-email] refused:', error.message);
     return refused(error.message);

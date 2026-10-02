@@ -12,6 +12,18 @@ describe('outreachDraft', () => {
     expect(outreachDraft('  SUBJECT:   Hello  \nBody', 'Smile Dental')).toEqual({ subject: 'Hello', body: 'Body' });
   });
 
+  // The AI sometimes answers with Windows line endings
+  it('reads the subject when the lines end with a carriage return', () => {
+    expect(outreachDraft('Subject: Faster mobile site\r\nYour site is slow.\r\n\r\nNuman', 'Smile Dental')).toEqual({
+      subject: 'Faster mobile site',
+      body: 'Your site is slow.\n\nNuman',
+    });
+  });
+
+  it('keeps the fallback subject short when the business name is long', () => {
+    expect(outreachDraft('Hi there.', 'Eva Galstian, DO: Family Medicine, NYC').subject).toBe('A few quick fixes for your website');
+  });
+
   it('falls back to a subject naming the business when the email has none', () => {
     expect(outreachDraft('Hi there,\nYour site is slow.', 'Smile Dental')).toEqual({
       subject: 'A few quick fixes for the Smile Dental website',
@@ -27,6 +39,35 @@ describe('outreachDraft layout', () => {
   it('puts a sign-off that follows the offer on the same line into its own paragraph', () => {
     const { body } = outreachDraft(`Subject: Hi\nHi, your site is slow. ${offer} The DevArtVentures team`, 'Smile Dental');
     expect(body).toBe(`Hi, your site is slow. ${offer}\n\nThe DevArtVentures team`);
+  });
+
+  // Reports written before the PDF went with the email offered to send it
+  it('turns the old offer to send the report into the attached report and the call', () => {
+    const old = 'Hi, your site is slow. I put together a short report with 4 fixes for Smile-Dental — want me to send it over? The DevArtVentures team';
+    expect(outreachDraft(`Subject: Hi\n${old}`, 'Smile-Dental').body).toBe(
+      "Hi, your site is slow. I've attached a short report with 4 fixes for Smile-Dental — happy to walk you through it on a quick call.\n\nThe DevArtVentures team"
+    );
+    const plain = "Hi. I put together a short report on Smile Dental's website - want me to send it over?\n\nNuman, DevArtVentures";
+    expect(outreachDraft(`Subject: Hi\n${plain}`, 'Smile Dental').body).toBe(
+      "Hi. I've attached a short report on Smile Dental's website — happy to walk you through it on a quick call.\n\nNuman, DevArtVentures"
+    );
+  });
+
+  it('gives a sign-off on the very next line a paragraph of its own too', () => {
+    const { body } = outreachDraft(`Subject: Hi\nHi, your site is slow. ${offer}\nThe DevArtVentures team`, 'Smile Dental');
+    expect(body).toBe(`Hi, your site is slow. ${offer}\n\nThe DevArtVentures team`);
+  });
+
+  it('rewrites the old offer for a business with a question mark in its name', () => {
+    const old = "Hi. I put together a short report on What's Up? Cafe's website — want me to send it over?\n\nNuman, DevArtVentures";
+    expect(outreachDraft(`Subject: Hi\n${old}`, "What's Up? Cafe").body).toBe(
+      "Hi. I've attached a short report on What's Up? Cafe's website — happy to walk you through it on a quick call.\n\nNuman, DevArtVentures"
+    );
+  });
+
+  it('only separates the sign-off from the offer itself, not from an earlier mention of a call', () => {
+    const { body } = outreachDraft(`Subject: Hi\nWe could talk on a quick call. Your site is slow. ${offer} The DevArtVentures team`, 'Smile Dental');
+    expect(body).toBe(`We could talk on a quick call. Your site is slow. ${offer}\n\nThe DevArtVentures team`);
   });
 
   it('leaves an email alone when the sign-off already has its own line', () => {

@@ -52,7 +52,22 @@ export function useEmailSend(business: Business, onUpdate?: (businessId: string,
     [business.id, onUpdate]
   );
 
+  /** The email as the lead will see it (HTML); nothing is sent */
+  const preview = useCallback(
+    async (draft: OutreachDraft): Promise<string> => {
+      const res = await fetch(API_ROUTES.SEND_EMAIL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: business.id, subject: draft.subject, body: draft.body, preview: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.html !== 'string') throw new Error(data.error || "Couldn't build the preview");
+      return data.html;
+    },
+    [business.id]
+  );
+
   const clearError = useCallback(() => setError(null), []);
 
-  return { sentAt, sending, error, warning, send, clearError };
+  return { sentAt, sending, error, warning, send, preview, clearError };
 }

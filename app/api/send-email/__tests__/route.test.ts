@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { POST, maxDuration } from '@/app/api/send-email/route';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
+import { brandLogo } from '@/app/_shared/lib/email/brandLogo';
 
 // Fake Supabase: the business (with its audit and report) and every update
 const db = vi.hoisted(() => {
@@ -23,10 +24,12 @@ const db = vi.hoisted(() => {
 });
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
+vi.mock('@/app/_shared/lib/email/brandLogo', () => ({ LOGO_CID: 'devartventures-logo', brandLogo: vi.fn() }));
 // The mailer (mailbox or Resend) has its own tests
 vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
 
 const PDF = Buffer.from('%PDF-1.7');
+const LOGO = Buffer.from('logo-png');
 const businessRow = (over: Record<string, unknown> = {}) => ({
   id: 'b1', name: 'Smile Dental', address: '1 Main St', website: 'https://smiledental.com', phone: null, email: 'office@smiledental.com',
   audits: {
@@ -48,6 +51,7 @@ beforeEach(() => {
   db.state.updateError = null;
   vi.mocked(emailSetupProblem).mockReset().mockReturnValue(null);
   vi.mocked(sendEmail).mockReset().mockResolvedValue({ ok: true });
+  vi.mocked(brandLogo).mockReset().mockResolvedValue(LOGO);
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
 });
 afterEach(() => {
@@ -66,12 +70,40 @@ describe('POST /api/send-email', () => {
     expect(sendEmail).toHaveBeenCalledWith({
       to: 'office@smiledental.com',
       subject: 'Quick note about your site',
-      text: 'Hi there,\nYour site is slow.',
-      attachments: [{ filename: 'audit-smile-dental.pdf', content: PDF }],
+      text: expect.stringMatching(/^Hi there,\nYour site is slow\.\n\n---/),
+      html: expect.stringContaining('Hi there,<br>Your site is slow.'),
+      attachments: [
+        { filename: 'audit-smile-dental.pdf', content: PDF },
+        { filename: 'devartventures-logo.png', content: LOGO, cid: 'devartventures-logo' },
+      ],
     });
+    const { html } = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(html).toContain('<img src="cid:devartventures-logo"');
+    expect(html).toContain('Smile Dental');
+    expect(html).toContain('Book your free call');
     expect(renderAuditPdf).toHaveBeenCalledWith('a1');
     expect(db.state.updates).toEqual([{ emailed_at: json.emailed_at }]);
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
+  });
+
+  it('still sends, without the logo, when the logo file can not be read', async () => {
+    vi.mocked(brandLogo).mockResolvedValue(null);
+    expect((await post(draft)).status).toBe(200);
+    const sent = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(sent.attachments).toEqual([{ filename: 'audit-smile-dental.pdf', content: PDF }]);
+    expect(sent.html).not.toContain('<img');
+  });
+
+  it('shows the email as it will look, without sending or needing email to be set up', async () => {
+    vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
+    const { status, json } = await post({ ...draft, preview: true });
+    expect(status).toBe(200);
+    expect(json.html).toContain('Hi there,<br>Your site is slow.');
+    // A browser can't load the email's attached logo, so the preview carries the image itself
+    expect(json.html).toContain(`<img src="data:image/png;base64,${LOGO.toString('base64')}"`);
+    expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(db.state.updates).toEqual([]);
   });
 
   it.each([

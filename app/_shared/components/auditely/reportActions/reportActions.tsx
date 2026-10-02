@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { DownloadIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
 import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal/sendEmailModal';
-import { outreachDraft, type OutreachDraft } from '@/app/_shared/lib/email/outreach';
+import { leadDrafts } from '@/app/_shared/lib/email/followUp';
+import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
@@ -23,7 +24,7 @@ const sentOn = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mont
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
 export function ReportActions({ businessName, state, crm, mail }: ReportActionsProps) {
   const [composing, setComposing] = useState(false);
-  const { email, report } = state;
+  const { email, report, audit } = state;
 
   const openComposer = () => {
     mail.clearError();
@@ -56,7 +57,7 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
           title={email ? undefined : 'No email address found for this business'}
           leftIcon={<MailIcon size={14} />}
         >
-          {mail.sentAt ? 'Email again' : 'Send email'}
+          {mail.sentAt ? 'Send follow-up' : 'Send email'}
         </Button>
         <Button variant="outline" size="sm" onClick={crm.send} isLoading={crm.sending}>
           {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
@@ -72,15 +73,17 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
         </Button>
       </div>
 
-      {composing && email && report && (
+      {composing && email && report && audit && (
         <SendEmailModal
           businessName={businessName}
           to={email}
-          draft={outreachDraft(report.cold_email, businessName)}
+          // Once the first email has gone, the next one is the follow-up
+          draft={leadDrafts(report.cold_email, businessName, audit)[mail.sentAt ? 'followUp' : 'first']}
           sentAt={mail.sentAt}
           sending={mail.sending}
           error={mail.error}
           onSend={sendEmail}
+          onPreview={mail.preview}
           onClose={() => setComposing(false)}
         />
       )}

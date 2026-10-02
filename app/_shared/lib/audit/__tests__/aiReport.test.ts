@@ -40,9 +40,16 @@ describe('reportFixes and offerSentence', () => {
   });
 
   it('offers a report with the number of fixes, or a plain report when there are none', () => {
-    expect(offerSentence(input())).toBe('I put together a short report with 3 fixes for Smile Dental — want me to send it over?');
-    expect(offerSentence(input({ problems: [problem(0)] }))).toBe('I put together a short report with 1 fix for Smile Dental — want me to send it over?');
-    expect(offerSentence(input({ problems: [] }))).toBe("I put together a short report on Smile Dental's website — want me to send it over?");
+    // The PDF goes with the email, so the offer is the call, not the report
+    expect(offerSentence(input())).toBe(
+      "I've attached a short report with 3 fixes for Smile Dental — happy to walk you through it on a quick call."
+    );
+    expect(offerSentence(input({ problems: [problem(0)] }))).toBe(
+      "I've attached a short report with 1 fix for Smile Dental — happy to walk you through it on a quick call."
+    );
+    expect(offerSentence(input({ problems: [] }))).toBe(
+      "I've attached a short report on Smile Dental's website — happy to walk you through it on a quick call."
+    );
   });
 });
 
@@ -103,6 +110,16 @@ describe('replyProblem', () => {
     const long = `Subject: ${'word '.repeat(30)}\n\n${'word '.repeat(111)}`;
     expect(replyProblem(reply(long), input())).toBe('The email body is 111 words; keep it under 90.');
     expect(replyProblem(reply(signed('word '.repeat(85))), input())).toBeNull();
+  });
+
+  it('asks for a subject of at most 6 words and sends back a long one', () => {
+    expect(buildReportPrompt(input())).toContain('a subject of at most 6 words');
+    const subject = "Let's fix the ways patients can't reach you online today";
+    expect(replyProblem(reply(signed('Your site is slow.').replace('Subject: Hi', `Subject: ${subject}`)), input())).toBe(
+      `The subject is ${subject.length} characters; keep it to 6 words at most.`
+    );
+    const short = signed('Your site is slow.').replace('Subject: Hi', "Subject: Patients can't reach you online");
+    expect(replyProblem(reply(short), input())).toBeNull();
   });
 
   it('requires the offer sentence and the sign-off, in any dash or line style', () => {
