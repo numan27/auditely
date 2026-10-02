@@ -76,7 +76,7 @@ export const Dropdown = ({
           role="menu"
           // Choosing an item closes the menu
           onClick={(e) => {
-            if ((e.target as HTMLElement).closest('[role="menuitem"]')) handleClose();
+            if ((e.target as HTMLElement).closest('[role^="menuitem"]')) handleClose();
           }}
         >
           {children}
