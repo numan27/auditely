@@ -86,7 +86,8 @@ export interface PdfDocumentProps {
   leadFindings: PdfFinding[];
   summary: string;
   improvements: string[];
-  contact: PdfContact;
+  /** null leaves out the "next step" box and the footer's contact */
+  contact: PdfContact | null;
 }
 
 export function PdfDocument({
@@ -197,7 +198,7 @@ export function PdfDocument({
           </View>
         )}
 
-        <NextStepSection contact={contact} />
+        {contact && <NextStepSection contact={contact} />}
 
         {/* Footer */}
         <View style={styles.footer} fixed>
@@ -205,9 +206,11 @@ export function PdfDocument({
             Powered by{' '}
             <Link src="https://devartventures.com" style={styles.link}>devartventures.com</Link>
           </Text>
-          <Text style={styles.footerText}>
-            <Link src={`mailto:${contact.email}`} style={styles.link}>{contact.email}</Link>
-          </Text>
+          {contact && (
+            <Text style={styles.footerText}>
+              <Link src={`mailto:${contact.email}`} style={styles.link}>{contact.email}</Link>
+            </Text>
+          )}
         </View>
       </Page>
     </Document>

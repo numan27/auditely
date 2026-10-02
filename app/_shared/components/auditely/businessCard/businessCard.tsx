@@ -11,6 +11,7 @@ import { ContactLine } from '@/app/_shared/components/auditely/contactLine/conta
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
@@ -28,6 +29,8 @@ interface BusinessCardProps {
   autoRun?: boolean;
   /** Set while "Audit all" handles this business, and afterwards */
   bulk?: BulkState;
+  /** Start with the report open although it's already audited (the demo's sample website) */
+  defaultOpen?: boolean;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -68,7 +71,8 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen }: BusinessCardProps) {
+  const demo = useDemo();
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
   const mail = useEmailSend(business, onUpdate);
@@ -76,13 +80,14 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
   // Pre-loaded cards (from saved searches) start collapsed, and so do the ones "Audit all"
   // finishes: dozens of open reports would bury the list. A card audited by hand opens.
   const [startedBlank] = useState(!(initialAudit && initialReport));
-  const [toggled, setToggled] = useState<boolean | null>(null);
+  const [toggled, setToggled] = useState<boolean | null>(defaultOpen ? true : null);
   const isExpanded = toggled ?? (startedBlank && bulk?.stage !== 'done');
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
-  const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
+  // The demo's sample has the age it has: no "Outdated" or "Over 30 days old" there
+  const isOutdated = !demo && auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
   // Outdated already says "re-audit"; stale only needs saying for a current-engine audit
-  const isStale = auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
+  const isStale = !demo && auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
   const reviews = reviewsLabel(business.rating, business.review_count);
 
   return (
@@ -120,12 +125,17 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
             <div className="flex flex-wrap gap-x-5 gap-y-1.5 empty:hidden">
               {business.phone && (
                 <ContactLine icon={<PhoneIcon size={14} />}>
-                  <a
-                    href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
-                    className="hover:text-[var(--color-primary-600)] hover:underline"
-                  >
-                    {business.phone}
-                  </a>
+                  {/* The demo's numbers are masked: nothing to call */}
+                  {demo ? (
+                    business.phone
+                  ) : (
+                    <a
+                      href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
+                      className="hover:text-[var(--color-primary-600)] hover:underline"
+                    >
+                      {business.phone}
+                    </a>
+                  )}
                 </ContactLine>
               )}
               <BusinessEmail email={email} website={business.website} businessId={business.id} onFound={saveEmail} />

@@ -224,6 +224,10 @@ describe('buildPdfProps', () => {
     const withBooking = { ...contact, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
     expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
   });
+
+  it('builds a report without a contact, for the public demo', () => {
+    expect(buildPdfProps(audit, business, noReport, null).contact).toBeNull();
+  });
 });
 
 describe('lead capture in the report', () => {

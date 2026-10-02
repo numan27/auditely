@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { CheckIcon, CopyIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 
 interface BusinessEmailProps {
   email: string | null;
@@ -21,6 +22,7 @@ interface BusinessEmailProps {
  * business — the only path allowed to spend API quota.
  */
 export function BusinessEmail({ email, website, businessId, onFound }: BusinessEmailProps) {
+  const demo = useDemo();
   const [copied, setCopied] = useState(false);
   const [finding, setFinding] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -33,6 +35,7 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
   };
 
   const handleFind = async () => {
+    if (demo) return demo.restrict('findEmail');
     setFinding(true);
     setNotFound(false);
     try {
@@ -51,6 +54,15 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
       setFinding(false);
     }
   };
+
+  // The demo's emails are masked: nothing to write to or copy
+  if (email && demo) {
+    return (
+      <ContactLine icon={<MailIcon size={14} />}>
+        <span className="font-medium text-[var(--color-text-primary)]">{email}</span>
+      </ContactLine>
+    );
+  }
 
   if (email) {
     return (

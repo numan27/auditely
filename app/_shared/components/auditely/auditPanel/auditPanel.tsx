@@ -12,6 +12,7 @@ import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
 import { ReportActions } from '@/app/_shared/components/auditely/reportActions/reportActions';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { Business } from '@/app/_shared/lib/types/auditely';
@@ -57,6 +58,7 @@ function Failed({ message, onRetry }: { message: string; onRetry: () => void }):
 
 /** The body of a business card: audit states, scores, findings and the AI report */
 export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
+  const demo = useDemo();
   const { audit, report, auditStatus, auditError, reportStatus, queued } = state;
 
   if (!business.website) {
@@ -73,8 +75,12 @@ export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
         {auditStatus === 'loading' ? (
           <Status
             busy
-            title={`Auditing ${domainOf(business.website)}…`}
-            detail="Speed tests run on mobile and desktop, so this takes about a minute."
+            title={demo ? `Replaying the saved audit of ${domainOf(business.website)}…` : `Auditing ${domainOf(business.website)}…`}
+            detail={
+              demo
+                ? 'A live audit takes about a minute; this replay is shortened.'
+                : 'Speed tests run on mobile and desktop, so this takes about a minute.'
+            }
           />
         ) : auditStatus === 'error' ? (
           <Failed message={auditError ?? "The audit didn't finish."} onRetry={state.retryAudit} />
@@ -130,7 +136,7 @@ export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
           ) : (
             <div className={ROW}>
               {reportStatus === 'loading' ? (
-                <Status busy title="Writing the summary and outreach email…" />
+                <Status busy title={demo ? 'Replaying the saved summary and outreach email…' : 'Writing the summary and outreach email…'} />
               ) : reportStatus === 'error' ? (
                 <Failed message="Couldn't write the AI summary." onRetry={() => state.generateReport(audit.id)} />
               ) : queued ? (

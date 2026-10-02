@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { CommandField } from '@/app/_shared/components/ui/commandField/commandField';
 import { GlobeIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { UrlAuditBusy } from '@/app/_shared/lib/hooks/useUrlAudits';
 
 interface UrlAuditFormProps {
@@ -17,12 +18,14 @@ interface UrlAuditFormProps {
 }
 
 export function UrlAuditForm({ onSubmit, onFindEmail, busy }: UrlAuditFormProps) {
+  const demo = useDemo();
   const [url, setUrl] = useState('');
   const isLoading = busy !== null;
 
   const run = async (action: (url: string) => Promise<boolean>) => {
     const value = url.trim();
-    if (!value || isLoading) return;
+    // In the demo both buttons always answer (with the notice), even with an empty field
+    if (isLoading || (!value && !demo)) return;
     if (await action(value)) setUrl('');
   };
 
@@ -54,7 +57,7 @@ export function UrlAuditForm({ onSubmit, onFindEmail, busy }: UrlAuditFormProps)
           variant="outline"
           size="md"
           isLoading={busy === 'email'}
-          disabled={isLoading || !url.trim()}
+          disabled={isLoading || (!demo && !url.trim())}
           onClick={() => void run(onFindEmail)}
           className="h-12 flex-1 whitespace-nowrap sm:flex-none"
         >
@@ -72,7 +75,7 @@ export function UrlAuditForm({ onSubmit, onFindEmail, busy }: UrlAuditFormProps)
           variant="primary"
           size="md"
           isLoading={busy === 'audit'}
-          disabled={isLoading || !url.trim()}
+          disabled={isLoading || (!demo && !url.trim())}
           className="h-12 flex-1 whitespace-nowrap sm:flex-none"
         >
           {busy === 'audit' ? 'Adding…' : 'Run audit'}

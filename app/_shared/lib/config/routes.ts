@@ -8,6 +8,8 @@ export const ROUTES = {
   SETTINGS: '/settings',
   // Private PDF report links (/report/{signed token}) — public, the token is the key
   REPORT: '/report',
+  // The public demo: the workspace on a saved sample, with nothing live behind it
+  DEMO: '/demo',
 } as const;
 
 // API route paths. Only AUTH is public (see PUBLIC_ROUTES below).
@@ -25,8 +27,9 @@ export const API_ROUTES = {
   SEND_EMAIL: '/api/send-email',
 } as const;
 
-// Everything is private (single-admin tool) except these; /report/{token} is checked by its signature
-export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT] as const;
+// Everything is private (single-admin tool) except these; /report/{token} is checked by
+// its signature, and /demo shows only the sample checked into the repo
+export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT, ROUTES.DEMO] as const;
 
 // Pages a logged-in user should be bounced away from
 export const AUTH_ROUTES = [ROUTES.LOGIN] as const;
@@ -36,6 +39,9 @@ export const HOME_ALIASES = ['/home'] as const;
 
 export const DEFAULT_LOGIN_REDIRECT = ROUTES.HOME;
 export const DEFAULT_LOGOUT_REDIRECT = ROUTES.LOGIN;
+
+// Where the home page sends a visitor who isn't logged in
+export const LOGGED_OUT_HOME = ROUTES.DEMO;
 
 // Create Sets for O(1) exact match lookups
 const PUBLIC_SET = new Set<string>(PUBLIC_ROUTES);
@@ -69,3 +75,6 @@ export const safeCallbackUrl = (value: string | null | undefined): string =>
   value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
     ? value
     : DEFAULT_LOGIN_REDIRECT;
+
+/** A sample audit's PDF report in the demo */
+export const demoReportPath = (auditId: string): string => `${ROUTES.DEMO}/report/${encodeURIComponent(auditId)}`;

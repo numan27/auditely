@@ -9,6 +9,7 @@ import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 
@@ -23,10 +24,12 @@ const sentOn = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mont
 
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
 export function ReportActions({ businessName, state, crm, mail }: ReportActionsProps) {
+  const demo = useDemo();
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
 
   const openComposer = () => {
+    if (demo) return demo.restrict('sendEmail');
     mail.clearError();
     setComposing(true);
   };
@@ -53,13 +56,14 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
           variant="outline"
           size="sm"
           onClick={openComposer}
-          disabled={!email}
-          title={email ? undefined : 'No email address found for this business'}
+          // In the demo the button always answers, with the notice
+          disabled={!email && !demo}
+          title={email || demo ? undefined : 'No email address found for this business'}
           leftIcon={<MailIcon size={14} />}
         >
           {mail.sentAt ? 'Send follow-up' : 'Send email'}
         </Button>
-        <Button variant="outline" size="sm" onClick={crm.send} isLoading={crm.sending}>
+        <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
           {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
         </Button>
         <Button

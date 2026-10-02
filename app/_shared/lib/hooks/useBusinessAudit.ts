@@ -3,12 +3,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { API_ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, demoReportPath } from '@/app/_shared/lib/config/routes';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
-import { shownStatus, type BulkState } from '@/app/_shared/lib/utils/bulkAudit';
+import { shownStatus, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
 import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+// The real routes. In the public demo the saved sample answers instead (demo/replay.ts).
+const send: Post = async (path, body) => {
+  const res = await fetch(path, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+  return { ok: res.ok, data: await res.json() };
+};
 
 /**
  * Audit + AI-report state and actions for one business card.
@@ -20,6 +27,8 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
  * filter and export on it. With `autoRun`, the audit starts on mount.
  * While "Audit all" handles the business (`bulk`), the statuses show its
  * progress; its results arrive through the `initial*` props.
+ * In the public demo the audit and summary are replayed from the saved sample,
+ * Re-audit opens the demo's notice, and the PDF is the sample's.
  */
 export interface BusinessAuditOptions {
   initialAudit?: Audit;
@@ -33,6 +42,8 @@ export function useBusinessAudit(
   business: Business,
   { initialAudit, initialReport, onUpdate, autoRun = false, bulk }: BusinessAuditOptions = {}
 ) {
+  const demo = useDemo();
+  const request = demo?.replay ?? send;
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>(initialAudit ? 'done' : 'idle');
@@ -75,20 +86,16 @@ export function useBusinessAudit(
   const generateReport = useCallback(async (auditId: string) => {
     setReportStatus('loading');
     try {
-      const res = await fetch(API_ROUTES.GENERATE, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ audit_id: auditId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setReport(data.ai_report);
+      const { ok, data } = await request(API_ROUTES.GENERATE, { audit_id: auditId });
+      const { ai_report, error } = data as { ai_report: AiReport; error?: string };
+      if (!ok) throw new Error(error);
+      setReport(ai_report);
       setReportStatus('done');
-      onUpdate?.(business.id, { ai_report: data.ai_report });
+      onUpdate?.(business.id, { ai_report });
     } catch {
       setReportStatus('error');
     }
-  }, [business.id, onUpdate]);
+  }, [business.id, onUpdate, request]);
 
   const runAudit = useCallback(
     async (force = false) => {
@@ -101,28 +108,24 @@ export function useBusinessAudit(
         setAuditStatus(audit ? 'done' : 'error');
       };
       try {
-        const res = await fetch(API_ROUTES.AUDIT, {
-          method: 'POST',
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ business_id: business.id, force }),
-        });
-        const data = await res.json();
-        if (!res.ok) return fail(data.error || 'Audit failed');
-        setAudit(data.audit);
-        if (data.email) setEmail(data.email);
+        const { ok, data } = await request(API_ROUTES.AUDIT, { business_id: business.id, force });
+        const result = data as { audit: Audit; email?: string | null; error?: string };
+        if (!ok) return fail(result.error || 'Audit failed');
+        setAudit(result.audit);
+        if (result.email) setEmail(result.email);
         if (force) setReport(undefined);
         setAuditStatus('done');
         onUpdate?.(business.id, {
-          audit: data.audit,
-          ...(data.email && { email: data.email }),
+          audit: result.audit,
+          ...(result.email && { email: result.email }),
           ...(force && { ai_report: undefined }),
         });
-        generateReport(data.audit.id);
+        generateReport(result.audit.id);
       } catch {
         fail('Audit failed');
       }
     },
-    [audit, business.id, generateReport, onUpdate]
+    [audit, business.id, generateReport, onUpdate, request]
   );
 
   // Sites added from the URL form audit straight away. The ref stops Strict
@@ -134,18 +137,22 @@ export function useBusinessAudit(
     runAudit();
   }, [autoRun, initialAudit, runAudit]);
 
-  const reAudit = useCallback(() => runAudit(true), [runAudit]);
+  // The demo has one saved audit per business: nothing fresh to measure
+  const reAudit = useCallback(() => (demo ? demo.restrict('reaudit') : runAudit(true)), [demo, runAudit]);
   const retryAudit = useCallback(() => runAudit(lastForce.current), [runAudit]);
 
   const downloadPdf = useCallback(async () => {
     if (!audit) return;
     setPdfLoading(true);
     try {
-      const res = await fetch(API_ROUTES.PDF, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ audit_id: audit.id }),
-      });
+      // The demo's reports are built ahead from the saved sample
+      const res = demo
+        ? await fetch(demoReportPath(audit.id))
+        : await fetch(API_ROUTES.PDF, {
+            method: 'POST',
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ audit_id: audit.id }),
+          });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error);
@@ -157,7 +164,7 @@ export function useBusinessAudit(
     } finally {
       setPdfLoading(false);
     }
-  }, [audit, business.name]);
+  }, [audit, business.name, demo]);
 
   return {
     audit,

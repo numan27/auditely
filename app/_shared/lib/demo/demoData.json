@@ -1,0 +1,5469 @@
+{
+  "capturedAt": "2026-10-02T16:04:28.434Z",
+  "query": {
+    "niche": "cosmetic dentist",
+    "location": "houston, tx, usa"
+  },
+  "leads": [
+    {
+      "id": "demo-b1",
+      "search_id": "demo-search",
+      "name": "Cosmetic Dentists of Houston",
+      "address": "1900 W Loop S Ste 1150, Houston, TX 77027, USA",
+      "website": "https://www.houstondental.com/",
+      "phone": "(•••) •••-••77",
+      "created_at": "2026-10-02T11:13:09.967+00:00",
+      "email": "i•••@houstondental.com",
+      "contact_page": "https://www.houstondental.com/contact/",
+      "socials": {
+        "facebook": "https://www.facebook.com/CosmeticDentistsOfHouston",
+        "linkedin": "https://www.linkedin.com/company/cosmetic-dentists-of-houston",
+        "instagram": "https://www.instagram.com/cosmeticdentistshouston"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.835+00:00",
+      "email_lookup_at": null,
+      "rating": 4.9,
+      "review_count": 675,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a1",
+        "checks": {
+          "aeo": {
+            "h1Count": 2,
+            "h2Count": 12,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "2 H1 headings (should be 1)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "12 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "2 question-style headings",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "FAQ schema (FAQPage) found",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": true,
+            "questionHeadings": 2
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Cosmetic Dentists of Houston",
+                "phones": [
+                  "••••••••77"
+                ],
+                "address": null
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Only generic Organization schema — add Dentist",
+                "status": "warn"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema is missing address",
+                "status": "warn"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "BreadcrumbList",
+              "ListItem",
+              "FAQPage",
+              "Question",
+              "Answer",
+              "Organization",
+              "ImageObject",
+              "WebSite"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Cosmetic Dentists of Houston | Houston's Premier Dentistry",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.houstondental.com/",
+            "robotsTxt": "ok",
+            "metaDescription": "Cosmetic Dentists of Houston offer a range of dental procedures including veneers, Invisalign, implants, oral cancer screening, crowns, teeth whitening and more"
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Let's Encrypt",
+            "daysToExpiry": 73
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 32
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.houstondental.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.houstondental.com/contact/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.houstondental.com/periodontal-treatment/",
+                "kind": "services"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (32 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.houstondental.com/"
+          },
+          "tech": [
+            {
+              "name": "WordPress",
+              "category": "platform"
+            },
+            {
+              "name": "Elementor",
+              "category": "pageBuilder"
+            },
+            {
+              "name": "PHP",
+              "version": "8.1.34",
+              "category": "framework"
+            },
+            {
+              "name": "LiteSpeed",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "1 link found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "12 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.8 s"
+              },
+              "interactive": {
+                "score": 0,
+                "title": "Time to Interactive",
+                "displayValue": "24.8 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.01,
+                "title": "Speed Index",
+                "displayValue": "13.7 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 397 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.74,
+                "title": "Total Blocking Time",
+                "displayValue": "340 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 3 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0,
+                "title": "First Contentful Paint",
+                "displayValue": "13.7 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.6,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.205"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "21.7 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.85,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.37,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.84,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.54,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "1 link found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "14 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.8 s"
+              },
+              "interactive": {
+                "score": 0.48,
+                "title": "Time to Interactive",
+                "displayValue": "4.6 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.75,
+                "title": "Speed Index",
+                "displayValue": "1.7 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 291 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.25,
+                "title": "Total Blocking Time",
+                "displayValue": "540 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 3 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.9,
+                "title": "First Contentful Paint",
+                "displayValue": "0.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.006"
+              },
+              "largest-contentful-paint": {
+                "score": 0.93,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.1 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.85,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.72,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.84,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.54,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 55,
+        "geo_score": 75,
+        "seo_score": 85,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:16:32.930629+00:00",
+        "lead_score": 85,
+        "business_id": "demo-b1",
+        "mobile_score": 37,
+        "engine_version": 2,
+        "performance_score": 72
+      },
+      "ai_report": {
+        "id": "demo-r1",
+        "summary": "Your site takes over 21 seconds to load on phones, causing many mobile visitors to leave before they see anything, which means lost appointments. In addition, the site doesn’t clearly explain that you are a cosmetic dentist, so search engines and AI helpers may send potential patients to competitors.",
+        "audit_id": "demo-a1",
+        "cold_email": "Subject: Mobile speed is costing you\nYour site loads in 21.7 seconds on phones, and research shows more than half of visitors abandon a page that takes longer than three seconds – that’s patients walking away before they even see your services. It also describes your practice too generally, so AI assistants often suggest other dentists. I've attached a short report with 4 fixes for Cosmetic Dentists of Houston — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:16:36.623265+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Mark your site with your exact business type, like Dentist or School.",
+          "Add an online booking or appointment-request button.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b2",
+      "search_id": "demo-search",
+      "name": "Sapphire Smiles - Dr. Antoun | Leading Cosmetic Dentist in Houston",
+      "address": "2522 Yale St #210, Houston, TX 77008, USA",
+      "website": "https://www.sapphiresmilesdentistry.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp",
+      "phone": "(•••) •••-••00",
+      "created_at": "2026-10-02T11:13:09.968+00:00",
+      "email": "i•••@sapphiresmilesdentistry.com",
+      "contact_page": null,
+      "socials": {
+        "facebook": "https://www.facebook.com/sapphiresmilesdentistry",
+        "instagram": "https://www.instagram.com/sapphiresmiles_dentistry"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.837+00:00",
+      "email_lookup_at": "2026-10-02T11:14:21.512+00:00",
+      "rating": 5,
+      "review_count": 960,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a2",
+        "checks": {
+          "aeo": {
+            "h1Count": 1,
+            "h2Count": 14,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "One H1 heading",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "14 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels are in order",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "2 question-style headings",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 2
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Sapphire Smiles",
+                "phones": [
+                  "••••••••38",
+                  "••••••••00"
+                ],
+                "address": "2522 Yale St. #210, Houston, TX, 77008"
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Business schema type: Dentist",
+                "status": "pass"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema includes name, address and phone",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "Dentist",
+              "PostalAddress",
+              "GeoCoordinates",
+              "OpeningHoursSpecification"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Best Smile Makeovers in Houston | Best Veneers in Houston",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.sapphiresmilesdentistry.com",
+            "robotsTxt": "ok",
+            "metaDescription": "Find the best cosmetic dentists in Houston at Sapphire Smiles. Specializing in expert smile makeovers, including dental implants, crowns, Invisalign, & veneers."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Google Trust Services",
+            "daysToExpiry": 59
+          },
+          "lead": {
+            "links": {
+              "broken": [
+                "https://www.sapphiresmilesdentistry.com/smile-makeovers-old",
+                "https://www.sapphiresmilesdentistry.com/invisalign-old",
+                "https://www.sapphiresmilesdentistry.com/dental-implants-old"
+              ],
+              "checked": 27
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.sapphiresmilesdentistry.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.sapphiresmilesdentistry.com/patient-journey/brittas-journey",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "No contact form or email link found on the pages we checked",
+                "status": "fail"
+              },
+              {
+                "id": "lead.booking",
+                "label": "Online booking or appointment request",
+                "detail": "app.nexhealth.com",
+                "status": "pass"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "No contact page linked from the homepage",
+                "status": "fail"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "3 broken links — visitors land on a \"page not found\"",
+                "detail": "/smile-makeovers-old, /invisalign-old, /dental-implants-old",
+                "status": "fail"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.sapphiresmilesdentistry.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp"
+          },
+          "tech": [
+            {
+              "name": "Webflow",
+              "category": "platform"
+            },
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            },
+            {
+              "name": "NexHealth",
+              "category": "widgets"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "20 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "4.4 s"
+              },
+              "interactive": {
+                "score": 0,
+                "title": "Time to Interactive",
+                "displayValue": "25.7 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.24,
+                "title": "Speed Index",
+                "displayValue": "7.7 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 6,432 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.04,
+                "title": "Total Blocking Time",
+                "displayValue": "2,640 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.01,
+                "title": "First Contentful Paint",
+                "displayValue": "6.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.46,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.264"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "12.5 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.69,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.15,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.93,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.73,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "14 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.3 s"
+              },
+              "interactive": {
+                "score": 0.46,
+                "title": "Time to Interactive",
+                "displayValue": "4.7 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.96,
+                "title": "Speed Index",
+                "displayValue": "1.1 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 6,431 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.03,
+                "title": "Total Blocking Time",
+                "displayValue": "1,180 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.93,
+                "title": "First Contentful Paint",
+                "displayValue": "0.8 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.99,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.041"
+              },
+              "largest-contentful-paint": {
+                "score": 0.93,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.1 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.69,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.68,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.93,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.73,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 65,
+        "geo_score": 100,
+        "seo_score": 69,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:16:44.544672+00:00",
+        "lead_score": 40,
+        "business_id": "demo-b2",
+        "mobile_score": 15,
+        "engine_version": 2,
+        "performance_score": 68
+      },
+      "ai_report": {
+        "id": "demo-r2",
+        "summary": "Your site is missing a contact form or email link, so potential patients can’t easily reach you online, causing lost appointments. In addition, the site loads slowly on phones and some links lead to missing pages, which drives visitors away before they even see your services.",
+        "audit_id": "demo-a2",
+        "cold_email": "Subject: No Contact Form\n\nHi Dr. Antoun, I noticed your website doesn’t have a contact form or email link, meaning visitors who prefer to write or call after hours have no easy way to get in touch, which likely costs you new patients. It also loads slowly on phones, causing many to leave before the page appears. I've attached a short report with 5 fixes for Sapphire Smiles - Dr. Antoun | Leading Cosmetic Dentist in Houston — happy to walk you through it on a quick call.\n\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:16:48.010163+00:00",
+        "improvements": [
+          "Add a short contact form to your homepage and contact page.",
+          "Repair or redirect the broken links.",
+          "Add a \"Contact\" link to your main menu that leads to a clear contact page.",
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Reserve space for images and banners so the page stays still while it loads."
+        ]
+      }
+    },
+    {
+      "id": "demo-b3",
+      "search_id": "demo-search",
+      "name": "The Houston Dentists",
+      "address": "4914 Bissonnet St #200, Bellaire, TX 77401, USA",
+      "website": "https://www.drfrazar.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp-listing",
+      "phone": "(•••) •••-••32",
+      "created_at": "2026-10-02T11:13:09.969+00:00",
+      "email": "i•••@drfrazar.com",
+      "contact_page": "https://www.drfrazar.com/contact",
+      "socials": {
+        "facebook": "https://www.facebook.com/thehoustondentists",
+        "instagram": "https://www.instagram.com/thehoustondentists"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.838+00:00",
+      "email_lookup_at": null,
+      "rating": 5,
+      "review_count": 752,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a3",
+        "checks": {
+          "aeo": {
+            "h1Count": 1,
+            "h2Count": 10,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "One H1 heading",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "10 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "Only 1 question-style heading (aim for 2+)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 1
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "The Houston Dentists",
+                "phones": [
+                  "••••••••37"
+                ],
+                "address": "4914 Bissonnet Street, Suite 200, Bellaire, TX, 77401"
+              },
+              "phone": "mismatch",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Business schema type: Dentist",
+                "status": "pass"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema includes name, address and phone",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number on site doesn't match business listing",
+                "detail": "Site shows: (•••) •••-••37",
+                "status": "fail"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "Dentist",
+              "PostalAddress",
+              "GeoCoordinates",
+              "OpeningHoursSpecification",
+              "OfferCatalog",
+              "Offer",
+              "Service"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Houston's Top Cosmetic Dentist | The Houston Dentists",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description is 172 characters (aim for 50–160)",
+                "status": "warn"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.drfrazar.com",
+            "robotsTxt": "ok",
+            "metaDescription": "Discover exceptional dental care at The Houston Dentists. Our dentists near you offer comprehensive services, from routine cleanings to advanced treatments. Schedule today!"
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Google Trust Services",
+            "daysToExpiry": 64
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 33
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.drfrazar.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp-listing",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.drfrazar.com/contact",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.drfrazar.com/service-categories/preventive-dentistry",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://www.drfrazar.com/about",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (33 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.drfrazar.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp-listing"
+          },
+          "tech": [
+            {
+              "name": "Webflow",
+              "category": "platform"
+            },
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "4 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "16 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "3.3 s"
+              },
+              "interactive": {
+                "score": 0.05,
+                "title": "Time to Interactive",
+                "displayValue": "16.3 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.35,
+                "title": "Speed Index",
+                "displayValue": "6.8 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 14,332 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0.5,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.41,
+                "title": "Total Blocking Time",
+                "displayValue": "720 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.16,
+                "title": "First Contentful Paint",
+                "displayValue": "4.4 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.96,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.068"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "10.8 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.41,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.88,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "4 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "9 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.6 s"
+              },
+              "interactive": {
+                "score": 0.77,
+                "title": "Time to Interactive",
+                "displayValue": "3.1 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.74,
+                "title": "Speed Index",
+                "displayValue": "1.7 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 14,380 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0.5,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.72,
+                "title": "Total Blocking Time",
+                "displayValue": "240 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.9,
+                "title": "First Contentful Paint",
+                "displayValue": "0.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.2,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.454"
+              },
+              "largest-contentful-paint": {
+                "score": 0.93,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.1 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.66,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.88,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 35,
+        "geo_score": 85,
+        "seo_score": 92,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:17:28.407373+00:00",
+        "lead_score": 85,
+        "business_id": "demo-b3",
+        "mobile_score": 41,
+        "engine_version": 2,
+        "performance_score": 66
+      },
+      "ai_report": {
+        "id": "demo-r3",
+        "summary": "Your site takes over 10 seconds to load on phones, causing many potential patients to leave before they see anything and likely choose another dentist. The missing or mismatched phone number on the homepage can also confuse callers and hurt trust, while the lack of online booking means you miss people who want to schedule after hours.",
+        "audit_id": "demo-a3",
+        "cold_email": "Subject: Slow Mobile Site Speed\nYour website loads in 10.8 seconds on phones, and most users abandon a page that takes longer than 3 seconds – that means you’re losing a lot of local patients before they even see you. On top of that, the phone number on your homepage doesn’t match your listing, which can confuse callers. I’ve attached a short report with 4 fixes for The Houston Dentists — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:17:31.338614+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Show the same phone number on your site as on your Google and other listings.",
+          "Add an online booking or appointment-request button.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b4",
+      "search_id": "demo-search",
+      "name": "Houston Dental Esthetics",
+      "address": "14511 Old Katy Rd #180, Houston, TX 77079, USA",
+      "website": "https://houstondentalesthetics.com/",
+      "phone": "(•••) •••-••36",
+      "created_at": "2026-10-02T11:13:09.971+00:00",
+      "email": "i•••@houstondentalesthetics.com",
+      "contact_page": "https://houstondentalesthetics.com/contact/",
+      "socials": {
+        "facebook": "https://www.facebook.com/HoustonDentalEsthetics",
+        "instagram": "https://www.instagram.com/houstondentalesthetics"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.839+00:00",
+      "email_lookup_at": null,
+      "rating": 5,
+      "review_count": 511,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a4",
+        "checks": {
+          "aeo": {
+            "h1Count": 1,
+            "h2Count": 10,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "One H1 heading",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "10 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "Only 1 question-style heading (aim for 2+)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 1
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Houston Dental Esthetics",
+                "phones": [
+                  "••••••••36"
+                ],
+                "address": "14511 Old Katy Rd., Ste 180, 77079"
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Use the more specific Dentist schema type",
+                "detail": "Found LocalBusiness",
+                "status": "warn"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema includes name, address and phone",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "WebPage",
+              "ReadAction",
+              "BreadcrumbList",
+              "ListItem",
+              "WebSite",
+              "SearchAction",
+              "EntryPoint",
+              "PropertyValueSpecification",
+              "LocalBusiness"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Dentist in Houston, TX | Houston Dental Esthetics",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://houstondentalesthetics.doctormmdev12.com/",
+            "robotsTxt": "ok",
+            "metaDescription": "Houston Dental Esthetics is a skilled Dentist in Houston, TX. Accepting new appointments. Call today or request an appointment on our website."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Let's Encrypt",
+            "daysToExpiry": 60
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 10
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://houstondentalesthetics.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://houstondentalesthetics.com/contact/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://houstondentalesthetics.com/services/",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://houstondentalesthetics.com/about/",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the contact page",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (10 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://houstondentalesthetics.com/"
+          },
+          "tech": [
+            {
+              "name": "WordPress",
+              "version": "7.1.2",
+              "category": "platform"
+            },
+            {
+              "name": "Google Analytics",
+              "category": "analytics"
+            },
+            {
+              "name": "Google Ads",
+              "category": "analytics"
+            },
+            {
+              "name": "Birdeye",
+              "category": "widgets"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "9 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.9 s"
+              },
+              "interactive": {
+                "score": 0,
+                "title": "Time to Interactive",
+                "displayValue": "27.0 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.02,
+                "title": "Speed Index",
+                "displayValue": "13.1 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 596 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 9 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.83,
+                "title": "Total Blocking Time",
+                "displayValue": "260 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0,
+                "title": "First Contentful Paint",
+                "displayValue": "13.1 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "25.7 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.5,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.87,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "8 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.5 s"
+              },
+              "interactive": {
+                "score": 0.37,
+                "title": "Time to Interactive",
+                "displayValue": "5.2 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.2,
+                "title": "Speed Index",
+                "displayValue": "3.3 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 599 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0.5,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 9 KiB"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.94,
+                "title": "Total Blocking Time",
+                "displayValue": "130 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.96,
+                "title": "First Contentful Paint",
+                "displayValue": "0.8 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0"
+              },
+              "largest-contentful-paint": {
+                "score": 0.98,
+                "title": "Largest Contentful Paint",
+                "displayValue": "0.8 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.89,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.87,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 35,
+        "geo_score": 90,
+        "seo_score": 100,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:17:49.108817+00:00",
+        "lead_score": 85,
+        "business_id": "demo-b4",
+        "mobile_score": 50,
+        "engine_version": 2,
+        "performance_score": 89
+      },
+      "ai_report": {
+        "id": "demo-r4",
+        "summary": "Your site takes over 25 seconds to load on phones, causing most mobile visitors to leave before they see anything, which means lost patients. It also describes your practice too generally, so search engines and AI helpers don’t match you to people looking for dental esthetics, and you don’t let customers book appointments online, forcing them to call during office hours.",
+        "audit_id": "demo-a4",
+        "cold_email": "Subject: Mobile speed is costing patients\n\nYour site loads in about 25 seconds on phones, and research shows most users abandon a page that takes longer than 3 seconds – that’s potential patients walking away. On top of that, the vague business description and lack of online booking make it hard for people to find and schedule you. I've attached a short report with 4 fixes for Houston Dental Esthetics — happy to walk you through it on a quick call.\n\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:17:52.297805+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Mark your site with your exact business type, like Dentist or School.",
+          "Add an online booking or appointment-request button.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b5",
+      "search_id": "demo-search",
+      "name": "Premier Dental Club - Smile makeover, TMJ, Headache, Emergency Dentistry Houston",
+      "address": "9720 Cypresswood Dr #200, Houston, TX 77070, USA",
+      "website": "https://www.premierdentalclub.com/",
+      "phone": "(•••) •••-••56",
+      "created_at": "2026-10-02T11:13:09.972+00:00",
+      "email": "i•••@premierdentalclub.com",
+      "contact_page": "https://www.premierdentalclub.com/contact/",
+      "socials": {
+        "instagram": "https://www.instagram.com/premierdentalclub"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.84+00:00",
+      "email_lookup_at": null,
+      "rating": 5,
+      "review_count": 849,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a5",
+        "checks": {
+          "aeo": {
+            "h1Count": 0,
+            "h2Count": 11,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "No H1 heading",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "11 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "No question-style headings",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 0
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Premier Dental Club",
+                "phones": [
+                  "••••••••56"
+                ],
+                "address": null
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Only generic Organization schema — add Dentist",
+                "status": "warn"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema is missing address, telephone",
+                "status": "warn"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "WebPage",
+              "ReadAction",
+              "ImageObject",
+              "BreadcrumbList",
+              "ListItem",
+              "WebSite",
+              "SearchAction",
+              "EntryPoint",
+              "PropertyValueSpecification",
+              "Organization"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Houston Dentist Specializing in TMJ, Jaw, Facial Pain | Cypress | Premier Dental Club",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title is 85 characters (aim for 10–60)",
+                "status": "warn"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.premierdentalclub.com/",
+            "robotsTxt": "ok",
+            "metaDescription": "TMJ & Orofacial Pain Specialist in Houston. Trusted Dental Care in cypresswood serving Cypress, Tomball, Briar Forest, Spring."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "GoDaddy.com",
+            "daysToExpiry": 138
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 19
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.premierdentalclub.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.premierdentalclub.com/contact/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.premierdentalclub.com/services/",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://www.premierdentalclub.com/about-us/",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "No tap-to-call phone link on the pages we checked",
+                "status": "fail"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (19 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.premierdentalclub.com/"
+          },
+          "tech": [
+            {
+              "name": "WordPress",
+              "category": "platform"
+            },
+            {
+              "name": "Divi",
+              "category": "pageBuilder"
+            },
+            {
+              "name": "PHP",
+              "version": "8.3.33",
+              "category": "framework"
+            },
+            {
+              "name": "GoDaddy",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "field": {
+              "lcpMs": 2287,
+              "scope": "origin"
+            },
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "1 long task found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 1,
+                "title": "JavaScript execution time",
+                "displayValue": "0.1 s"
+              },
+              "interactive": {
+                "score": 0.84,
+                "title": "Time to Interactive",
+                "displayValue": "4.4 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0,
+                "title": "Speed Index",
+                "displayValue": "22.4 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 19 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 1,
+                "title": "Total Blocking Time",
+                "displayValue": "0 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.6,
+                "title": "First Contentful Paint",
+                "displayValue": "2.7 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.027"
+              },
+              "largest-contentful-paint": {
+                "score": 0.4,
+                "title": "Largest Contentful Paint",
+                "displayValue": "4.4 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.71,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.65,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "field": {
+              "lcpMs": 2036,
+              "scope": "origin"
+            },
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "1 long task found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 1,
+                "title": "JavaScript execution time",
+                "displayValue": "0.2 s"
+              },
+              "interactive": {
+                "score": 1,
+                "title": "Time to Interactive",
+                "displayValue": "1.0 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0,
+                "title": "Speed Index",
+                "displayValue": "10.0 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 19 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 1,
+                "title": "Total Blocking Time",
+                "displayValue": "0 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.96,
+                "title": "First Contentful Paint",
+                "displayValue": "0.8 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.011"
+              },
+              "largest-contentful-paint": {
+                "score": 0.95,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.0 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.88,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.65,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 15,
+        "geo_score": 70,
+        "seo_score": 92,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:18:27.375927+00:00",
+        "lead_score": 60,
+        "business_id": "demo-b5",
+        "mobile_score": 71,
+        "engine_version": 2,
+        "performance_score": 88
+      },
+      "ai_report": {
+        "id": "demo-r5",
+        "summary": "Your website is missing a clickable phone link and a clear call button, which means many mobile visitors aren’t calling you right away. The vague description of your services and the lack of online booking also keep potential patients from finding you and scheduling appointments, costing you missed calls and lost appointments.",
+        "audit_id": "demo-a5",
+        "cold_email": "Subject: Missing Call Button\n\nYour site doesn’t have a clickable phone link or clear call button, so mobile visitors aren’t calling you immediately and you lose potential patients. Additionally, the vague service description and no online booking make it harder for people to choose you over competitors. I've attached a short report with 4 fixes for Premier Dental Club - Smile makeover, TMJ, Headache, Emergency Dentistry Houston — happy to walk you through it on a quick call.\n\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:18:30.780151+00:00",
+        "improvements": [
+          "Make your phone number a tap-to-call button at the top of every page.",
+          "Mark your site with your exact business type, like Dentist or School.",
+          "Add an online booking or appointment-request button.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b6",
+      "search_id": "demo-search",
+      "name": "Cosmetic Smiles",
+      "address": "7676 Woodway Dr Ste 310, Houston, TX 77063, USA",
+      "website": "https://www.cosmeticsmiles.com/",
+      "phone": "(•••) •••-••06",
+      "created_at": "2026-10-02T11:13:09.973+00:00",
+      "email": "c•••@cosmeticsmiles.com",
+      "contact_page": "https://www.cosmeticsmiles.com/contact/",
+      "socials": {
+        "facebook": "https://www.facebook.com/Cosmetic-Smiles-Dr-Leticia-Perezous-159859634053105"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:11.841+00:00",
+      "email_lookup_at": null,
+      "rating": 4.9,
+      "review_count": 248,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a6",
+        "checks": {
+          "aeo": {
+            "h1Count": 0,
+            "h2Count": 0,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "No H1 heading",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "Only 0 H2 sections (aim for 3+)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels are in order",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "No question-style headings",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 0
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Cosmetic Smiles",
+                "phones": [
+                  "••••••••03",
+                  "••••••••77"
+                ],
+                "address": "7676 Woodway Dr., Ste 310, Houston, TX, 77063"
+              },
+              "phone": "mismatch",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Business schema type: Dentist",
+                "status": "pass"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema includes name, address and phone",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number on site doesn't match business listing",
+                "detail": "Site shows: (•••) •••-••03, (•••) •••-••77",
+                "status": "fail"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "Dentist",
+              "PostalAddress",
+              "WebSite",
+              "Organization",
+              "OpeningHoursSpecification"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Dentist in West Houston | Comprehensive Dentistry | Dr. Leticia Perezous",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title is 72 characters (aim for 10–60)",
+                "status": "warn"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt blocks all search engines",
+                "status": "fail"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.cosmeticsmiles.com/",
+            "robotsTxt": "blocks-all",
+            "metaDescription": "Welcome to the home of Leticia Perezous, DDS, proudly offers Smile Makeover, Cosmetic Dentistry, Family Dentistry & Prosthetic Dentistry in West Houston, TX."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "ZeroSSL GmbH",
+            "daysToExpiry": 65
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 34
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.cosmeticsmiles.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.cosmeticsmiles.com/contact/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.cosmeticsmiles.com/contact/appointment-request/",
+                "kind": "booking"
+              },
+              {
+                "ok": true,
+                "url": "https://www.cosmeticsmiles.com/procedures/periodontal-disease/treatment/",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://www.cosmeticsmiles.com/about/our-practice/",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.formUnchecked",
+                "label": "Couldn't read the embedded widget on the contact page — it may be a form",
+                "status": "warn"
+              },
+              {
+                "id": "lead.booking",
+                "label": "Online booking or appointment request",
+                "detail": "/contact/appointment-request/",
+                "status": "pass"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (34 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.cosmeticsmiles.com/"
+          },
+          "tech": [
+            {
+              "name": "ASP.NET",
+              "category": "framework"
+            },
+            {
+              "name": "Google Analytics",
+              "category": "analytics"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "12 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.6 s"
+              },
+              "interactive": {
+                "score": 0,
+                "title": "Time to Interactive",
+                "displayValue": "26.7 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.54,
+                "title": "Speed Index",
+                "displayValue": "5.5 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 696 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.5,
+                "title": "Total Blocking Time",
+                "displayValue": "600 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.12,
+                "title": "First Contentful Paint",
+                "displayValue": "4.7 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "25.5 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.47,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.91,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.81,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "6 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 1,
+                "title": "JavaScript execution time",
+                "displayValue": "0.7 s"
+              },
+              "interactive": {
+                "score": 0.28,
+                "title": "Time to Interactive",
+                "displayValue": "5.9 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.3,
+                "title": "Speed Index",
+                "displayValue": "2.9 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 797 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.92,
+                "title": "Total Blocking Time",
+                "displayValue": "130 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.35,
+                "title": "First Contentful Paint",
+                "displayValue": "1.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0"
+              },
+              "largest-contentful-paint": {
+                "score": 0.04,
+                "title": "Largest Contentful Paint",
+                "displayValue": "5.9 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.6,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.95,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.81,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 10,
+        "geo_score": 85,
+        "seo_score": 100,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:52:11.461+00:00",
+        "lead_score": 100,
+        "business_id": "demo-b6",
+        "mobile_score": 47,
+        "engine_version": 2,
+        "performance_score": 60
+      },
+      "ai_report": {
+        "id": "demo-r6",
+        "summary": "Your site is blocking Google, so it rarely shows up when people search for cosmetic services, costing you missed calls and customers. It also loads very slowly on phones, causing many visitors to leave before seeing anything, and the phone number on the homepage doesn’t match your listings, which confuses callers and hurts trust.",
+        "audit_id": "demo-a6",
+        "cold_email": "Subject: Blocked from Google and Slow Site\nYour site is hidden from Google, meaning potential customers can’t find you when they search, and the slow mobile load time drives them away before they see your services. On top of that, the phone number on your homepage doesn’t match your listings, which can cause missed calls. I've attached a short report with 4 fixes for Cosmetic Smiles — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:52:16.197447+00:00",
+        "improvements": [
+          "Update your robots.txt file so search engines can read your site.",
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Show the same phone number on your site as on your Google and other listings.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b7",
+      "search_id": "demo-search",
+      "name": "Cosmetic Dentistry by Dr. Ned Shimizu",
+      "address": "11757 Katy Fwy #960, Houston, TX 77079, USA",
+      "website": "https://www.wedesignyoursmile.com/",
+      "phone": "(•••) •••-••10",
+      "created_at": "2026-10-02T11:13:09.976+00:00",
+      "email": "i•••@wedesignyoursmile.com",
+      "contact_page": "https://www.wedesignyoursmile.com/contact/",
+      "socials": {
+        "facebook": "https://www.facebook.com/SmileDesignHouston",
+        "instagram": "https://www.instagram.com/shimizu_cosmetic_dentistry"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:27.192+00:00",
+      "email_lookup_at": "2026-10-02T11:14:21.534+00:00",
+      "rating": 4.9,
+      "review_count": 121,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a7",
+        "checks": {
+          "aeo": {
+            "h1Count": 1,
+            "h2Count": 9,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "One H1 heading",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "9 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels are in order",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "4 question-style headings",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 4
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Cosmetic Dentistry by Dr. Ned Shimizu",
+                "phones": [
+                  "••••••••10"
+                ],
+                "address": "11757 Katy Freeway #960, Houston, TX, 77079"
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Business schema type: Dentist",
+                "status": "pass"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema includes name, address and phone",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "Dentist",
+              "PostalAddress",
+              "GeoCoordinates",
+              "PropertyValue",
+              "OfferCatalog",
+              "Service",
+              "AggregateRating",
+              "ImageObject",
+              "WebPage",
+              "ReadAction",
+              "BreadcrumbList",
+              "ListItem",
+              "WebSite",
+              "SearchAction",
+              "EntryPoint",
+              "PropertyValueSpecification",
+              "Organization"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Dental Treatment Memorial Area Houston & Bunker Hill Village",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.wedesignyoursmile.com/",
+            "robotsTxt": "ok",
+            "metaDescription": "Dental Treatments in Memorial Area, Houston. Get expert dental care, advanced treatments & personalized solutions for healthy smiles in Bunker Hill Village."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Google Trust Services",
+            "daysToExpiry": 51
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 32
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.wedesignyoursmile.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.wedesignyoursmile.com/contact/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.wedesignyoursmile.com/dental-services/dental-reconstruction/",
+                "kind": "services"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "No contact form or email link found on the pages we checked",
+                "status": "fail"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (32 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.wedesignyoursmile.com/"
+          },
+          "tech": [
+            {
+              "name": "WordPress",
+              "category": "platform"
+            },
+            {
+              "name": "Beaver Builder",
+              "category": "pageBuilder"
+            },
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            },
+            {
+              "name": "Kinsta",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "field": {
+              "lcpMs": 4406,
+              "scope": "origin"
+            },
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "13 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.3 s"
+              },
+              "interactive": {
+                "score": 0,
+                "title": "Time to Interactive",
+                "displayValue": "44.9 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.01,
+                "title": "Speed Index",
+                "displayValue": "14.6 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 334 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.64,
+                "title": "Total Blocking Time",
+                "displayValue": "440 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 9 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.35,
+                "title": "First Contentful Paint",
+                "displayValue": "3.5 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.47,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.262"
+              },
+              "largest-contentful-paint": {
+                "score": 0.14,
+                "title": "Largest Contentful Paint",
+                "displayValue": "5.9 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.38,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.97,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.69,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "13 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.6 s"
+              },
+              "interactive": {
+                "score": 0.29,
+                "title": "Time to Interactive",
+                "displayValue": "5.8 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.37,
+                "title": "Speed Index",
+                "displayValue": "2.7 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 334 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.02,
+                "title": "Total Blocking Time",
+                "displayValue": "1,270 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 9 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.8,
+                "title": "First Contentful Paint",
+                "displayValue": "1.1 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.96,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.072"
+              },
+              "largest-contentful-paint": {
+                "score": 0.71,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.8 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.54,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.93,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.92,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 65,
+        "geo_score": 100,
+        "seo_score": 92,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:19:06.26506+00:00",
+        "lead_score": 55,
+        "business_id": "demo-b7",
+        "mobile_score": 38,
+        "engine_version": 2,
+        "performance_score": 54
+      },
+      "ai_report": {
+        "id": "demo-r7",
+        "summary": "Your site doesn’t let visitors email or fill out a contact form, so potential patients who prefer writing or call after hours have no easy way to reach you, likely costing you leads. On top of that, the pages load slowly on phones and shift while loading, causing many mobile users to leave before they even see your services.",
+        "audit_id": "demo-a7",
+        "cold_email": "Subject: No Contact Form Losing Leads\nYour site has no contact form or email link, so people who want to write instead of call can’t reach you, and you’re missing appointments. On top of that, the slow, shifting mobile experience drives visitors away. I've attached a short report with 5 fixes for Cosmetic Dentistry by Dr. Ned Shimizu — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:19:09.334346+00:00",
+        "improvements": [
+          "Add a short contact form to your homepage and contact page.",
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Reserve space for images and banners so the page stays still while it loads.",
+          "Add an online booking or appointment-request button.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b8",
+      "search_id": "demo-search",
+      "name": "Konig TMJ & Cosmetic Dentistry",
+      "address": "2201 W Holcombe Blvd #300, Houston, TX 77030, USA",
+      "website": "https://www.konigdds.com/",
+      "phone": "(•••) •••-••89",
+      "created_at": "2026-10-02T11:13:09.977+00:00",
+      "email": "d•••@konigdds.com",
+      "contact_page": "https://www.konigdds.com/contact-us/",
+      "socials": {
+        "facebook": "https://www.facebook.com/KonigDDS"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:27.193+00:00",
+      "email_lookup_at": null,
+      "rating": 4.9,
+      "review_count": 395,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a8",
+        "checks": {
+          "aeo": {
+            "h1Count": 0,
+            "h2Count": 29,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "No H1 heading",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "29 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "Only 1 question-style heading (aim for 2+)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 1
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Konig Center for Cosmetic & Comprehensive Dentistry",
+                "phones": [
+                  "••••••••89"
+                ],
+                "address": null
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Only generic Organization schema — add Dentist",
+                "status": "warn"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema is missing address, telephone",
+                "status": "warn"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "WebPage",
+              "ReadAction",
+              "ImageObject",
+              "BreadcrumbList",
+              "ListItem",
+              "WebSite",
+              "SearchAction",
+              "EntryPoint",
+              "PropertyValueSpecification",
+              "Organization"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Home - Konig Center for Cosmetic & Comprehensive Dentistry",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description missing",
+                "status": "fail"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.konigdds.com/",
+            "robotsTxt": "ok",
+            "metaDescription": null
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Let's Encrypt",
+            "daysToExpiry": 49
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 33
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.konigdds.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.konigdds.com/contact-us/",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.konigdds.com/lumn-social-url-appointments",
+                "kind": "booking"
+              },
+              {
+                "ok": true,
+                "url": "https://www.konigdds.com/our-services/",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://www.konigdds.com/about-us/",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "Online booking or appointment request",
+                "detail": "/lumn-social-url-appointments",
+                "status": "pass"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (33 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.konigdds.com/"
+          },
+          "tech": [
+            {
+              "name": "WordPress",
+              "category": "platform"
+            },
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            },
+            {
+              "name": "Kinsta",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "2 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "14 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.1 s"
+              },
+              "interactive": {
+                "score": 0.02,
+                "title": "Time to Interactive",
+                "displayValue": "20.3 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.74,
+                "title": "Speed Index",
+                "displayValue": "4.4 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 1,008 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 0,
+                "title": "Document does not have a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.34,
+                "title": "Total Blocking Time",
+                "displayValue": "850 ms"
+              },
+              "unminified-javascript": {
+                "score": 0,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 8 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.65,
+                "title": "First Contentful Paint",
+                "displayValue": "2.6 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.89,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.1"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "17.9 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.85,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.46,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.9,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "2 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "12 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.8 s"
+              },
+              "interactive": {
+                "score": 0.68,
+                "title": "Time to Interactive",
+                "displayValue": "3.6 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.97,
+                "title": "Speed Index",
+                "displayValue": "1.0 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 1,009 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 1,
+                "title": "Image elements have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 0,
+                "title": "Document does not have a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.21,
+                "title": "Total Blocking Time",
+                "displayValue": "590 ms"
+              },
+              "unminified-javascript": {
+                "score": 0,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 8 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.99,
+                "title": "First Contentful Paint",
+                "displayValue": "0.5 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.003"
+              },
+              "largest-contentful-paint": {
+                "score": 0.94,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.0 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.85,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.74,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.9,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 15,
+        "geo_score": 70,
+        "seo_score": 85,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:19:43.214146+00:00",
+        "lead_score": 100,
+        "business_id": "demo-b8",
+        "mobile_score": 46,
+        "engine_version": 2,
+        "performance_score": 74
+      },
+      "ai_report": {
+        "id": "demo-r8",
+        "summary": "Your site takes about 18 seconds to load on phones, which means many local visitors leave before they see anything, costing you potential patients. The vague business description and missing meta description also keep you hidden in search results, so fewer people click on your link.",
+        "audit_id": "demo-a8",
+        "cold_email": "Subject: Slow Mobile Load Time\n\nYour homepage loads around 18 seconds on phones, and most people abandon a page after 3 seconds – that’s a lot of lost traffic and appointments. On top of that, the lack of a clear description and meta text means Google shows random snippets, reducing clicks. I've attached a short report with 4 fixes for Konig TMJ & Cosmetic Dentistry — happy to walk you through it on a quick call.\n\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:19:46.330606+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Mark your site with your exact business type, like Dentist or School.",
+          "Write a short description of what you do and where.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b9",
+      "search_id": "demo-search",
+      "name": "Dentiq Dentistry Houston",
+      "address": "1355 W Gray St, Houston, TX 77019, USA",
+      "website": "https://www.dentiq.dental/",
+      "phone": "(•••) •••-••04",
+      "created_at": "2026-10-02T11:13:09.978+00:00",
+      "email": null,
+      "contact_page": "https://www.dentiq.dental/contact",
+      "socials": {
+        "facebook": "https://www.facebook.com/dentiqdentistry",
+        "instagram": "https://www.instagram.com/dentiqdentistry"
+      },
+      "contacts_checked_at": "2026-10-02T12:17:22.674+00:00",
+      "email_lookup_at": "2026-10-02T11:15:36.808+00:00",
+      "rating": 4.9,
+      "review_count": 1310,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a9",
+        "checks": {
+          "aeo": {
+            "h1Count": 1,
+            "h2Count": 11,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "One H1 heading",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "11 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels are in order",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "2 question-style headings",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 2
+          },
+          "geo": {
+            "nap": {
+              "name": "match",
+              "site": {
+                "name": "Dentiq Dentistry",
+                "phones": [
+                  "••••••••04"
+                ],
+                "address": null
+              },
+              "phone": "match",
+              "address": "match"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "Structured data (JSON-LD) found",
+                "status": "pass"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "Business schema type: Dentist",
+                "status": "pass"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema is missing address",
+                "status": "warn"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number matches business listing",
+                "status": "pass"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Schema includes hours, map location or social profiles",
+                "status": "pass"
+              }
+            ],
+            "schemaTypes": [
+              "Organization",
+              "ContactPoint",
+              "ImageObject",
+              "PostalAddress",
+              "GeoCoordinates",
+              "Place",
+              "Dentist",
+              "City",
+              "State",
+              "OpeningHoursSpecification",
+              "ReserveAction",
+              "Reservation",
+              "EntryPoint",
+              "OfferCatalog",
+              "Offer",
+              "MedicalProcedure",
+              "Service",
+              "Person",
+              "CollegeOrUniversity",
+              "WebSite",
+              "WebPage",
+              "BreadcrumbList",
+              "ListItem"
+            ]
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Top-Rated Houston Dentist | Dentiq Dentistry",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "Canonical URL set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": "https://www.dentiq.dental",
+            "robotsTxt": "ok",
+            "metaDescription": "Comprehensive dental care in Houston, TX, from implants and All-On-X to veneers, Invisalign, and same-day crowns. Book your visit at Dentiq Dentistry today."
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Google Trust Services",
+            "daysToExpiry": 73
+          },
+          "lead": {
+            "links": {
+              "broken": [],
+              "checked": 33
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.dentiq.dental/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.dentiq.dental/contact",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.dentiq.dental/services",
+                "kind": "services"
+              },
+              {
+                "ok": true,
+                "url": "https://www.dentiq.dental/about",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "No online booking — visitors can only call or email",
+                "status": "warn"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "No broken links (33 checked)",
+                "status": "pass"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.dentiq.dental/"
+          },
+          "tech": [
+            {
+              "name": "Webflow",
+              "category": "platform"
+            },
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "field": {
+              "lcpMs": 3015,
+              "scope": "origin"
+            },
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "5 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "16 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.9 s"
+              },
+              "interactive": {
+                "score": 0.01,
+                "title": "Time to Interactive",
+                "displayValue": "23.4 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.16,
+                "title": "Speed Index",
+                "displayValue": "8.8 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 6,495 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0.5,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 7 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.85,
+                "title": "Total Blocking Time",
+                "displayValue": "240 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0,
+                "title": "First Contentful Paint",
+                "displayValue": "8.3 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.017"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "14.0 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.52,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.97,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.77,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "field": {
+              "lcpMs": 2553,
+              "scope": "origin"
+            },
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "5 links found"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "15 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.1 s"
+              },
+              "interactive": {
+                "score": 0.5,
+                "title": "Time to Interactive",
+                "displayValue": "4.5 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.72,
+                "title": "Speed Index",
+                "displayValue": "1.8 s"
+              },
+              "cache-insight": {
+                "score": 0,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 6,550 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 7 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.31,
+                "title": "Total Blocking Time",
+                "displayValue": "480 ms"
+              },
+              "unminified-javascript": {
+                "score": 0.5,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 2 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.89,
+                "title": "First Contentful Paint",
+                "displayValue": "0.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.001"
+              },
+              "largest-contentful-paint": {
+                "score": 0.64,
+                "title": "Largest Contentful Paint",
+                "displayValue": "2.0 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.92,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.66,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.97,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.77,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 65,
+        "geo_score": 95,
+        "seo_score": 92,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:31:01.12822+00:00",
+        "lead_score": 85,
+        "business_id": "demo-b9",
+        "mobile_score": 52,
+        "engine_version": 2,
+        "performance_score": 66
+      },
+      "ai_report": {
+        "id": "demo-r9",
+        "summary": "Your site takes about 3 seconds to load on phones, which means many potential patients leave before they even see your services, costing you appointments. On top of that, you don’t let customers book online and your business details are missing from search results, making it harder for people and AI assistants to find and choose you.",
+        "audit_id": "demo-a9",
+        "cold_email": "Subject: Mobile Speed Is Losing Customers\nYour site’s 3‑second load time on phones is causing visitors to leave, meaning missed appointments and lost revenue. Also, without online booking and complete business details, you lose even more potential patients. I've attached a short report with 4 fixes for Dentiq Dentistry Houston — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:31:04.74417+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Add an online booking or appointment-request button.",
+          "Complete your schema markup with your business name, address and phone.",
+          "Add a short FAQ answering the questions customers ask you most."
+        ]
+      }
+    },
+    {
+      "id": "demo-b10",
+      "search_id": "demo-search",
+      "name": "Nu Dentistry",
+      "address": "5706 San Felipe St Ste B-300, Houston, TX 77057, USA",
+      "website": "https://nudentistry.com/",
+      "phone": "(•••) •••-••00",
+      "created_at": "2026-10-02T11:13:09.979+00:00",
+      "email": "i•••@nudentistry.com",
+      "contact_page": "https://www.nudentistry.com/contact-us/?undefined",
+      "socials": {
+        "facebook": "https://www.facebook.com/GHSPerio",
+        "instagram": "https://www.instagram.com/nudentistry"
+      },
+      "contacts_checked_at": "2026-10-02T11:13:27.194+00:00",
+      "email_lookup_at": "2026-10-02T11:14:21.528+00:00",
+      "rating": 4.9,
+      "review_count": 2279,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-a10",
+        "checks": {
+          "aeo": {
+            "h1Count": 0,
+            "h2Count": 10,
+            "findings": [
+              {
+                "id": "aeo.h1",
+                "label": "No H1 heading",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.h2",
+                "label": "10 H2 sections",
+                "status": "pass"
+              },
+              {
+                "id": "aeo.hierarchy",
+                "label": "Heading levels skip (e.g. H1 → H3)",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.questions",
+                "label": "No question-style headings",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSchema",
+                "label": "No FAQPage schema",
+                "status": "fail"
+              },
+              {
+                "id": "aeo.faqSection",
+                "label": "No FAQ / Q&A section",
+                "status": "fail"
+              }
+            ],
+            "hasFaqSchema": false,
+            "questionHeadings": 0
+          },
+          "geo": {
+            "nap": {
+              "name": "mismatch",
+              "site": {
+                "name": "Dentist Houston TX | Cosmetic & Family Dentist in Houston TX",
+                "phones": [
+                  "••••••••44"
+                ],
+                "address": null
+              },
+              "phone": "mismatch",
+              "address": "missing"
+            },
+            "findings": [
+              {
+                "id": "geo.jsonld",
+                "label": "No structured data (JSON-LD) on the homepage",
+                "status": "fail"
+              },
+              {
+                "id": "geo.businessType",
+                "label": "No Dentist schema for AI search engines to read",
+                "status": "fail"
+              },
+              {
+                "id": "geo.entityComplete",
+                "label": "Schema is missing name, address, telephone",
+                "status": "fail"
+              },
+              {
+                "id": "geo.nap.name",
+                "label": "Business name on site doesn't match business listing",
+                "detail": "Site shows: Dentist Houston TX | Cosmetic & Family Dentist in Houston TX",
+                "status": "fail"
+              },
+              {
+                "id": "geo.nap.address",
+                "label": "Address not found on the homepage",
+                "status": "fail"
+              },
+              {
+                "id": "geo.nap.phone",
+                "label": "Phone number on site doesn't match business listing",
+                "detail": "Site shows: (•••) •••-••44",
+                "status": "fail"
+              },
+              {
+                "id": "geo.extras",
+                "label": "Add opening hours, map coordinates or social profiles to the schema",
+                "status": "warn"
+              }
+            ],
+            "schemaTypes": []
+          },
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok"
+          },
+          "seo": {
+            "title": "Dentist Houston TX | Cosmetic & Family Dentist in Houston TX",
+            "noindex": false,
+            "findings": [
+              {
+                "id": "seo.title",
+                "label": "Page title present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.metaDescription",
+                "label": "Meta description present",
+                "status": "pass"
+              },
+              {
+                "id": "seo.canonical",
+                "label": "No canonical URL",
+                "status": "warn"
+              },
+              {
+                "id": "seo.viewport",
+                "label": "Mobile viewport set",
+                "status": "pass"
+              },
+              {
+                "id": "seo.noindex",
+                "label": "Page can be indexed",
+                "status": "pass"
+              },
+              {
+                "id": "seo.robots",
+                "label": "robots.txt allows search engines",
+                "status": "pass"
+              }
+            ],
+            "viewport": true,
+            "canonical": null,
+            "robotsTxt": "ok",
+            "metaDescription": "At Nu Dentistry  we are your one-stop shop for comprehensive dental care in Houston, TX. We offer general dentistry, family dentistry, orthodontic"
+          },
+          "ssl": {
+            "valid": true,
+            "issuer": "Let's Encrypt",
+            "daysToExpiry": 45
+          },
+          "lead": {
+            "links": {
+              "broken": [
+                "https://www.nudentistry.com/houston-tx/our-doctors/dr-darius-mith/?undefined"
+              ],
+              "checked": 32
+            },
+            "pages": [
+              {
+                "ok": true,
+                "url": "https://www.nudentistry.com/",
+                "kind": "home"
+              },
+              {
+                "ok": true,
+                "url": "https://www.nudentistry.com/contact-us/?undefined",
+                "kind": "contact"
+              },
+              {
+                "ok": true,
+                "url": "https://www.nudentistry.com/about/?undefined",
+                "kind": "about"
+              }
+            ],
+            "findings": [
+              {
+                "id": "lead.clickToCall",
+                "label": "Tap-to-call phone link on the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.form",
+                "label": "Contact form on the contact page",
+                "status": "pass"
+              },
+              {
+                "id": "lead.booking",
+                "label": "Online booking or appointment request",
+                "detail": "/contact-us/?undefined",
+                "status": "pass"
+              },
+              {
+                "id": "lead.contactPage",
+                "label": "Contact page linked from the homepage",
+                "status": "pass"
+              },
+              {
+                "id": "lead.brokenLinks",
+                "label": "1 broken link — visitors land on a \"page not found\"",
+                "detail": "/houston-tx/our-doctors/dr-darius-mith/?undefined",
+                "status": "fail"
+              }
+            ]
+          },
+          "site": {
+            "ok": true,
+            "status": 200,
+            "finalUrl": "https://www.nudentistry.com/"
+          },
+          "tech": [
+            {
+              "name": "Gatsby",
+              "category": "framework"
+            },
+            {
+              "name": "Vercel",
+              "category": "hosting"
+            },
+            {
+              "name": "Google Tag Manager",
+              "category": "analytics"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": null,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "6 links found"
+              },
+              "redirects": {
+                "score": 0,
+                "title": "Avoid multiple page redirects",
+                "displayValue": "Est savings of 780 ms"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "17 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "3.1 s"
+              },
+              "interactive": {
+                "score": 0.01,
+                "title": "Time to Interactive",
+                "displayValue": "21.3 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.13,
+                "title": "Speed Index",
+                "displayValue": "9.1 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 184 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.29,
+                "title": "Total Blocking Time",
+                "displayValue": "960 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.17,
+                "title": "First Contentful Paint",
+                "displayValue": "4.4 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.99,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.043"
+              },
+              "largest-contentful-paint": {
+                "score": 0,
+                "title": "Largest Contentful Paint",
+                "displayValue": "16.3 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.83,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.36,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.73,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": null,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 0,
+                "title": "Image elements do not have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 0,
+                "title": "Links do not have descriptive text",
+                "displayValue": "6 links found"
+              },
+              "redirects": {
+                "score": 0,
+                "title": "Avoid multiple page redirects",
+                "displayValue": "Est savings of 230 ms"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "12 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "1.7 s"
+              },
+              "interactive": {
+                "score": 0.39,
+                "title": "Time to Interactive",
+                "displayValue": "5.1 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.6,
+                "title": "Speed Index",
+                "displayValue": "2.1 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 165 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 1,
+                "title": "Minify CSS"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.58,
+                "title": "Total Blocking Time",
+                "displayValue": "300 ms"
+              },
+              "unminified-javascript": {
+                "score": 1,
+                "title": "Minify JavaScript"
+              },
+              "first-contentful-paint": {
+                "score": 0.89,
+                "title": "First Contentful Paint",
+                "displayValue": "0.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 1,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "0.002"
+              },
+              "largest-contentful-paint": {
+                "score": 0.85,
+                "title": "Largest Contentful Paint",
+                "displayValue": "1.4 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 0.83,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.79,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.74,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 0.96,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": 15,
+        "geo_score": 0,
+        "seo_score": 83,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:20:05.114203+00:00",
+        "lead_score": 80,
+        "business_id": "demo-b10",
+        "mobile_score": 36,
+        "engine_version": 2,
+        "performance_score": 79
+      },
+      "ai_report": {
+        "id": "demo-r10",
+        "summary": "Your site has broken links that lead to a page‑not‑found error and it loads very slowly on phones. Both issues cause visitors to leave and can cost you potential patients who would otherwise call or book an appointment.",
+        "audit_id": "demo-a10",
+        "cold_email": "Subject: Broken Links Cost Customers\nYour site has broken links like /houston-tx/our-doctors/dr-darius-mith/?undefined that send visitors to a page not found, which makes them think the practice is neglected and drives them away. On top of that, pages take about 16.3 seconds to load on phones, causing many mobile users to leave before seeing your services. I've attached a short report with 5 fixes for Nu Dentistry — happy to walk you through it on a quick call. The DevArtVentures team",
+        "created_at": "2026-10-02T11:20:07.861124+00:00",
+        "improvements": [
+          "Repair or redirect the broken links.",
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Show the same phone number on your site as on your Google and other listings.",
+          "Add business details (schema markup) that search engines and AI tools can read.",
+          "Add your opening hours, map location and social profiles to your schema markup."
+        ]
+      }
+    }
+  ],
+  "sites": [
+    {
+      "id": "demo-bs1",
+      "search_id": "demo-search",
+      "name": "cosmeticdentistshouston.com",
+      "address": "",
+      "website": "https://cosmeticdentistshouston.com",
+      "phone": null,
+      "created_at": "2026-10-02T11:41:06.545125+00:00",
+      "email": "s•••@cosmeticdentistshouston.com",
+      "contact_page": null,
+      "socials": {},
+      "contacts_checked_at": null,
+      "email_lookup_at": "2026-10-02T11:41:10.273+00:00",
+      "rating": null,
+      "review_count": null,
+      "hubspot_company_id": null,
+      "crm_sent_at": null,
+      "emailed_at": null,
+      "audit": {
+        "id": "demo-as1",
+        "checks": {
+          "aeo": null,
+          "geo": null,
+          "psi": {
+            "mobile": "ok",
+            "desktop": "ok",
+            "measuredAt": "2026-10-02T11:17:37.385Z"
+          },
+          "seo": null,
+          "ssl": {
+            "valid": true,
+            "issuer": "Google Trust Services",
+            "daysToExpiry": 65
+          },
+          "lead": null,
+          "site": {
+            "ok": false,
+            "reason": "Blocked (403)",
+            "status": 403,
+            "finalUrl": "https://cosmeticdentistshouston.com/"
+          },
+          "tech": [
+            {
+              "name": "Cloudflare",
+              "category": "hosting"
+            }
+          ]
+        },
+        "raw_json": {
+          "mobile": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "17 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 0,
+                "title": "Reduce JavaScript execution time",
+                "displayValue": "2.3 s"
+              },
+              "interactive": {
+                "score": 0.25,
+                "title": "Time to Interactive",
+                "displayValue": "10.2 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.62,
+                "title": "Speed Index",
+                "displayValue": "5.1 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 19 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 12 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.59,
+                "title": "Total Blocking Time",
+                "displayValue": "490 ms"
+              },
+              "unminified-javascript": {
+                "score": 0,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 57 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.44,
+                "title": "First Contentful Paint",
+                "displayValue": "3.2 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.01,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "1.171"
+              },
+              "largest-contentful-paint": {
+                "score": 0.18,
+                "title": "Largest Contentful Paint",
+                "displayValue": "5.6 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.33,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.94,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 1,
+                "title": "Best Practices"
+              }
+            }
+          },
+          "desktop": {
+            "keyAudits": {
+              "canonical": {
+                "score": 1,
+                "title": "Document has a valid `rel=canonical`"
+              },
+              "image-alt": {
+                "score": 1,
+                "title": "Image elements have `[alt]` attributes"
+              },
+              "link-text": {
+                "score": 1,
+                "title": "Links have descriptive text"
+              },
+              "redirects": {
+                "score": 1,
+                "title": "Avoid multiple page redirects"
+              },
+              "long-tasks": {
+                "score": 1,
+                "title": "Avoid long main-thread tasks",
+                "displayValue": "7 long tasks found"
+              },
+              "robots-txt": {
+                "score": 1,
+                "title": "robots.txt is valid"
+              },
+              "bootup-time": {
+                "score": 1,
+                "title": "JavaScript execution time",
+                "displayValue": "1.1 s"
+              },
+              "interactive": {
+                "score": 0.95,
+                "title": "Time to Interactive",
+                "displayValue": "2.1 s"
+              },
+              "is-on-https": {
+                "score": 1,
+                "title": "Uses HTTPS"
+              },
+              "speed-index": {
+                "score": 0.95,
+                "title": "Speed Index",
+                "displayValue": "1.1 s"
+              },
+              "cache-insight": {
+                "score": 0.5,
+                "title": "Use efficient cache lifetimes",
+                "displayValue": "Est savings of 9 KiB"
+              },
+              "document-title": {
+                "score": 1,
+                "title": "Document has a `<title>` element"
+              },
+              "unminified-css": {
+                "score": 0,
+                "title": "Minify CSS",
+                "displayValue": "Est savings of 12 KiB"
+              },
+              "unsized-images": {
+                "score": 0.5,
+                "title": "Image elements do not have explicit `width` and `height`"
+              },
+              "dom-size-insight": {
+                "score": 1,
+                "title": "Optimize DOM size"
+              },
+              "meta-description": {
+                "score": 1,
+                "title": "Document has a meta description"
+              },
+              "total-blocking-time": {
+                "score": 0.77,
+                "title": "Total Blocking Time",
+                "displayValue": "210 ms"
+              },
+              "unminified-javascript": {
+                "score": 0,
+                "title": "Minify JavaScript",
+                "displayValue": "Est savings of 57 KiB"
+              },
+              "first-contentful-paint": {
+                "score": 0.9,
+                "title": "First Contentful Paint",
+                "displayValue": "0.9 s"
+              },
+              "cumulative-layout-shift": {
+                "score": 0.02,
+                "title": "Cumulative Layout Shift",
+                "displayValue": "1.06"
+              },
+              "largest-contentful-paint": {
+                "score": 0.6,
+                "title": "Largest Contentful Paint",
+                "displayValue": "2.1 s"
+              }
+            },
+            "categories": {
+              "seo": {
+                "score": 1,
+                "title": "SEO"
+              },
+              "performance": {
+                "score": 0.57,
+                "title": "Performance"
+              },
+              "accessibility": {
+                "score": 0.97,
+                "title": "Accessibility"
+              },
+              "best-practices": {
+                "score": 1,
+                "title": "Best Practices"
+              }
+            }
+          }
+        },
+        "aeo_score": null,
+        "geo_score": null,
+        "seo_score": 100,
+        "ssl_valid": true,
+        "created_at": "2026-10-02T11:43:34.1394+00:00",
+        "lead_score": null,
+        "business_id": "demo-bs1",
+        "mobile_score": 33,
+        "engine_version": 2,
+        "performance_score": 57
+      },
+      "ai_report": {
+        "id": "demo-rs1",
+        "summary": "Your site loads slowly on phones, taking about 5.6 seconds, so many visitors leave before seeing your services, losing you potential patients. While it loads, the page shifts, causing wrong taps and frustration, which further hurts the user experience.",
+        "audit_id": "demo-as1",
+        "cold_email": "Subject: Slow mobile load time\nYour site takes about 5.6 seconds to load on phones, which means many local customers leave before they even see your services, costing you potential patients. It also shifts while loading, causing wrong taps and frustration. I've attached a short report with 2 fixes for cosmeticdentistshouston.com — happy to walk you through it on a quick call.\nThe DevArtVentures team",
+        "created_at": "2026-10-02T11:43:36.812389+00:00",
+        "improvements": [
+          "Speed up the page (images, code and hosting) so it loads faster on phones.",
+          "Reserve space for images and banners so the page stays still while it loads."
+        ]
+      }
+    }
+  ],
+  "replayIds": [
+    "demo-b2",
+    "demo-b4",
+    "demo-b6",
+    "demo-b8",
+    "demo-b10"
+  ]
+}

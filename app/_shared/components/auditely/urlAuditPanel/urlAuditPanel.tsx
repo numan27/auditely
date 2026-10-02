@@ -5,10 +5,12 @@
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditForm } from '@/app/_shared/components/auditely/urlAuditForm/urlAuditForm';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUrlAudits } from '@/app/_shared/lib/hooks/useUrlAudits';
 
 /** "Audit a website": audit any URL, with every site audited this way listed below */
 export function UrlAuditPanel() {
+  const demo = useDemo();
   const { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness } = useUrlAudits();
 
   return (
@@ -47,6 +49,7 @@ export function UrlAuditPanel() {
                 initialReport={business.ai_report}
                 onUpdate={updateBusiness}
                 autoRun={business.id === autoRunId}
+                defaultOpen={!!demo}
               />
             ))}
           </div>

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { contactsFromResponse, type ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 import { emailFinderNotice } from '@/app/_shared/lib/utils/emailFinderNotice';
@@ -28,19 +29,22 @@ const formatDate = (iso: string) =>
  * "Find email" adds it without auditing and runs the full email search.
  */
 export function useUrlAudits() {
-  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList();
-  const [isLoading, setIsLoading] = useState(true);
+  const demo = useDemo();
+  // The public demo lists its sample website and loads nothing
+  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(demo?.data.sites);
+  const [isLoading, setIsLoading] = useState(!demo);
   const [busy, setBusy] = useState<UrlAuditBusy>(null);
   const [notice, setNotice] = useState<UrlAuditNotice | null>(null);
   const [autoRunId, setAutoRunId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (demo) return;
     fetch(API_ROUTES.AUDIT_URL)
       .then((res) => res.json())
       .then((data) => setBusinesses(data.businesses ?? []))
       .catch(() => setNotice({ tone: 'error', text: "Couldn't load your earlier audits. Reload the page to try again." }))
       .finally(() => setIsLoading(false));
-  }, [setBusinesses]);
+  }, [demo, setBusinesses]);
 
   // One business to /api/find-emails; returns what's now known about it
   const findContacts = useCallback(
@@ -92,6 +96,10 @@ export function useUrlAudits() {
   /** "Run audit": adds a website and starts its audit. Resolves true when the form can be cleared. */
   const addWebsite = useCallback(
     async (url: string): Promise<boolean> => {
+      if (demo) {
+        demo.restrict('auditUrl');
+        return false;
+      }
       setBusy('audit');
       setNotice(null);
       try {
@@ -115,7 +123,7 @@ export function useUrlAudits() {
         setBusy(null);
       }
     },
-    [addSite, discoverContacts]
+    [addSite, demo, discoverContacts]
   );
 
   /**
@@ -124,6 +132,10 @@ export function useUrlAudits() {
    */
   const findEmail = useCallback(
     async (url: string): Promise<boolean> => {
+      if (demo) {
+        demo.restrict('auditUrl');
+        return false;
+      }
       setBusy('email');
       setNotice(null);
       try {
@@ -139,7 +151,7 @@ export function useUrlAudits() {
         setBusy(null);
       }
     },
-    [addSite, findContacts]
+    [addSite, demo, findContacts]
   );
 
   return { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness };

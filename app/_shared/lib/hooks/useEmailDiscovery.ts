@@ -67,22 +67,25 @@ function chunk<T>(arr: T[], size: number): T[][] {
  *                         contacts back in does NOT restart discovery)
  * @param onContactsFound called per chunk with each business's current contacts
  * @param runKey          changes when a new search loads; restarts discovery
+ * @param enabled         false in the public demo: nothing to find, no request
  */
 export function useEmailDiscovery(
   businesses: BusinessWithData[],
   onContactsFound: (found: ContactsFound[]) => void,
-  runKey: string | number
+  runKey: string | number,
+  enabled = true
 ): DiscoveryProgress {
+  const totalAtStart = () => (enabled ? initialTotal(businesses) : 0);
   const [progress, setProgress] = useState(() => ({
     runKey,
     done: 0,
-    total: initialTotal(businesses),
+    total: totalAtStart(),
   }));
 
   // A new run resets progress. Adjusting state during render (instead of in the
   // effect) avoids an extra cascading render.
   if (progress.runKey !== runKey) {
-    setProgress({ runKey, done: 0, total: initialTotal(businesses) });
+    setProgress({ runKey, done: 0, total: totalAtStart() });
   }
 
   // Effect events always see the latest props without being effect dependencies
@@ -91,6 +94,7 @@ export function useEmailDiscovery(
   const getLookupIds = useEffectEvent((foundEmail: Set<string>) => emailLookupCandidates(businesses, foundEmail));
 
   useEffect(() => {
+    if (!enabled) return;
     const pending = getPendingIds();
     const lookupAtStart = getLookupIds(new Set());
     if (pending.length === 0 && lookupAtStart.length === 0) return;
@@ -145,9 +149,9 @@ export function useEmailDiscovery(
       cancelled = true;
       controller.abort();
     };
-    // Keyed only on runKey: a new search restarts discovery. `businesses` and
-    // the callback are read via effect events, so merging found emails does not re-run.
-  }, [runKey]);
+    // Keyed on runKey: a new search restarts discovery. `businesses` and the
+    // callback are read via effect events, so merging found emails does not re-run.
+  }, [runKey, enabled]);
 
   return { done: progress.done, total: progress.total };
 }

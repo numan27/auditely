@@ -4,19 +4,13 @@
 // by the download (/api/pdf) and the private report link (/report/{token}).
 // Server-only.
 
-import { renderToBuffer } from '@react-pdf/renderer';
-import { createElement } from 'react';
 import { supabase } from '@/app/_shared/lib/supabase/client';
-import { PdfDocument } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
-import { buildPdfProps } from '@/app/_shared/lib/audit/reportData';
+import { pdfFileName, renderPdf, type PdfBusiness } from '@/app/_shared/lib/audit/pdfRender';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
 
 export type AuditPdfResult =
   | { ok: true; pdf: Buffer; filename: string }
   | { ok: false; status: 404 | 500; error: string };
-
-const fileName = (businessName: string) =>
-  `audit-${businessName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().replace(/-+/g, '-')}.pdf`;
 
 export async function renderAuditPdf(auditId: string): Promise<AuditPdfResult> {
   const { data: audit } = await supabase.from('audits').select('*, businesses(*)').eq('id', auditId).single();
@@ -31,11 +25,10 @@ export async function renderAuditPdf(auditId: string): Promise<AuditPdfResult> {
     .maybeSingle();
   if (!aiReport) return { ok: false, status: 404, error: 'AI report not found — generate the report first' };
 
-  const business = audit.businesses as { name: string; website: string | null; address: string; phone: string | null };
+  const business = audit.businesses as PdfBusiness;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdf = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport, reportContact())) as any);
-    return { ok: true, pdf, filename: fileName(business.name) };
+    const pdf = await renderPdf(audit, business, aiReport, reportContact());
+    return { ok: true, pdf, filename: pdfFileName(business.name) };
   } catch {
     return { ok: false, status: 500, error: 'Failed to generate PDF' };
   }

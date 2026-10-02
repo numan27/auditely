@@ -3,6 +3,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { auditBusiness, BULK_CONCURRENCY, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
 import { runPool } from '@/app/_shared/lib/utils/pool';
 import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/auditely';
@@ -42,6 +43,7 @@ const poster =
  * already audited is kept.
  */
 export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpdate) => void) {
+  const demo = useDemo();
   const [states, setStates] = useState<Record<string, BulkState>>({});
   const [progress, setProgress] = useState<BulkProgress | null>(null);
   // Counts completed runs, so the list can re-arrange once the scores are in
@@ -64,7 +66,8 @@ export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpda
         if (state.stage !== 'done' && state.stage !== 'failed') return;
         setProgress((p) => p && { ...p, finished: p.finished + 1, failed: p.failed + Number(state.stage === 'failed') });
       };
-      const post = poster(run.signal);
+      // In the public demo the saved sample answers instead of the API
+      const post = demo?.replay ?? poster(run.signal);
       await runPool(targets, (business) => auditBusiness(business, { post, onUpdate, onStage }), BULK_CONCURRENCY, () => stopRequested.current);
 
       // Also after a cancelled run (the list was left): its requests were aborted and count as failed
@@ -74,7 +77,7 @@ export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpda
       setProgress((p) => p && { ...p, isRunning: false, isStopping: false });
       setRunsFinished((n) => n + 1);
     },
-    [onUpdate]
+    [demo, onUpdate]
   );
 
   const stop = useCallback(() => {
@@ -92,14 +95,14 @@ export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpda
     []
   );
 
-  // Closing the tab would cancel the run too: ask first
+  // Closing the tab would cancel the run too: ask first. Not in the demo, where nothing is lost.
   const isRunning = progress?.isRunning ?? false;
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || demo) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [isRunning]);
+  }, [demo, isRunning]);
 
   return { states, progress, runsFinished, start, stop };
 }

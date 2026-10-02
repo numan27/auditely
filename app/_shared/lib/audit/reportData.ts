@@ -107,7 +107,8 @@ export function buildPdfProps(
   audit: AuditLike,
   business: { name: string; website: string | null; address: string; phone: string | null },
   report: { summary: string; improvements: unknown },
-  contact: PdfContact
+  // null: no "next step" box (the public demo)
+  contact: PdfContact | null
 ): PdfDocumentProps {
   const problems = rankedProblems(audit).slice(0, PDF_PROBLEMS_LIMIT);
   const { seo, ssl } = measuredSeoAndSsl(audit);
