@@ -39,7 +39,7 @@ Code: `utils/pool.ts` (`runPool`), `utils/bulkAudit.ts` (`needsAudit`, `auditBus
 - **Send email** in the card footer (disabled without an email address) opens a dialog: recipient, subject, message, a note that the PDF is attached, and a warning when the lead was already emailed.
 - The draft is the AI's email: its "Subject:" line becomes the subject, and a sign-off the AI left on the offer's line moves to its own paragraph.
 - `POST /api/send-email { business_id, subject, body }`: the recipient always comes from the stored business; subject and message are validated on both sides (`email/outreach.ts`); the PDF is the same one the download uses; sent from `FROM_EMAIL`, with `EMAIL_REPLY_TO` and `EMAIL_BCC` when set.
-- **How it is sent** (`email/mailer.ts`): through the mailbox's own SMTP server when `SMTP_HOST` is set (Zoho: `smtppro.zoho.com`, port 465), otherwise through Resend. Added 2026-10-02 because an email sent through Resend never reaches the mailbox: nothing in its Sent folder. Sent through the mailbox, Zoho keeps each email in Sent and the reply threads under it in the Inbox. A half-filled mailbox setup is an error, never a quiet fall back to Resend.
+- **How it is sent** (`email/mailer.ts`): through the mailbox's own SMTP server when `SMTP_HOST` is set (Zoho: `smtp.zoho.com` for a free account, `smtppro.zoho.com` for a paid one, port 465), otherwise through Resend. Added 2026-10-02 because an email sent through Resend never reaches the mailbox: nothing in its Sent folder. Sent through the mailbox, Zoho keeps each email in Sent and the reply threads under it in the Inbox. A half-filled mailbox setup is an error, never a quiet fall back to Resend.
 - `businesses.emailed_at` records the send (`docs/migrations/2026-10-02-emailed-at.sql`). When the email went out but the date couldn't be saved, the answer is still a success with a warning, so nobody sends it again thinking it failed.
 
 | Case | Status | Message |
@@ -48,6 +48,7 @@ Code: `utils/pool.ts` (`runPool`), `utils/bulkAudit.ts` (`needsAudit`, `auditBus
 | Some but not all of `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | 503 | "Email sending is half set up — SMTP_HOST, SMTP_USER and SMTP_PASS are all needed." |
 | No email address | 400 | "This business has no email address." |
 | No audit or summary | 400 | "Run the audit and AI summary first." |
+| Zoho answers "Access Restricted": the server isn't the one for the account's plan | 502 | "{SMTP_HOST} isn't the server for this mailbox (554 5.7.8 Access Restricted) — set SMTP_HOST to smtp.zoho.com for a free Zoho account, smtppro.zoho.com for a paid one." |
 | The mailbox refuses the login | 502 | "The mailbox refused the login ({its answer}) — check SMTP_USER and SMTP_PASS. SMTP_PASS must be an app password when two-step sign-in is on." |
 | The mailbox or Resend refuses the email (sender isn't the mailbox, unverified domain, bad address) | 502 | "The email wasn't sent: {its reason}" |
 | The mailbox stops answering (it can't be told whether the email went) | 502 | "The mailbox didn't confirm the email, so it may or may not have gone — check its Sent folder before sending again." |
@@ -56,7 +57,7 @@ Code: `utils/pool.ts` (`runPool`), `utils/bulkAudit.ts` (`needsAudit`, `auditBus
 ## Setup (user, once)
 
 1. Run `docs/migrations/2026-10-02-emailed-at.sql` in Supabase.
-2. Mailbox (emails show in its Sent folder): in Zoho, create an app password (Security → App Passwords); needs a paid Zoho plan — the free plan has no SMTP access. Or Resend (no copy in the mailbox): verify the sending domain (DNS records) and create an API key.
+2. Mailbox (emails show in its Sent folder): in Zoho, create an app password (Security → App Passwords). `SMTP_HOST` is `smtp.zoho.com` for a free account and `smtppro.zoho.com` for a paid one. Checked 2026-10-02: this account's login is accepted on `smtp.zoho.com` and refused with "Access Restricted" on `smtppro.zoho.com`. Newer free accounts may have no SMTP access at all. Or Resend (no copy in the mailbox): verify the sending domain (DNS records) and create an API key.
 3. Vercel → Environment Variables: `FROM_EMAIL` (the mailbox, e.g. `DevArtVentures <contact@devartventures.com>`), then `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` or `RESEND_API_KEY`, optionally `EMAIL_REPLY_TO` and `EMAIL_BCC`; redeploy.
 
 ## Testing

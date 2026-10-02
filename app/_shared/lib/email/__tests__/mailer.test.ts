@@ -110,6 +110,19 @@ describe('sendEmail through the mailbox (SMTP)', () => {
     });
   });
 
+  // Zoho has one server for free accounts and one for paid: the wrong one answers "Access Restricted"
+  it('says to try the other Zoho server when this one is not for the account', async () => {
+    smtp.sendMail.mockRejectedValue(
+      smtpError({ code: 'EAUTH', response: '554 5.7.8 Access Restricted. For more details, check this announcement: https://help.zoho.com/x' })
+    );
+    expect(await sendEmail(email)).toEqual({
+      ok: false,
+      status: 502,
+      error:
+        "smtppro.zoho.com isn't the server for this mailbox (554 5.7.8 Access Restricted) — set SMTP_HOST to smtp.zoho.com for a free Zoho account, smtppro.zoho.com for a paid one.",
+    });
+  });
+
   it("passes on the mailbox's reason when it refuses the email", async () => {
     smtp.sendMail.mockRejectedValue(smtpError({ code: 'EENVELOPE', response: '553 Relaying disallowed as numan@devartventures.com' }));
     expect(await sendEmail(email)).toEqual({

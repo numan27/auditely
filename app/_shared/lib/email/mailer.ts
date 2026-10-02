@@ -1,8 +1,9 @@
 // app/_shared/lib/email/mailer.ts
 
 // Sends one email from FROM_EMAIL. With SMTP_HOST set it goes out through the
-// mailbox's own server (Zoho: smtppro.zoho.com), which keeps a copy in the
-// mailbox's Sent folder. Without it, through Resend, which keeps none.
+// mailbox's own server (Zoho: smtp.zoho.com for a free account, smtppro.zoho.com
+// for a paid one), which keeps a copy in the mailbox's Sent folder. Without it,
+// through Resend, which keeps none.
 
 import { createTransport } from 'nodemailer';
 import { Resend } from 'resend';
@@ -67,6 +68,14 @@ async function viaSmtp(message: Message): Promise<SendResult> {
     // `response` is the mail server's own answer
     const { code, response, message: detail } = err as Error & { code?: string; response?: string };
     console.error('[send-email] smtp failed:', code, response ?? detail);
+    // Zoho's answer from the server that isn't the one for the account's plan
+    if (code === 'EAUTH' && response && /access restricted/i.test(response)) {
+      return {
+        ok: false,
+        status: 502,
+        error: `${SMTP_HOST} isn't the server for this mailbox (${response.split('. ')[0]}) — set SMTP_HOST to smtp.zoho.com for a free Zoho account, smtppro.zoho.com for a paid one.`,
+      };
+    }
     if (code === 'EAUTH') {
       const answer = response ? ` (${response})` : '';
       return {
