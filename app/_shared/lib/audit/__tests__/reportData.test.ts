@@ -79,7 +79,7 @@ describe('siteReasonText', () => {
   it('explains bot blocking in plain words, for new and old audits', () => {
     for (const reason of ['Blocked (403)', 'Blocked (bot challenge)']) {
       expect(siteReasonText(reason)).toBe(
-        "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected."
+        "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected."
       );
     }
   });

@@ -41,7 +41,7 @@ export const formatSsl = (valid: boolean | null | undefined): string =>
 export function siteReasonText(reason: string): string {
   // "Blocked (403)" / "Blocked (bot challenge)": the site's bot protection turned the audit away
   if (reason.startsWith('Blocked')) {
-    return "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
+    return "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
   }
   return `Couldn't read site: ${reason}`;
 }
