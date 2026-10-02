@@ -2,6 +2,7 @@
 
 'use client';
 
+import type { ReactNode } from 'react';
 import { ExportMenu } from '@/app/_shared/components/auditely/exportMenu/exportMenu';
 import {
   FILTER_OPTIONS,
@@ -19,6 +20,8 @@ interface LeadToolbarProps {
   onToggleFilter: (filter: LeadFilter) => void;
   getExportLeads: () => BusinessWithData[];
   exportFileName: string;
+  /** Shown before the sort order ("Audit all") */
+  actions?: ReactNode;
 }
 
 /** Filter chips, sort order and export for the results list */
@@ -30,6 +33,7 @@ export function LeadToolbar({
   onToggleFilter,
   getExportLeads,
   exportFileName,
+  actions,
 }: LeadToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -67,7 +71,8 @@ export function LeadToolbar({
         })}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        {actions}
         <label className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-tertiary)]">
           Sort
           <select

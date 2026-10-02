@@ -119,7 +119,7 @@ The token is only read on the server and never sent to the browser.
 
 ## UI
 
-In the audit panel's footer, next to "Download PDF report" (shown once the AI report exists): **Send to HubSpot**. While sending: "Sending…". After success: "Sent to HubSpot · {date}" and the button becomes **Send again**. Errors show beside the button.
+In the audit panel's footer, next to "Download PDF report" (shown once the AI report exists): **Send to HubSpot**. While sending: "Sending…". After success: "Sent to HubSpot {date}" and the button becomes **Update HubSpot** (renamed from "Send again" once "Send email" sat beside it, 2026-10-02). Errors show beside the button.
 
 ## Setup (user, once)
 

@@ -11,9 +11,11 @@ import { ContactLine } from '@/app/_shared/components/auditely/contactLine/conta
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
+import type { BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
 
 interface BusinessCardProps {
@@ -24,6 +26,8 @@ interface BusinessCardProps {
   onUpdate?: (businessId: string, update: BusinessUpdate) => void;
   /** Start the audit as soon as the card appears (sites added by URL) */
   autoRun?: boolean;
+  /** Set while "Audit all" handles this business, and afterwards */
+  bulk?: BulkState;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -64,12 +68,16 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun }: BusinessCardProps) {
-  const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun });
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk }: BusinessCardProps) {
+  const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
+  const mail = useEmailSend(business, onUpdate);
   const { audit, auditStatus, reportStatus, email, saveEmail } = state;
-  // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
-  const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
+  // Pre-loaded cards (from saved searches) start collapsed, and so do the ones "Audit all"
+  // finishes: dozens of open reports would bury the list. A card audited by hand opens.
+  const [startedBlank] = useState(!(initialAudit && initialReport));
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const isExpanded = toggled ?? (startedBlank && bulk?.stage !== 'done');
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
   const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
@@ -147,7 +155,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
           {isCompleted && (
             <button
               type="button"
-              onClick={() => setIsExpanded((prev) => !prev)}
+              onClick={() => setToggled(!isExpanded)}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'Hide audit details' : 'Show audit details'}
               className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"
@@ -158,7 +166,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
         </div>
       </div>
 
-      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} />}
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} mail={mail} />}
     </article>
   );
 }

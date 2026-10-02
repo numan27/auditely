@@ -1,110 +1,80 @@
 // app/api/send-email/route.ts
 
+// "Send email": one lead's outreach email, as edited in the dialog, sent from
+// FROM_EMAIL with the PDF report attached. The send date is saved so the lead
+// isn't emailed twice by accident.
+
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { renderToBuffer } from '@react-pdf/renderer';
-import { createElement } from 'react';
 import { supabase } from '@/app/_shared/lib/supabase/client';
-import { PdfDocument } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
-import { buildPdfProps } from '@/app/_shared/lib/audit/reportData';
-import { reportContact } from '@/app/_shared/lib/config/reportContact';
+import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
+import { outreachProblem } from '@/app/_shared/lib/email/outreach';
+import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 
-// The AI writes "Subject: ..." as the first line of cold_email. Use it as the
-// real subject and strip it from the body; fall back to a default subject.
-function splitSubject(coldEmail: string, fallback: string): { subject: string; body: string } {
-  const [firstLine, ...rest] = coldEmail.trimStart().split('\n');
-  const match = firstLine?.match(/^\s*subject:\s*(.+)$/i);
-  if (!match) return { subject: fallback, body: coldEmail };
-  return { subject: match[1].trim(), body: rest.join('\n').trimStart() };
-}
+const MIGRATION = 'docs/migrations/2026-10-02-emailed-at.sql';
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const auditId: string = body.audit_id ?? '';
+  // Anything that isn't a JSON object (a bare null, a string) is treated as empty
+  const parsed: unknown = await request.json().catch(() => null);
+  const input = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
+  const businessId: string = typeof input.business_id === 'string' ? input.business_id : '';
+  const subject: string = typeof input.subject === 'string' ? input.subject : '';
+  const text: string = typeof input.body === 'string' ? input.body : '';
+  if (!businessId) return NextResponse.json({ error: 'business_id is required' }, { status: 400 });
 
-  if (!auditId) {
-    return NextResponse.json({ error: 'audit_id is required' }, { status: 400 });
-  }
+  const problem = outreachProblem({ subject, body: text });
+  if (problem) return NextResponse.json({ error: problem }, { status: 400 });
 
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL;
-  if (!apiKey || !fromEmail) {
-    return NextResponse.json({ error: 'Email service not configured' }, { status: 503 });
+  const from = process.env.FROM_EMAIL;
+  if (!apiKey || !from) {
+    return NextResponse.json({ error: "Email sending isn't set up — add RESEND_API_KEY and FROM_EMAIL in Vercel." }, { status: 503 });
   }
 
-  // Fetch audit + business
-  const { data: audit } = await supabase
-    .from('audits')
-    .select('*, businesses(*)')
-    .eq('id', auditId)
-    .single();
-
-  if (!audit) {
-    return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+  // The recipient always comes from the stored business, never from the request
+  const { data } = await supabase.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', businessId).single();
+  if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+  const business = withAuditData(data as BusinessRow);
+  if (!business.email) return NextResponse.json({ error: 'This business has no email address.' }, { status: 400 });
+  if (!business.audit || !business.ai_report) {
+    return NextResponse.json({ error: 'Run the audit and AI summary first.' }, { status: 400 });
   }
 
-  const business = audit.businesses as {
-    name: string;
-    website: string | null;
-    address: string;
-    phone: string | null;
-    email: string | null;
-  };
+  const report = await renderAuditPdf(business.audit.id);
+  if (!report.ok) return NextResponse.json({ error: report.error }, { status: report.status });
 
-  if (!business.email) {
-    return NextResponse.json({ error: 'Business has no email address' }, { status: 400 });
-  }
-
-  // Fetch AI report
-  const { data: aiReport } = await supabase
-    .from('ai_reports')
-    .select('*')
-    .eq('audit_id', auditId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!aiReport) {
-    return NextResponse.json({ error: 'Generate the AI report first' }, { status: 400 });
-  }
-
-  // Generate PDF
-  let pdfBuffer: Buffer;
+  const replyTo = process.env.EMAIL_REPLY_TO;
+  const bcc = process.env.EMAIL_BCC;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pdfBuffer = await renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, aiReport, reportContact())) as any);
-  } catch {
-    return NextResponse.json({ error: 'Failed to generate PDF attachment' }, { status: 500 });
-  }
-
-  // Send via Resend
-  const resend = new Resend(apiKey);
-  const safeName = business.name
-    .replace(/[^a-zA-Z0-9]/g, '-')
-    .toLowerCase()
-    .replace(/-+/g, '-');
-
-  const { subject, body: text } = splitSubject(
-    aiReport.cold_email,
-    `Free Website Audit Report — ${business.name}`
-  );
-
-  try {
-    await resend.emails.send({
-      from: fromEmail,
+    // Resend reports a refusal (unverified domain, bad address) in `error` instead of throwing
+    const { error } = await new Resend(apiKey).emails.send({
+      from,
       to: business.email,
-      subject,
+      subject: subject.trim(),
       text,
-      attachments: [
-        {
-          filename: `audit-${safeName}.pdf`,
-          content: pdfBuffer,
-        },
-      ],
+      ...(replyTo && { replyTo }),
+      ...(bcc && { bcc }),
+      attachments: [{ filename: report.filename, content: report.pdf }],
     });
-  } catch {
-    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
+    if (error) {
+      console.error('[send-email] refused:', error.message);
+      return NextResponse.json({ error: `The email wasn't sent: ${error.message}` }, { status: 502 });
+    }
+  } catch (err) {
+    console.error('[send-email] failed:', err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "The email service couldn't be reached — try again." }, { status: 502 });
   }
 
-  return NextResponse.json({ success: true });
+  // The email has gone: a failed save must not read as a failed send, or it would be sent again
+  const emailedAt = new Date().toISOString();
+  const { error: saveError } = await supabase.from('businesses').update({ emailed_at: emailedAt }).eq('id', businessId);
+  if (saveError) {
+    console.error('[send-email] could not record the send:', saveError.message);
+    // Only a missing column is fixed by the migration
+    const warning = /emailed_at/.test(saveError.message)
+      ? `Sent, but Auditely couldn't record it — run ${MIGRATION} in Supabase.`
+      : "Sent, but the send date couldn't be saved: after a reload this lead won't show as emailed.";
+    return NextResponse.json({ emailed_at: emailedAt, warning });
+  }
+  return NextResponse.json({ emailed_at: emailedAt });
 }

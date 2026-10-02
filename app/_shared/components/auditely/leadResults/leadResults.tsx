@@ -5,13 +5,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
+import { BulkAuditControl } from '@/app/_shared/components/auditely/bulkAuditControl/bulkAuditControl';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
 import { LeadToolbar } from '@/app/_shared/components/auditely/leadToolbar/leadToolbar';
+import { useBulkAudit } from '@/app/_shared/lib/hooks/useBulkAudit';
 import { useLeadView } from '@/app/_shared/lib/hooks/useLeadView';
 import type { DiscoveryProgress } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import type { SearchQuery } from '@/app/_shared/lib/hooks/useLeadSearch';
 import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import { needsAudit } from '@/app/_shared/lib/utils/bulkAudit';
 import { exportFileName } from '@/app/_shared/lib/utils/leadExport';
+import { matchesFilters } from '@/app/_shared/lib/utils/leadView';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 
 const PAGE_SIZE = 20;
@@ -29,8 +33,9 @@ interface LeadResultsProps {
  */
 export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResultsProps) {
   const discoveryDone = discovery.done >= discovery.total;
-  // Re-arranged once discovery has found the emails
-  const view = useLeadView(businesses, String(discoveryDone));
+  const bulk = useBulkAudit(onUpdate);
+  // Re-arranged once discovery has found the emails, and after each "Audit all" run
+  const view = useLeadView(businesses, `${discoveryDone}|${bulk.runsFinished}`);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -39,6 +44,11 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
   const hasMore = visibleCount < view.leads.length;
   const withoutWebsite = businesses.filter((b) => !b.website).length;
   const isFiltered = view.filters.length > 0;
+  // "Audit all" covers the businesses the filters show, whether or not they're scrolled into view
+  const toAudit = businesses.filter((b) => needsAudit(b) && matchesFilters(b, view.filters)).length;
+  const { currentLeads } = view;
+  const { start: startBulk } = bulk;
+  const auditAll = useCallback(() => startBulk(currentLeads().filter(needsAudit)), [startBulk, currentLeads]);
 
   const loadMore = useCallback(() => {
     if (isLoadingMore) return;
@@ -83,6 +93,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
           onToggleFilter={view.toggleFilter}
           getExportLeads={view.currentLeads}
           exportFileName={exportFileName(query)}
+          actions={<BulkAuditControl pending={toAudit} progress={bulk.progress} onStart={auditAll} onStop={bulk.stop} />}
         />
       </div>
 
@@ -112,6 +123,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
               initialAudit={business.audit}
               initialReport={business.ai_report}
               onUpdate={onUpdate}
+              bulk={bulk.states[business.id]}
             />
           ))}
         </div>

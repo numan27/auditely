@@ -22,6 +22,7 @@ export const API_ROUTES = {
   RESULTS: '/api/results',
   FIND_EMAILS: '/api/find-emails',
   CRM: '/api/crm',
+  SEND_EMAIL: '/api/send-email',
 } as const;
 
 // Everything is private (single-admin tool) except these; /report/{token} is checked by its signature

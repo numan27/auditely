@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
+import { shownStatus, type BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -17,17 +18,20 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
  * - retryAudit(): repeats the last request (normal or forced)
  * Every result is also passed to `onUpdate`, so the results list can sort,
  * filter and export on it. With `autoRun`, the audit starts on mount.
+ * While "Audit all" handles the business (`bulk`), the statuses show its
+ * progress; its results arrive through the `initial*` props.
  */
 export interface BusinessAuditOptions {
   initialAudit?: Audit;
   initialReport?: AiReport;
   onUpdate?: (businessId: string, update: BusinessUpdate) => void;
   autoRun?: boolean;
+  bulk?: BulkState;
 }
 
 export function useBusinessAudit(
   business: Business,
-  { initialAudit, initialReport, onUpdate, autoRun = false }: BusinessAuditOptions = {}
+  { initialAudit, initialReport, onUpdate, autoRun = false, bulk }: BusinessAuditOptions = {}
 ) {
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
@@ -44,18 +48,21 @@ export function useBusinessAudit(
   }, [business.email]);
 
   // A card sorted or filtered out of view unmounts; results for requests it had
-  // in flight reach the list via onUpdate and come back in through these props.
-  useEffect(() => {
-    if (!initialAudit) return;
-    setAudit(initialAudit);
-    setAuditStatus('done');
-  }, [initialAudit]);
-
-  useEffect(() => {
-    if (!initialReport) return;
-    setReport(initialReport);
-    setReportStatus('done');
-  }, [initialReport]);
+  // in flight reach the list via onUpdate and come back in through these props,
+  // as do the results of "Audit all". Taken in during render (not in an effect),
+  // so the card never shows a frame of "Not audited yet" in between.
+  const [synced, setSynced] = useState({ audit: initialAudit, report: initialReport });
+  if (synced.audit !== initialAudit || synced.report !== initialReport) {
+    setSynced({ audit: initialAudit, report: initialReport });
+    if (initialAudit && initialAudit !== synced.audit) {
+      setAudit(initialAudit);
+      setAuditStatus('done');
+    }
+    if (initialReport && initialReport !== synced.report) {
+      setReport(initialReport);
+      setReportStatus('done');
+    }
+  }
 
   const saveEmail = useCallback(
     (value: string) => {
@@ -155,9 +162,8 @@ export function useBusinessAudit(
   return {
     audit,
     report,
-    auditStatus,
-    auditError,
-    reportStatus,
+    // auditStatus, auditError, reportStatus, and `queued` while it waits its turn
+    ...shownStatus({ auditStatus, reportStatus, auditError }, bulk),
     email,
     saveEmail,
     pdfLoading,
