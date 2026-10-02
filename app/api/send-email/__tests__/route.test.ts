@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { POST } from '@/app/api/send-email/route';
+import { POST, maxDuration } from '@/app/api/send-email/route';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
+import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 
 // Fake Supabase: the business (with its audit and report) and every update
 const db = vi.hoisted(() => {
@@ -20,22 +21,10 @@ const db = vi.hoisted(() => {
   };
   return { state, from };
 });
-// Fake Resend: records each email; `answer` is what its API replies
-const mail = vi.hoisted(() => ({
-  send: vi.fn(),
-  keys: [] as string[],
-}));
-
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
-vi.mock('resend', () => ({
-  Resend: class {
-    emails = { send: mail.send };
-    constructor(key: string) {
-      mail.keys.push(key);
-    }
-  },
-}));
+// The mailer (mailbox or Resend) has its own tests
+vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
 
 const PDF = Buffer.from('%PDF-1.7');
 const businessRow = (over: Record<string, unknown> = {}) => ({
@@ -53,30 +42,28 @@ const post = async (body: unknown) => {
 };
 
 beforeEach(() => {
-  vi.stubEnv('RESEND_API_KEY', 're_key');
-  vi.stubEnv('FROM_EMAIL', 'Numan <numan@devartventures.com>');
-  vi.stubEnv('EMAIL_REPLY_TO', '');
-  vi.stubEnv('EMAIL_BCC', '');
   vi.spyOn(console, 'error').mockImplementation(() => {});
   db.state.business = businessRow();
   db.state.updates = [];
   db.state.updateError = null;
-  mail.keys.length = 0;
-  mail.send.mockReset().mockResolvedValue({ data: { id: 'email-1' }, error: null });
+  vi.mocked(emailSetupProblem).mockReset().mockReturnValue(null);
+  vi.mocked(sendEmail).mockReset().mockResolvedValue({ ok: true });
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
 });
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
 describe('POST /api/send-email', () => {
+  // A function stopped mid-send would leave an email that went out unrecorded
+  it('is given a minute, more than the PDF and the slowest send take together', () => {
+    expect(maxDuration).toBe(60);
+  });
+
   it("sends the edited email to the business with the PDF attached, and records when", async () => {
     const { status, json } = await post(draft);
     expect(status).toBe(200);
-    expect(mail.keys).toEqual(['re_key']);
-    expect(mail.send).toHaveBeenCalledWith({
-      from: 'Numan <numan@devartventures.com>',
+    expect(sendEmail).toHaveBeenCalledWith({
       to: 'office@smiledental.com',
       subject: 'Quick note about your site',
       text: 'Hi there,\nYour site is slow.',
@@ -85,13 +72,6 @@ describe('POST /api/send-email', () => {
     expect(renderAuditPdf).toHaveBeenCalledWith('a1');
     expect(db.state.updates).toEqual([{ emailed_at: json.emailed_at }]);
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
-  });
-
-  it('adds the reply-to and BCC addresses when they are configured', async () => {
-    vi.stubEnv('EMAIL_REPLY_TO', 'contact@devartventures.com');
-    vi.stubEnv('EMAIL_BCC', 'log@bcc.hubspot.com');
-    await post(draft);
-    expect(mail.send.mock.calls[0][0]).toMatchObject({ replyTo: 'contact@devartventures.com', bcc: 'log@bcc.hubspot.com' });
   });
 
   it.each([
@@ -103,15 +83,14 @@ describe('POST /api/send-email', () => {
     ['not an object', 'business_id is required'],
   ])('refuses %j', async (body, error) => {
     expect(await post(body)).toEqual({ status: 400, json: { error } });
-    expect(mail.send).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("says so when email sending isn't set up", async () => {
-    vi.stubEnv('FROM_EMAIL', '');
-    expect(await post(draft)).toEqual({
-      status: 503,
-      json: { error: "Email sending isn't set up — add RESEND_API_KEY and FROM_EMAIL in Vercel." },
-    });
+  it("says so when email sending isn't set up, before doing any work", async () => {
+    vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
+    expect(await post(draft)).toEqual({ status: 503, json: { error: "Email sending isn't set up." } });
+    expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it('needs an email address, an audit and its summary', async () => {
@@ -121,27 +100,18 @@ describe('POST /api/send-email', () => {
     expect(await post(draft)).toEqual({ status: 400, json: { error: 'Run the audit and AI summary first.' } });
     db.state.business = null;
     expect((await post(draft)).status).toBe(404);
-    expect(mail.send).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("doesn't send without the PDF", async () => {
     vi.mocked(renderAuditPdf).mockResolvedValue({ ok: false, status: 500, error: 'Failed to generate PDF' });
     expect(await post(draft)).toEqual({ status: 500, json: { error: 'Failed to generate PDF' } });
-    expect(mail.send).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("passes on the email service's reason when it refuses, and records nothing", async () => {
-    mail.send.mockResolvedValue({ data: null, error: { message: 'The devartventures.com domain is not verified.' } });
-    expect(await post(draft)).toEqual({
-      status: 502,
-      json: { error: "The email wasn't sent: The devartventures.com domain is not verified." },
-    });
-    expect(db.state.updates).toEqual([]);
-  });
-
-  it("says the email service couldn't be reached when the request itself fails", async () => {
-    mail.send.mockRejectedValue(new TypeError('fetch failed'));
-    expect(await post(draft)).toEqual({ status: 502, json: { error: "The email service couldn't be reached — try again." } });
+  it("passes on the mailer's reason when the email isn't sent, and records nothing", async () => {
+    vi.mocked(sendEmail).mockResolvedValue({ ok: false, status: 502, error: "The email wasn't sent: 553 Relaying disallowed" });
+    expect(await post(draft)).toEqual({ status: 502, json: { error: "The email wasn't sent: 553 Relaying disallowed" } });
     expect(db.state.updates).toEqual([]);
   });
 

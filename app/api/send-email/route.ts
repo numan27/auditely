@@ -1,15 +1,18 @@
 // app/api/send-email/route.ts
 
 // "Send email": one lead's outreach email, as edited in the dialog, sent from
-// FROM_EMAIL with the PDF report attached. The send date is saved so the lead
-// isn't emailed twice by accident.
+// FROM_EMAIL (through the mailbox, or Resend — see email/mailer.ts) with the PDF
+// report attached. The send date is saved so the lead isn't emailed twice by accident.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
+import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { outreachProblem } from '@/app/_shared/lib/email/outreach';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
+
+// A function stopped mid-send would leave an email that went out unrecorded
+export const maxDuration = 60;
 
 const MIGRATION = 'docs/migrations/2026-10-02-emailed-at.sql';
 
@@ -25,11 +28,8 @@ export async function POST(request: NextRequest) {
   const problem = outreachProblem({ subject, body: text });
   if (problem) return NextResponse.json({ error: problem }, { status: 400 });
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.FROM_EMAIL;
-  if (!apiKey || !from) {
-    return NextResponse.json({ error: "Email sending isn't set up — add RESEND_API_KEY and FROM_EMAIL in Vercel." }, { status: 503 });
-  }
+  const setupProblem = emailSetupProblem();
+  if (setupProblem) return NextResponse.json({ error: setupProblem }, { status: 503 });
 
   // The recipient always comes from the stored business, never from the request
   const { data } = await supabase.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', businessId).single();
@@ -43,27 +43,13 @@ export async function POST(request: NextRequest) {
   const report = await renderAuditPdf(business.audit.id);
   if (!report.ok) return NextResponse.json({ error: report.error }, { status: report.status });
 
-  const replyTo = process.env.EMAIL_REPLY_TO;
-  const bcc = process.env.EMAIL_BCC;
-  try {
-    // Resend reports a refusal (unverified domain, bad address) in `error` instead of throwing
-    const { error } = await new Resend(apiKey).emails.send({
-      from,
-      to: business.email,
-      subject: subject.trim(),
-      text,
-      ...(replyTo && { replyTo }),
-      ...(bcc && { bcc }),
-      attachments: [{ filename: report.filename, content: report.pdf }],
-    });
-    if (error) {
-      console.error('[send-email] refused:', error.message);
-      return NextResponse.json({ error: `The email wasn't sent: ${error.message}` }, { status: 502 });
-    }
-  } catch (err) {
-    console.error('[send-email] failed:', err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "The email service couldn't be reached — try again." }, { status: 502 });
-  }
+  const sent = await sendEmail({
+    to: business.email,
+    subject: subject.trim(),
+    text,
+    attachments: [{ filename: report.filename, content: report.pdf }],
+  });
+  if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: sent.status });
 
   // The email has gone: a failed save must not read as a failed send, or it would be sent again
   const emailedAt = new Date().toISOString();
