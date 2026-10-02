@@ -15,6 +15,13 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 /** Which button's action is running: "Run audit" or "Find email" */
 export type UrlAuditBusy = 'audit' | 'email' | null;
 
+/** Sites waiting for a yes in the "remove?" dialog */
+export interface UrlAuditRemoval {
+  sites: BusinessWithData[];
+  busy: boolean;
+  error: string | null;
+}
+
 export interface UrlAuditNotice {
   tone: 'error' | 'info';
   text: string;
@@ -36,6 +43,7 @@ export function useUrlAudits() {
   const [busy, setBusy] = useState<UrlAuditBusy>(null);
   const [notice, setNotice] = useState<UrlAuditNotice | null>(null);
   const [autoRunId, setAutoRunId] = useState<string | null>(null);
+  const [removal, setRemoval] = useState<UrlAuditRemoval | null>(null);
 
   useEffect(() => {
     if (demo) return;
@@ -154,5 +162,50 @@ export function useUrlAudits() {
     [addSite, demo, findContacts]
   );
 
-  return { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness };
+  /** The cross on a card, or "Clear all": opens the "remove?" dialog for these sites */
+  const askRemove = useCallback((sites: BusinessWithData[]) => {
+    if (sites.length > 0) setRemoval({ sites, busy: false, error: null });
+  }, []);
+
+  const cancelRemove = useCallback(() => setRemoval(null), []);
+
+  /** The dialog's yes: deletes the sites with their audits and takes them off the list */
+  const confirmRemove = useCallback(async () => {
+    if (!removal || removal.busy) return;
+    setRemoval({ ...removal, busy: true, error: null });
+    try {
+      const res = await fetch(API_ROUTES.AUDIT_URL, {
+        method: 'DELETE',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ ids: removal.sites.map((site) => site.id) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRemoval({ ...removal, busy: false, error: data.error ?? "Couldn't remove it. Try again." });
+        return;
+      }
+      const removed = new Set<string>(data.removed ?? []);
+      setBusinesses((prev) => prev.filter((b) => !removed.has(b.id)));
+      // A note about a site that is gone would only confuse
+      setNotice(null);
+      setRemoval(null);
+    } catch {
+      setRemoval({ ...removal, busy: false, error: "Couldn't reach Auditely. Check your connection and try again." });
+    }
+  }, [removal, setBusinesses]);
+
+  return {
+    businesses,
+    isLoading,
+    busy,
+    notice,
+    autoRunId,
+    addWebsite,
+    findEmail,
+    updateBusiness,
+    removal,
+    askRemove,
+    cancelRemove,
+    confirmRemove,
+  };
 }

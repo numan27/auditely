@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon } from '@/app/_shared/components/ui/icons/icons';
+import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPanel';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
@@ -31,6 +31,8 @@ interface BusinessCardProps {
   bulk?: BulkState;
   /** Start with the report open although it's already audited (the demo's sample website) */
   defaultOpen?: boolean;
+  /** Adds a cross that asks to remove this business from its list (websites added by URL) */
+  onRemove?: () => void;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -71,7 +73,7 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, onRemove }: BusinessCardProps) {
   const demo = useDemo();
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
@@ -92,7 +94,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
 
   return (
     <article
-      className={`overflow-hidden rounded-2xl border bg-[var(--color-surface)] ${
+      className={`group/card overflow-hidden rounded-2xl border bg-[var(--color-surface)] ${
         isCompleted ? 'border-emerald-500/40' : 'border-[var(--color-border)]'
       }`}
     >
@@ -171,6 +173,19 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
               className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"
             >
               <ChevronDownIcon size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+
+          {/* Shown on hover or keyboard focus; always where there is no hover (phones) */}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${business.name}`}
+              title="Remove from this list"
+              className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] opacity-0 transition hover:bg-red-500/10 hover:text-red-600 focus-visible:opacity-100 group-hover/card:opacity-100 dark:hover:text-red-400 [@media(hover:none)]:opacity-100"
+            >
+              <XIcon size={16} />
             </button>
           )}
         </div>
