@@ -2,6 +2,7 @@
 
 'use client';
 
+import { DemoVideoTrigger } from '@/app/_shared/components/auditely/demoVideoTrigger/demoVideoTrigger';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Modal } from '@/app/_shared/components/ui/modal/modal';
 import type { DemoLinks } from '@/app/_shared/lib/demo/demoLinks';
@@ -50,9 +51,7 @@ export function DemoNoticeModal({ action, links, onClose }: DemoNoticeModalProps
           </p>
           {links.videoUrl && (
             <p>
-              <a href={links.videoUrl} target="_blank" rel="noopener noreferrer" className={LINK}>
-                Watch the 45-second walkthrough
-              </a>
+              <DemoVideoTrigger className={`${LINK} cursor-pointer`}>Watch the 45-second walkthrough</DemoVideoTrigger>
             </p>
           )}
         </div>

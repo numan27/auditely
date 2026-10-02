@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { DemoBanner } from '@/app/_shared/components/auditely/demoBanner/demoBanner';
+import { DemoVideoThumb } from '@/app/_shared/components/auditely/demoVideoThumb/demoVideoThumb';
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { LeadResults } from '@/app/_shared/components/auditely/leadResults/leadResults';
 import { ModeTabs, panelId, tabId, type WorkspaceMode } from '@/app/_shared/components/auditely/modeTabs/modeTabs';
@@ -36,11 +37,14 @@ export function Workspace() {
       <DemoBanner />
 
       <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
-        <section className="pb-7 pt-10 sm:pt-16">
-          <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--color-text-primary)] sm:text-[3.25rem]">
-            Find your next client
-          </h1>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-[var(--color-text-secondary)]">{INTRO[mode]}</p>
+        <section className="flex flex-col gap-6 pb-7 pt-10 sm:pt-16 lg:flex-row lg:items-end lg:gap-10">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--color-text-primary)] sm:text-[3.25rem]">
+              Find your next client
+            </h1>
+            <p className="mt-3 max-w-xl text-base leading-relaxed text-[var(--color-text-secondary)]">{INTRO[mode]}</p>
+          </div>
+          <DemoVideoThumb />
         </section>
 
         <ModeTabs value={mode} onChange={changeMode} />

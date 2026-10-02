@@ -23,7 +23,7 @@ Every action that costs money is a client call to a protected route: search (Goo
 - Real audits for guests, in any form (user's decision: replay only).
 - Any change to an API route, or any new public API route.
 - A demo of Saved searches, the send-email dialog or the HubSpot handoff. Their buttons explain themselves and stop.
-- Recording the Loom walkthrough. The demo only links to it when a URL is set.
+- Recording the Loom walkthrough. The demo only shows it when a URL is set.
 - Counting or tracking demo visitors.
 
 ## Decisions
@@ -95,8 +95,18 @@ Sorting, filtering, expanding a card, copying the outreach email and the theme t
 
 ### Notice and banner
 
-- `demoBanner/demoBanner.tsx`, above the heading: "Demo: a real search with contact details hidden. Live search and audits are switched off." Plus "Watch the 45-second walkthrough" when `DEMO_VIDEO_URL` is set.
-- `demoNoticeModal/demoNoticeModal.tsx`, one dialog for every restricted action. Title: "Live generation is switched off in this demo". One sentence on what the button does in the full app, by action (search, audit a URL, re-audit, find email, send email, HubSpot, export). Then "Want to see it run live? Message me on Upwork and I'll walk you through it.", which becomes a "Get in touch" link when `DEMO_CONTACT_URL` is set, and the walkthrough link when there is one.
+- `demoBanner/demoBanner.tsx`, above the heading: "Demo: a real search with contact details hidden. Live search and audits are switched off."
+- `demoNoticeModal/demoNoticeModal.tsx`, one dialog for every restricted action. Title: "Live generation is switched off in this demo". One sentence on what the button does in the full app, by action (search, audit a URL, re-audit, find email, send email, HubSpot, export). Then "Want to see it run live? Message me on Upwork and I'll walk you through it.", which becomes a "Get in touch" link when `DEMO_CONTACT_URL` is set, and "Watch the 45-second walkthrough" when there is one (see Walkthrough video).
+
+### Walkthrough video
+
+Added 2026-10-03. One recording for both tabs, hosted on Loom.
+
+- `demoVideoThumb/demoVideoThumb.tsx`: a thumbnail with a play button and "Watch a live search and audit · 45-second walkthrough". From 1024px it sits to the right of the heading; below that it is a small row under the intro, above the tabs. Until there is a frame of the recording to show, the tile is a drawn placeholder.
+- `demoVideoModal/demoVideoModal.tsx`: the Loom player in a dialog, 16:9. It is mounted on the click, so nothing is requested from Loom before a visitor asks for the video. Closing it removes the player, which stops the video.
+- `demoVideoTrigger/demoVideoTrigger.tsx`: what the thumbnail and the notice's link are made of. With a Loom link it is a button that calls `useDemo().playVideo()`; with any other link it is a link to a new tab; without a video, or in the private app, it is nothing. From the notice, the video takes the notice's place.
+- `lib/demo/demoLinks.ts`: `loomPlayerUrl()` turns `loom.com/share/{id}` (or `/embed/{id}`) into the player address, with autoplay and without Loom's title, owner and share button. Only `loom.com` and `www.loom.com` with a plain id are accepted; `DemoLinks.videoPlayerUrl` is null for everything else.
+- Without `DEMO_VIDEO_URL` the heading area is exactly as in the private app.
 
 ## PDF
 
@@ -108,7 +118,7 @@ Sorting, filtering, expanding a card, copying the outreach email and the theme t
 
 | Variable | Effect |
 |---|---|
-| `DEMO_VIDEO_URL` | Adds the walkthrough link to the banner and the notice |
+| `DEMO_VIDEO_URL` | Adds the walkthrough thumbnail beside the heading and the walkthrough link in the notice. A Loom share link plays inside the demo; any other link opens in a new tab |
 | `DEMO_CONTACT_URL` | Turns the notice's last line into a "Get in touch" link |
 | `DEMO_PDF_CONTACT=1` | The demo PDF shows the report contact box, as the real one does |
 
@@ -131,6 +141,8 @@ After a change to the audit engine or the report UI, run the capture again. A te
   - `demoData`: `findUnmasked` finds nothing in the capture; no HubSpot or emailed fields; no id that isn't a `demo-…` id; every audit is on the current engine; every `replayIds` entry has an audit and a report.
   - `replay`: answers with the saved audit and report, fails cleanly for an unknown id.
   - `pdfRender`: with and without a contact.
+  - `demoLinks`: a Loom share link becomes its player address; any other host, a lookalike host or an odd id has none.
+  - `demoVideo`: the thumbnail is a button for a Loom video (no player in the page yet), a new-tab link for another host, and absent without a video or outside the demo; the notice follows the same rule; the banner has no link.
 - Browser, logged out against `next dev`: the bare domain opens the demo; both tabs; sort and filter; a single replay; "Audit all" with Stop; every restricted button opens the notice; the PDF downloads; the network panel shows no `/api/*` request. Then logged in: the workspace is unchanged.
 
 ## Risks

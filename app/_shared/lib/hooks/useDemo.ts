@@ -17,6 +17,8 @@ export interface Demo {
   replay: Post;
   /** Opens the notice for an action the demo doesn't run */
   restrict: (action: DemoAction) => void;
+  /** Opens the recorded walkthrough in its player (links.videoPlayerUrl) */
+  playVideo: () => void;
 }
 
 export const DemoContext = createContext<Demo | null>(null);

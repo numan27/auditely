@@ -14,19 +14,6 @@ export function DemoBanner() {
       <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-[var(--color-text-secondary)] sm:px-6">
         <span className="font-medium text-[var(--color-text-primary)]">Demo:</span> a real search with contact details
         hidden. Live search and audits are switched off.
-        {demo.links.videoUrl && (
-          <>
-            {' '}
-            <a
-              href={demo.links.videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="whitespace-nowrap font-medium text-[var(--color-primary-600)] hover:underline"
-            >
-              Watch the 45-second walkthrough
-            </a>
-          </>
-        )}
       </p>
     </div>
   );
