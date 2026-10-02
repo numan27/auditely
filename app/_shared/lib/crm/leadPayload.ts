@@ -127,6 +127,8 @@ export function buildLeadPayload(input: LeadInput): LeadPayload {
       domain,
       website: business.website,
       phone: business.phone,
+      // A custom property in HubSpot; an account without it still gets the lead (hubspot.ts)
+      email: business.email,
       address: business.address,
       industry,
     }),

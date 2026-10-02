@@ -60,6 +60,7 @@ describe('buildLeadPayload', () => {
       domain: 'smiledental.com',
       website: 'https://www.smiledental.com/',
       phone: '(555) 123-4567',
+      email: 'office@smiledental.com',
       address: '123 Main St, Springfield, IL',
       industry: 'MEDICAL_PRACTICE',
     });
@@ -86,6 +87,7 @@ describe('buildLeadPayload', () => {
     const lead = buildLeadPayload(input({ niche: 'lawn care', business: { ...input().business, email: null, phone: null } }));
     expect(lead.contact).toBeNull();
     expect(lead.company).not.toHaveProperty('phone');
+    expect(lead.company).not.toHaveProperty('email');
     expect(lead.company).not.toHaveProperty('industry');
   });
 

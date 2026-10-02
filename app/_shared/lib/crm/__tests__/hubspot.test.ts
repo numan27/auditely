@@ -33,6 +33,14 @@ const emptyHubSpot = (call: Call): Answer => {
   if (call.method === 'PUT') return { status: 200, body: {} };
   return { status: 404, body: { message: 'Not found' } };
 };
+// Refuses a write that carries any of these properties, wording it as HubSpot does
+const rejecting = (call: Call, errors: Record<string, string>): Answer => {
+  const sent = Object.keys((call.body as { properties?: Record<string, string> } | null)?.properties ?? {});
+  const refused = Object.entries(errors).filter(([name]) => sent.includes(name));
+  if (!refused.length) return emptyHubSpot(call);
+  const details = refused.map(([name, error]) => ({ isValid: false, message: `${name} was refused`, error, name }));
+  return { status: 400, body: { message: `Property values were not valid: ${JSON.stringify(details)}` } };
+};
 const send = (l: LeadPayload = lead(), savedCompanyId: string | null = null) => {
   const onCompanySaved = vi.fn(async () => {});
   return { result: sendLead('token-1', l, { savedCompanyId, onCompanySaved }), onCompanySaved };
@@ -102,14 +110,27 @@ describe('sendLead', () => {
 
   it('saves the company without the industry when HubSpot rejects it', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    answer = (call) => {
-      const properties = (call.body as { properties?: Record<string, string> } | null)?.properties;
-      if (call.path === `${V}/companies` && properties?.industry) return { status: 400, body: { message: 'Property values were not valid' } };
-      return emptyHubSpot(call);
-    };
+    answer = (call) => (call.path === `${V}/companies` ? rejecting(call, { industry: 'INVALID_OPTION' }) : emptyHubSpot(call));
     expect((await send().result).companyId).toBe('c-new');
     expect(only('POST', `${V}/companies`)[1].body).toEqual({ properties: { name: 'Smile Dental', domain: 'smiledental.com', lifecyclestage: 'lead' } });
     expect(warn).toHaveBeenCalled();
+  });
+
+  it("saves the company without its email when the HubSpot account has no company email property", async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    answer = (call) => (call.path === `${V}/companies` ? rejecting(call, { email: 'PROPERTY_DOESNT_EXIST' }) : emptyHubSpot(call));
+    const company = { name: 'Smile Dental', domain: 'smiledental.com', email: 'office@smiledental.com', industry: 'MEDICAL_PRACTICE' };
+    expect((await send(lead({ company })).result).companyId).toBe('c-new');
+    // Only the email goes: the industry HubSpot accepted is kept
+    expect(only('POST', `${V}/companies`)[1].body).toEqual({
+      properties: { name: 'Smile Dental', domain: 'smiledental.com', industry: 'MEDICAL_PRACTICE', lifecyclestage: 'lead' },
+    });
+  });
+
+  it("doesn't retry when HubSpot rejects something the company can't go without", async () => {
+    answer = (call) => (call.path === `${V}/companies` ? rejecting(call, { name: 'INVALID_LONG' }) : emptyHubSpot(call));
+    await expect(send().result).rejects.toMatchObject({ status: 400 });
+    expect(only('POST', `${V}/companies`)).toHaveLength(1);
   });
 
   it('updates the existing contact when HubSpot says it already exists', async () => {
