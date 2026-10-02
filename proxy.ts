@@ -4,6 +4,7 @@ import {
   ROUTES,
   isApiRoute,
   isAuthRoute,
+  isHomeAlias,
   isProtectedRoute,
 } from "@/app/_shared/lib/config/routes";
 import { SESSION_COOKIE, verifySessionToken } from "@/app/_shared/lib/auth/session";
@@ -12,6 +13,11 @@ import { SESSION_COOKIE, verifySessionToken } from "@/app/_shared/lib/auth/sessi
 // The whole app is private except the login page and the login API.
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // "/home" isn't a page: forward it to the home page before anything remembers it as the login destination
+  if (isHomeAlias(pathname)) {
+    return NextResponse.redirect(new URL(`${ROUTES.HOME}${search}`, request.url));
+  }
 
   // Verify the signed session cookie (not just its presence)
   const token = request.cookies.get(SESSION_COOKIE)?.value;

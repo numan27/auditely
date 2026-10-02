@@ -31,6 +31,9 @@ export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT] as c
 // Pages a logged-in user should be bounced away from
 export const AUTH_ROUTES = [ROUTES.LOGIN] as const;
 
+// Addresses people type or bookmark for the home page; they forward to it instead of a 404
+export const HOME_ALIASES = ['/home'] as const;
+
 export const DEFAULT_LOGIN_REDIRECT = ROUTES.HOME;
 export const DEFAULT_LOGOUT_REDIRECT = ROUTES.LOGIN;
 
@@ -54,6 +57,9 @@ export const isProtectedRoute = (pathname: string): boolean => !isPublicRoute(pa
 // Check if a route is an auth route
 export const isAuthRoute = (pathname: string): boolean =>
   matchesRoute(pathname, AUTH_SET, AUTH_ROUTES);
+
+export const isHomeAlias = (pathname: string): boolean =>
+  (HOME_ALIASES as readonly string[]).includes(pathname);
 
 export const isApiRoute = (pathname: string): boolean =>
   pathname === '/api' || pathname.startsWith('/api/');
