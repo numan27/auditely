@@ -2,6 +2,7 @@
 
 import type { AuditChecks } from '@/app/_shared/lib/audit/types';
 import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
+import type { EmailCheck } from '@/app/_shared/lib/email/emailCheck';
 
 export interface Search {
   id: string;
@@ -35,6 +36,8 @@ export interface Business {
   crm_sent_at?: string | null;
   /** When the outreach email was last sent from Auditely; absent before the emailed-at migration */
   emailed_at?: string | null;
+  /** What Verifalia said about the email address; absent before the email-check migration */
+  email_check?: EmailCheck | null;
   created_at: string;
 }
 
@@ -72,7 +75,9 @@ export interface BusinessWithData extends Business {
 }
 
 /** What a business card found or produced, merged back into the results list */
-export type BusinessUpdate = Partial<Pick<BusinessWithData, 'email' | 'audit' | 'ai_report' | 'crm_sent_at' | 'emailed_at'>>;
+export type BusinessUpdate = Partial<
+  Pick<BusinessWithData, 'email' | 'audit' | 'ai_report' | 'crm_sent_at' | 'emailed_at' | 'email_check'>
+>;
 
 export type AuditStatus = 'idle' | 'loading' | 'done' | 'error';
 export type ReportStatus = 'idle' | 'loading' | 'done' | 'error';

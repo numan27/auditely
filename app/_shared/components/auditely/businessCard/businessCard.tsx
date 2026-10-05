@@ -13,6 +13,7 @@ import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
+import { checkFor } from '@/app/_shared/lib/email/emailCheck';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
@@ -140,7 +141,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
                   )}
                 </ContactLine>
               )}
-              <BusinessEmail email={email} website={business.website} businessId={business.id} onFound={saveEmail} />
+              <BusinessEmail email={email} website={business.website} businessId={business.id} check={checkFor(mail.check, email)} onFound={saveEmail} />
               {reviews && <ContactLine icon={<StarIcon size={14} />}>{reviews}</ContactLine>}
             </div>
           </div>

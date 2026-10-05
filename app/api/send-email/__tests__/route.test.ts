@@ -4,6 +4,7 @@ import { POST, maxDuration } from '@/app/api/send-email/route';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { brandLogo } from '@/app/_shared/lib/email/brandLogo';
+import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 
 // Fake Supabase: the business (with its audit and report) and every update
 const db = vi.hoisted(() => {
@@ -27,6 +28,8 @@ vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }))
 vi.mock('@/app/_shared/lib/email/brandLogo', () => ({ LOGO_CID: 'devartventures-logo', brandLogo: vi.fn() }));
 // The mailer (mailbox or Resend) has its own tests
 vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
+// The address check (Verifalia) has its own tests
+vi.mock('@/app/_shared/lib/email/leadEmailCheck', () => ({ checkLeadEmail: vi.fn() }));
 
 const PDF = Buffer.from('%PDF-1.7');
 const LOGO = Buffer.from('logo-png');
@@ -39,6 +42,10 @@ const businessRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const draft = { business_id: 'b1', subject: 'Quick note about your site', body: 'Hi there,\nYour site is slow.' };
+const checked = (verdict: string, status: string) => ({
+  state: 'checked' as const,
+  check: { address: 'office@smiledental.com', verdict, status, checked_at: '2026-10-05T10:00:00Z' },
+});
 const post = async (body: unknown) => {
   const res = await POST(new NextRequest('https://auditely.app/api/send-email', { method: 'POST', body: JSON.stringify(body) }));
   return { status: res.status, json: await res.json() };
@@ -50,6 +57,7 @@ beforeEach(() => {
   db.state.updates = [];
   db.state.updateError = null;
   vi.mocked(emailSetupProblem).mockReset().mockReturnValue(null);
+  vi.mocked(checkLeadEmail).mockReset().mockResolvedValue({ state: 'off' });
   vi.mocked(sendEmail).mockReset().mockResolvedValue({ ok: true });
   vi.mocked(brandLogo).mockReset().mockResolvedValue(LOGO);
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
@@ -160,5 +168,45 @@ describe('POST /api/send-email', () => {
     const { status, json } = await post(draft);
     expect(status).toBe(200);
     expect(json.warning).toBe("Sent, but the send date couldn't be saved: after a reload this lead won't show as emailed.");
+  });
+
+  it('never sends to an address Verifalia calls undeliverable, and says why', async () => {
+    const undeliverable = checked('Undeliverable', 'MailboxDoesNotExist');
+    vi.mocked(checkLeadEmail).mockResolvedValue(undeliverable as Awaited<ReturnType<typeof checkLeadEmail>>);
+    expect(await post(draft)).toEqual({
+      status: 400,
+      json: { error: "Not sent: This mailbox doesn't exist.", email_check: undeliverable.check },
+    });
+    expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(db.state.updates).toEqual([]);
+  });
+
+  it('checks the stored address', async () => {
+    db.state.business = businessRow({ email_check: { verdict: 'Deliverable' } });
+    await post({ ...draft, email: 'someone@else.com' });
+    expect(checkLeadEmail).toHaveBeenCalledWith({ id: 'b1', email: 'office@smiledental.com', email_check: { verdict: 'Deliverable' } });
+  });
+
+  it.each([
+    ['deliverable', checked('Deliverable', 'Success')],
+    ['risky', checked('Risky', 'ServerIsCatchAll')],
+    ['unknown', checked('Unknown', 'SmtpConnectionTimeout')],
+    ['not checked', { state: 'unchecked' as const, reason: "Not checked: today's free Verifalia checks are used up." }],
+    ['Verifalia off', { state: 'off' as const }],
+  ])('sends when the address is %s', async (_name, result) => {
+    vi.mocked(checkLeadEmail).mockResolvedValue(result as Awaited<ReturnType<typeof checkLeadEmail>>);
+    expect((await post(draft)).status).toBe(200);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('spends no check on a preview, or when the email could not be sent anyway', async () => {
+    await post({ ...draft, preview: true });
+    vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
+    await post(draft);
+    db.state.business = businessRow({ audits: null });
+    vi.mocked(emailSetupProblem).mockReturnValue(null);
+    await post(draft);
+    expect(checkLeadEmail).not.toHaveBeenCalled();
   });
 });

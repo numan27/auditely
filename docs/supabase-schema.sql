@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   crm_sent_at         TIMESTAMPTZ,
   -- When the outreach email was last sent from Auditely
   emailed_at          TIMESTAMPTZ,
+  -- What Verifalia said about the email address: { address, verdict, status, checked_at }
+  email_check         JSONB,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

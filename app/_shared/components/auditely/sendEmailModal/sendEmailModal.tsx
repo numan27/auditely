@@ -4,10 +4,12 @@
 
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
+import { EmailCheckNote } from '@/app/_shared/components/auditely/emailCheckNote/emailCheckNote';
 import { Input } from '@/app/_shared/components/ui/input/input';
 import { Modal } from '@/app/_shared/components/ui/modal/modal';
 import { TextArea } from '@/app/_shared/components/ui/textArea/textArea';
 import { MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import { blocksSending, checkReason, type EmailCheck } from '@/app/_shared/lib/email/emailCheck';
 import { BODY_MAX, outreachProblem, SUBJECT_MAX, type OutreachDraft } from '@/app/_shared/lib/email/outreach';
 
 interface SendEmailModalProps {
@@ -19,6 +21,11 @@ interface SendEmailModalProps {
   sentAt: string | null;
   sending: boolean;
   error: string | null;
+  /** What Verifalia said about the address, when the check is fresh */
+  check: EmailCheck | null;
+  checking: boolean;
+  /** Why the address wasn't checked, or that the result couldn't be saved */
+  checkNote: string | null;
   onSend: (draft: OutreachDraft) => void;
   /** The email as the lead will see it (HTML) */
   onPreview: (draft: OutreachDraft) => Promise<string>;
@@ -31,7 +38,7 @@ const sentOn = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mont
  * Review, edit and send one lead's outreach email. Mount it only while open:
  * the fields start from `draft` each time.
  */
-export function SendEmailModal({ businessName, to, draft, sentAt, sending, error, onSend, onPreview, onClose }: SendEmailModalProps) {
+export function SendEmailModal({ businessName, to, draft, sentAt, sending, error, check, checking, checkNote, onSend, onPreview, onClose }: SendEmailModalProps) {
   const [subject, setSubject] = useState(draft.subject);
   const [body, setBody] = useState(draft.body);
   // The designed email while it is being looked at; null while editing
@@ -39,6 +46,8 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const problem = outreachProblem({ subject, body });
+  // An address Verifalia calls undeliverable is never written to
+  const blocked = check && blocksSending(check) ? `${checkReason(check)} This email can't be sent.` : null;
 
   const showPreview = async () => {
     setPreviewing(true);
@@ -61,6 +70,7 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
           <p className="text-sm text-[var(--color-text-secondary)]">
             To <span className="font-medium text-[var(--color-text-primary)]">{to}</span>
           </p>
+          <EmailCheckNote checking={checking} check={check} note={checkNote} />
           {previewHtml === null ? (
             <>
               {/* Locked while the preview is built, so the preview is of what the fields say */}
@@ -139,8 +149,8 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
             onSend({ subject, body });
           }}
           isLoading={sending}
-          disabled={!!problem}
-          title={problem ?? undefined}
+          disabled={!!problem || checking || !!blocked}
+          title={blocked ?? problem ?? undefined}
           leftIcon={<MailIcon size={14} />}
         >
           {sending ? 'Sending…' : sentAt ? 'Send follow-up' : 'Send email'}

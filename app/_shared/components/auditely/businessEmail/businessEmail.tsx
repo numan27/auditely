@@ -6,26 +6,37 @@ import { useState } from 'react';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { CheckIcon, CopyIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
+import { checkMark, type CheckMark, type EmailCheck } from '@/app/_shared/lib/email/emailCheck';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 
 interface BusinessEmailProps {
   email: string | null;
   website: string | null;
   businessId: string;
+  /** What Verifalia said about this address, once "Send email" has checked it */
+  check?: EmailCheck | null;
   onFound: (email: string) => void;
 }
+
+const MARK_TONES: Record<CheckMark['tone'], string> = {
+  good: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  warn: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  bad: 'bg-red-500/10 text-red-700 dark:text-red-400',
+};
 
 /**
  * Email row for a business card. Controlled: the parent owns the canonical
  * email value. When no email is known yet, offers an on-demand "Find email"
  * action that runs the full discovery cascade (including Hunter) for this one
  * business — the only path allowed to spend API quota.
+ * Beside a known email: what Verifalia said about it, once it was checked.
  */
-export function BusinessEmail({ email, website, businessId, onFound }: BusinessEmailProps) {
+export function BusinessEmail({ email, website, businessId, check, onFound }: BusinessEmailProps) {
   const demo = useDemo();
   const [copied, setCopied] = useState(false);
   const [finding, setFinding] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const mark = check ? checkMark(check) : null;
 
   const copyEmail = async () => {
     if (!email) return;
@@ -80,6 +91,13 @@ export function BusinessEmail({ email, website, businessId, onFound }: BusinessE
           >
             {copied ? <CheckIcon size={13} className="text-emerald-500" /> : <CopyIcon size={13} />}
           </button>
+          {/* The word, not just a tick: the copy button beside it turns into a tick too */}
+          {mark && (
+            <span title={mark.title} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${MARK_TONES[mark.tone]}`}>
+              {mark.tone === 'good' && <CheckIcon size={11} strokeWidth={3} />}
+              {mark.label}
+            </span>
+          )}
         </span>
       </ContactLine>
     );

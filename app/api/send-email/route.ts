@@ -4,12 +4,15 @@
 // FROM_EMAIL (through the mailbox, or Resend — see email/mailer.ts) in the
 // DevArtVentures design (email/outreachEmail.ts) with the PDF report attached.
 // The send date is saved so the lead isn't emailed twice by accident.
+// An address Verifalia calls undeliverable is refused (email/leadEmailCheck.ts).
 // With `preview: true` nothing is sent: the answer is the email's HTML.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import { brandLogo, LOGO_CID } from '@/app/_shared/lib/email/brandLogo';
+import { blocksSending, checkReason } from '@/app/_shared/lib/email/emailCheck';
+import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { outreachHtml, outreachText } from '@/app/_shared/lib/email/outreachEmail';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
@@ -52,6 +55,12 @@ export async function POST(request: NextRequest) {
     // A browser can't load the email's attached logo, so the preview carries the image itself
     const logoSrc = logo && `data:image/png;base64,${logo.toString('base64')}`;
     return NextResponse.json({ html: outreachHtml({ ...email, logoSrc }) });
+  }
+
+  // The dialog checked the address when it opened, so this normally reads the saved result
+  const checked = await checkLeadEmail({ id: business.id, email: business.email, email_check: business.email_check });
+  if (checked.state === 'checked' && blocksSending(checked.check)) {
+    return NextResponse.json({ error: `Not sent: ${checkReason(checked.check)}`, email_check: checked.check }, { status: 400 });
   }
 
   const report = await renderAuditPdf(business.audit.id);

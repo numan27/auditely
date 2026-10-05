@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["@react-pdf/renderer"],
+  // verifalia ships a browser build beside its Node one: loaded by Node itself, the server gets the Node build
+  serverExternalPackages: ["@react-pdf/renderer", "verifalia"],
   // Read from disk at run time (the outreach email's logo), so the build can't see it's needed
   outputFileTracingIncludes: {
     "/api/send-email": ["./app/_shared/assets/images/devartventuresLogo.png"],

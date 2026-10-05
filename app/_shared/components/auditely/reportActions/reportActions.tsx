@@ -7,6 +7,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import { DownloadIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
 import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal/sendEmailModal';
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
+import { freshCheck } from '@/app/_shared/lib/email/emailCheck';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
@@ -32,6 +33,8 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
     if (demo) return demo.restrict('sendEmail');
     mail.clearError();
     setComposing(true);
+    // Is the address deliverable? A fresh saved answer is reused, so this often asks nothing
+    void mail.verify();
   };
   const sendEmail = async (draft: OutreachDraft) => {
     if (await mail.send(draft)) setComposing(false);
@@ -86,6 +89,10 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
           sentAt={mail.sentAt}
           sending={mail.sending}
           error={mail.error}
+          // A result too old to go by is not shown: the server would check again
+          check={freshCheck(mail.check, email)}
+          checking={mail.checking}
+          checkNote={mail.checkNote}
           onSend={sendEmail}
           onPreview={mail.preview}
           onClose={() => setComposing(false)}
