@@ -1391,7 +1391,7 @@ Stop the server afterwards.
 
 - [ ] **Step 3: Hand-off (do not commit yet)**
 
-Report: what changed, test results, the login check, and the user's setup steps from the spec (HubSpot private app with the 4 scopes, `HUBSPOT_TOKEN` in Vercel, the migration). Offer to watch the first live send together. Ask for the go-ahead to commit code, spec and plan on `staging`; commit only after a yes, ending the message with:
+Report: what changed, test results, the login check, and the user's setup steps from the spec (HubSpot service key with the 4 scopes, `HUBSPOT_TOKEN` in Vercel, the migration). Offer to watch the first live send together. Ask for the go-ahead to commit code, spec and plan on `staging`; commit only after a yes, ending the message with:
 ```
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 ```

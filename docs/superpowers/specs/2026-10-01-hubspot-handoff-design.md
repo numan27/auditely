@@ -9,7 +9,7 @@
 - Leads leave Auditely today only by CSV export or copy-paste.
 - The PDF is generated on download (`/api/pdf`) and never stored, so there is no link to share.
 - The whole app is behind the admin login (`proxy.ts`; only `/login` and `/api/auth` are public).
-- HubSpot free CRM has API access through a private app token ("legacy private apps" — still supported). Free accounts: 100 requests / 10 s, 250,000 / day.
+- HubSpot free CRM has API access through a **service key** (Development → Keys → Service keys; public beta since February 2026), used as a Bearer token. New accounts can no longer create legacy private apps (verified on the user's account, 2026-10-01). Free accounts: 100 requests / 10 s, 250,000 / day.
 
 ## Goals
 
@@ -124,7 +124,7 @@ In the audit panel's footer, next to "Download PDF report" (shown once the AI re
 ## Setup (user, once)
 
 1. Free HubSpot account.
-2. Development → Legacy apps → Create legacy app → Private; scopes: `crm.objects.companies.read`, `crm.objects.companies.write`, `crm.objects.contacts.read`, `crm.objects.contacts.write` (notes use the contact scopes); create; Auth tab → copy the token.
+2. Development → Keys → Service keys → Create service key (Super admins only); name it "Auditely"; Add new scope: `crm.objects.companies.read`, `crm.objects.companies.write`, `crm.objects.contacts.read`, `crm.objects.contacts.write` (notes use the contact scopes; if `crm.objects.notes.read` / `.write` are listed, add them too); Create; copy the key. HubSpot recommends rotating it every 6 months.
 3. Vercel → Settings → Environment Variables: `HUBSPOT_TOKEN` (Production and Preview); redeploy.
 4. Run `docs/migrations/2026-10-01-hubspot.sql` in Supabase.
 
