@@ -4,7 +4,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { startingLeads } from '@/app/_shared/lib/demo/demoSamples';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
 import { withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
@@ -20,15 +22,19 @@ export interface SearchQuery {
  * discovers contacts for the results in the background.
  */
 export function useLeadSearch() {
-  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList();
+  const demo = useDemo();
+  // The public demo opens on its sample search
+  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(() =>
+    demo ? websiteFirst(startingLeads(demo.data)) : []
+  );
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(!!demo);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState<SearchQuery | null>(null);
+  const [query, setQuery] = useState<SearchQuery | null>(demo?.data.query ?? null);
   // Changes whenever a new result set loads: restarts discovery, resets the list view
   const [runKey, setRunKey] = useState(0);
 
-  const discovery = useEmailDiscovery(businesses, mergeContacts, runKey);
+  const discovery = useEmailDiscovery(businesses, mergeContacts, runKey, !demo);
 
   const start = useCallback(() => {
     setIsSearching(true);
@@ -49,6 +55,7 @@ export function useLeadSearch() {
 
   const search = useCallback(
     async (niche: string, location: string) => {
+      if (demo) return demo.restrict('search');
       start();
       try {
         const res = await fetch(API_ROUTES.SEARCH, {
@@ -65,7 +72,7 @@ export function useLeadSearch() {
         setIsSearching(false);
       }
     },
-    [start, show]
+    [demo, start, show]
   );
 
   const openSaved = useCallback(
@@ -88,10 +95,10 @@ export function useLeadSearch() {
   // Opened from Saved Searches (?load=<search_id>)
   useEffect(() => {
     const searchId = new URLSearchParams(window.location.search).get('load');
-    if (!searchId) return;
+    if (!searchId || demo) return;
     window.history.replaceState({}, '', ROUTES.HOME);
     openSaved(searchId);
-  }, [openSaved]);
+  }, [demo, openSaved]);
 
   return {
     businesses,

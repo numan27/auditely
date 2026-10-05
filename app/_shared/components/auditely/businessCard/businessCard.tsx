@@ -4,16 +4,19 @@
 
 import { useState } from 'react';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon } from '@/app/_shared/components/ui/icons/icons';
+import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPanel';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
+import type { BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
 
 interface BusinessCardProps {
@@ -24,6 +27,12 @@ interface BusinessCardProps {
   onUpdate?: (businessId: string, update: BusinessUpdate) => void;
   /** Start the audit as soon as the card appears (sites added by URL) */
   autoRun?: boolean;
+  /** Set while "Audit all" handles this business, and afterwards */
+  bulk?: BulkState;
+  /** Start with the report open although it's already audited (the demo's sample website) */
+  defaultOpen?: boolean;
+  /** Adds a cross that asks to remove this business from its list (websites added by URL) */
+  onRemove?: () => void;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -64,22 +73,28 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun }: BusinessCardProps) {
-  const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun });
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, onRemove }: BusinessCardProps) {
+  const demo = useDemo();
+  const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
+  const mail = useEmailSend(business, onUpdate);
   const { audit, auditStatus, reportStatus, email, saveEmail } = state;
-  // Pre-loaded cards (from saved searches) start collapsed; freshly processed cards start expanded
-  const [isExpanded, setIsExpanded] = useState(!(initialAudit && initialReport));
+  // Pre-loaded cards (from saved searches) start collapsed, and so do the ones "Audit all"
+  // finishes: dozens of open reports would bury the list. A card audited by hand opens.
+  const [startedBlank] = useState(!(initialAudit && initialReport));
+  const [toggled, setToggled] = useState<boolean | null>(defaultOpen ? true : null);
+  const isExpanded = toggled ?? (startedBlank && bulk?.stage !== 'done');
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
-  const isOutdated = auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
+  // The demo's sample has the age it has: no "Outdated" or "Over 30 days old" there
+  const isOutdated = !demo && auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
   // Outdated already says "re-audit"; stale only needs saying for a current-engine audit
-  const isStale = auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
+  const isStale = !demo && auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
   const reviews = reviewsLabel(business.rating, business.review_count);
 
   return (
     <article
-      className={`overflow-hidden rounded-2xl border bg-[var(--color-surface)] ${
+      className={`group/card overflow-hidden rounded-2xl border bg-[var(--color-surface)] ${
         isCompleted ? 'border-emerald-500/40' : 'border-[var(--color-border)]'
       }`}
     >
@@ -112,12 +127,17 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
             <div className="flex flex-wrap gap-x-5 gap-y-1.5 empty:hidden">
               {business.phone && (
                 <ContactLine icon={<PhoneIcon size={14} />}>
-                  <a
-                    href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
-                    className="hover:text-[var(--color-primary-600)] hover:underline"
-                  >
-                    {business.phone}
-                  </a>
+                  {/* The demo's numbers are masked: nothing to call */}
+                  {demo ? (
+                    business.phone
+                  ) : (
+                    <a
+                      href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
+                      className="hover:text-[var(--color-primary-600)] hover:underline"
+                    >
+                      {business.phone}
+                    </a>
+                  )}
                 </ContactLine>
               )}
               <BusinessEmail email={email} website={business.website} businessId={business.id} onFound={saveEmail} />
@@ -147,7 +167,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
           {isCompleted && (
             <button
               type="button"
-              onClick={() => setIsExpanded((prev) => !prev)}
+              onClick={() => setToggled(!isExpanded)}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'Hide audit details' : 'Show audit details'}
               className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"
@@ -155,10 +175,23 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
               <ChevronDownIcon size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             </button>
           )}
+
+          {/* Shown on hover or keyboard focus; always where there is no hover (phones) */}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${business.name}`}
+              title="Remove from this list"
+              className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] opacity-0 transition hover:bg-red-500/10 hover:text-red-600 focus-visible:opacity-100 group-hover/card:opacity-100 dark:hover:text-red-400 [@media(hover:none)]:opacity-100"
+            >
+              <XIcon size={16} />
+            </button>
+          )}
         </div>
       </div>
 
-      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} />}
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} mail={mail} />}
     </article>
   );
 }

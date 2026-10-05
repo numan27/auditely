@@ -2,13 +2,17 @@
 
 // "Audit a website": sites entered by URL rather than found by a search.
 // GET lists them newest first, with their audits; POST adds one (or returns
-// the same site if it was added before).
+// the same site if it was added before); DELETE removes the ones named.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { DIRECT_AUDIT_SEARCH } from '@/app/_shared/lib/config/directAudits';
 import { normalizeWebsiteUrl, websiteKey } from '@/app/_shared/lib/utils/websiteUrl';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// More than the list will hold; a longer request isn't from the app
+const MAX_REMOVED = 500;
 
 async function findDirectSearchId(): Promise<string | null> {
   const { data } = await supabase
@@ -78,4 +82,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save the website' }, { status: 500 });
   }
   return NextResponse.json({ business: data, existing: false });
+}
+
+// Removes sites from the list for good: their audits and reports go with them
+// (ON DELETE CASCADE). Only websites added by URL: a lead's id is left alone.
+export async function DELETE(request: NextRequest) {
+  const body = await request.json().catch(() => ({}));
+  const ids: unknown = body?.ids;
+  const valid =
+    Array.isArray(ids) &&
+    ids.length > 0 &&
+    ids.length <= MAX_REMOVED &&
+    ids.every((id) => typeof id === 'string' && UUID.test(id));
+  if (!valid) return NextResponse.json({ error: 'Choose the websites to remove' }, { status: 400 });
+
+  const searchId = await findDirectSearchId();
+  if (!searchId) return NextResponse.json({ removed: [] });
+
+  const { data, error } = await supabase
+    .from('businesses')
+    .delete()
+    .eq('search_id', searchId)
+    .in('id', ids as string[])
+    .select('id');
+  if (error) {
+    console.error('[audit-url] Failed to remove websites:', error.message);
+    return NextResponse.json({ error: 'Failed to remove the website' }, { status: 500 });
+  }
+  return NextResponse.json({ removed: (data ?? []).map((row) => row.id as string) });
 }

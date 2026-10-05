@@ -6,6 +6,7 @@
 import { rankedProblems } from '@/app/_shared/lib/audit/impact';
 import { isOutdatedAudit } from '@/app/_shared/lib/audit/types';
 import type { AiReport, Audit, Business } from '@/app/_shared/lib/types/auditely';
+import { escapeHtml } from '@/app/_shared/lib/utils/html';
 
 export interface LeadInput {
   business: Pick<Business, 'name' | 'address' | 'website' | 'phone' | 'email' | 'rating' | 'review_count'>;
@@ -53,8 +54,6 @@ export function industryFor(niche: string | null): { industry: string | null; gr
   return rule ? { industry: rule.industry, group: rule.group } : { industry: null, group: 'Other' };
 }
 
-const esc = (text: string) =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const score = (value: number | null | undefined) => (typeof value === 'number' ? String(value) : '—');
 
 // Platforms many businesses share: a domain there isn't the business's own
@@ -100,16 +99,16 @@ function noteHtml({ business, audit, report, reportUrl }: LeadInput, group: stri
     typeof business.review_count === 'number'
       ? `Google rating ${typeof business.rating === 'number' ? business.rating.toFixed(1) : '—'} from ${business.review_count} reviews`
       : null;
-  const problems = rankedProblems(audit).slice(0, 4).map((p) => `<li>${esc(p.problem)}</li>`).join('');
+  const problems = rankedProblems(audit).slice(0, 4).map((p) => `<li>${escapeHtml(p.problem)}</li>`).join('');
 
   return [
-    `<p><strong>Auditely audit lead — ${esc(group)}</strong></p>`,
-    `<p>Audited ${esc(audited)}: ${scores}</p>`,
-    rating && `<p>${esc(rating)}</p>`,
+    `<p><strong>Auditely audit lead — ${escapeHtml(group)}</strong></p>`,
+    `<p>Audited ${escapeHtml(audited)}: ${scores}</p>`,
+    rating && `<p>${escapeHtml(rating)}</p>`,
     problems && `<p><strong>Top problems</strong></p><ul>${problems}</ul>`,
-    `<p><strong>Summary</strong><br>${esc(report.summary)}</p>`,
-    `<p><strong>Cold email draft</strong><br>${esc(report.cold_email).replace(/\r?\n/g, '<br>')}</p>`,
-    `<p><a href="${esc(reportUrl)}">PDF report</a></p>`,
+    `<p><strong>Summary</strong><br>${escapeHtml(report.summary)}</p>`,
+    `<p><strong>Cold email draft</strong><br>${escapeHtml(report.cold_email).replace(/\r?\n/g, '<br>')}</p>`,
+    `<p><a href="${escapeHtml(reportUrl)}">PDF report</a></p>`,
   ]
     .filter(Boolean)
     .join('');
@@ -127,6 +126,8 @@ export function buildLeadPayload(input: LeadInput): LeadPayload {
       domain,
       website: business.website,
       phone: business.phone,
+      // A custom property in HubSpot; an account without it still gets the lead (hubspot.ts)
+      email: business.email,
       address: business.address,
       industry,
     }),

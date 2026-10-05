@@ -12,7 +12,9 @@ import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
 import { ReportActions } from '@/app/_shared/components/auditely/reportActions/reportActions';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
+import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { Business } from '@/app/_shared/lib/types/auditely';
 
 interface AuditPanelProps {
@@ -20,6 +22,8 @@ interface AuditPanelProps {
   state: ReturnType<typeof useBusinessAudit>;
   /** "Send to HubSpot", owned by the card so it survives collapsing */
   crm: ReturnType<typeof useCrmSend>;
+  /** "Send email", owned by the card for the same reason */
+  mail: ReturnType<typeof useEmailSend>;
 }
 
 const ROW = 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between';
@@ -53,8 +57,9 @@ function Failed({ message, onRetry }: { message: string; onRetry: () => void }):
 }
 
 /** The body of a business card: audit states, scores, findings and the AI report */
-export function AuditPanel({ business, state, crm }: AuditPanelProps) {
-  const { audit, report, auditStatus, auditError, reportStatus } = state;
+export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
+  const demo = useDemo();
+  const { audit, report, auditStatus, auditError, reportStatus, queued } = state;
 
   if (!business.website) {
     return (
@@ -70,11 +75,17 @@ export function AuditPanel({ business, state, crm }: AuditPanelProps) {
         {auditStatus === 'loading' ? (
           <Status
             busy
-            title={`Auditing ${domainOf(business.website)}…`}
-            detail="Speed tests run on mobile and desktop, so this takes about a minute."
+            title={demo ? `Replaying the saved audit of ${domainOf(business.website)}…` : `Auditing ${domainOf(business.website)}…`}
+            detail={
+              demo
+                ? 'A live audit takes about a minute; this replay is shortened.'
+                : 'Speed tests run on mobile and desktop, so this takes about a minute.'
+            }
           />
         ) : auditStatus === 'error' ? (
           <Failed message={auditError ?? "The audit didn't finish."} onRetry={state.retryAudit} />
+        ) : queued ? (
+          <Status title="Queued for audit" detail="Audit all is working through the list, a few sites at a time." />
         ) : (
           <>
             <Status
@@ -105,7 +116,8 @@ export function AuditPanel({ business, state, crm }: AuditPanelProps) {
                 variant="ghost"
                 size="sm"
                 onClick={state.reAudit}
-                disabled={reportStatus === 'loading'}
+                // Queued: "Audit all" is about to write this audit's summary
+                disabled={reportStatus === 'loading' || queued}
                 leftIcon={<RefreshIcon size={14} />}
               >
                 Re-audit
@@ -120,13 +132,15 @@ export function AuditPanel({ business, state, crm }: AuditPanelProps) {
 
         <section className="border-t border-[var(--color-border)] pt-6">
           {reportStatus === 'done' && report ? (
-            <AiReportSection report={report} />
+            <AiReportSection report={report} businessName={business.name} audit={audit} emailedAt={mail.sentAt} />
           ) : (
             <div className={ROW}>
               {reportStatus === 'loading' ? (
-                <Status busy title="Writing the summary and outreach email…" />
+                <Status busy title={demo ? 'Replaying the saved summary and outreach email…' : 'Writing the summary and outreach email…'} />
               ) : reportStatus === 'error' ? (
                 <Failed message="Couldn't write the AI summary." onRetry={() => state.generateReport(audit.id)} />
+              ) : queued ? (
+                <Status title="AI summary queued" detail="Audit all will write it shortly." />
               ) : (
                 <>
                   <Status title="AI summary" detail="A plain-English summary and an outreach email based on this audit." />
@@ -140,7 +154,7 @@ export function AuditPanel({ business, state, crm }: AuditPanelProps) {
         </section>
       </div>
 
-      {report && <ReportActions state={state} crm={crm} />}
+      {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} />}
     </>
   );
 }

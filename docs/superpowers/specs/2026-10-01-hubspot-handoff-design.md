@@ -37,7 +37,9 @@
 
 ## What is sent
 
-**Company** (`/crm/objects/2026-09/companies`): `name`, `domain` (website host without `www.`), `website`, `phone`, `address` (the full listing address), `industry` (only when the niche maps clearly — see below), and `lifecyclestage: lead` on create only.
+**Company** (`/crm/objects/2026-09/companies`): `name`, `domain` (website host without `www.`), `website`, `phone`, `address` (the full listing address), `email` (a custom company property — see below), `industry` (only when the niche maps clearly — see below), and `lifecyclestage: lead` on create only.
+
+**Company email:** HubSpot companies have no email property by default. To see the email in the Companies table, create a company property labelled "Email" (internal name `email`, single-line text). An account without it still gets the lead: HubSpot names the property it rejected, the company is saved again without it, and a warning is logged.
 
 **Contact** (only when the business has an email; `/crm/objects/2026-09/contacts`): `email`, `phone`, `website`, `company` (business name); on create also `lifecyclestage: lead` and `hs_lead_status: NEW`. Linked to the company with the default association (`PUT /crm/objects/2026-09/contact/{id}/associations/default/company/{id}`).
 
@@ -65,7 +67,7 @@
 | real estate, realtor | `REAL_ESTATE` | Real estate |
 | accountant, accounting, cpa, bookkeep | `ACCOUNTING` | Finance |
 
-The internal values follow HubSpot's naming but aren't published; if HubSpot rejects the `industry` value, the company is saved again without it and a warning is logged — the lead always goes through.
+All nine values are in HubSpot's allowed list (checked against the live API, 2026-10-01). If HubSpot ever rejects the `industry` value, the company is saved again without it and a warning is logged — the lead always goes through.
 
 **Matching:** the company id saved from the last send is updated directly; if that company was deleted in HubSpot (404), or there is no saved id, the company is found by `domain` (search) and updated, else created. The contact is found by email (search) and updated, else created.
 
@@ -117,7 +119,7 @@ The token is only read on the server and never sent to the browser.
 
 ## UI
 
-In the audit panel's footer, next to "Download PDF report" (shown once the AI report exists): **Send to HubSpot**. While sending: "Sending…". After success: "Sent to HubSpot · {date}" and the button becomes **Send again**. Errors show beside the button.
+In the audit panel's footer, next to "Download PDF report" (shown once the AI report exists): **Send to HubSpot**. While sending: "Sending…". After success: "Sent to HubSpot {date}" and the button becomes **Update HubSpot** (renamed from "Send again" once "Send email" sat beside it, 2026-10-02). Errors show beside the button.
 
 ## Setup (user, once)
 

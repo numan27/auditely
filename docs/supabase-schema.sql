@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- The HubSpot company this lead was sent to, and when
   hubspot_company_id  TEXT,
   crm_sent_at         TIMESTAMPTZ,
+  -- When the outreach email was last sent from Auditely
+  emailed_at          TIMESTAMPTZ,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

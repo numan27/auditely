@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { contactsFromResponse, type ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 import { emailFinderNotice } from '@/app/_shared/lib/utils/emailFinderNotice';
@@ -13,6 +14,13 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 /** Which button's action is running: "Run audit" or "Find email" */
 export type UrlAuditBusy = 'audit' | 'email' | null;
+
+/** Sites waiting for a yes in the "remove?" dialog */
+export interface UrlAuditRemoval {
+  sites: BusinessWithData[];
+  busy: boolean;
+  error: string | null;
+}
 
 export interface UrlAuditNotice {
   tone: 'error' | 'info';
@@ -28,19 +36,23 @@ const formatDate = (iso: string) =>
  * "Find email" adds it without auditing and runs the full email search.
  */
 export function useUrlAudits() {
-  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList();
-  const [isLoading, setIsLoading] = useState(true);
+  const demo = useDemo();
+  // The public demo lists its sample website and loads nothing
+  const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(demo?.data.sites);
+  const [isLoading, setIsLoading] = useState(!demo);
   const [busy, setBusy] = useState<UrlAuditBusy>(null);
   const [notice, setNotice] = useState<UrlAuditNotice | null>(null);
   const [autoRunId, setAutoRunId] = useState<string | null>(null);
+  const [removal, setRemoval] = useState<UrlAuditRemoval | null>(null);
 
   useEffect(() => {
+    if (demo) return;
     fetch(API_ROUTES.AUDIT_URL)
       .then((res) => res.json())
       .then((data) => setBusinesses(data.businesses ?? []))
       .catch(() => setNotice({ tone: 'error', text: "Couldn't load your earlier audits. Reload the page to try again." }))
       .finally(() => setIsLoading(false));
-  }, [setBusinesses]);
+  }, [demo, setBusinesses]);
 
   // One business to /api/find-emails; returns what's now known about it
   const findContacts = useCallback(
@@ -92,6 +104,10 @@ export function useUrlAudits() {
   /** "Run audit": adds a website and starts its audit. Resolves true when the form can be cleared. */
   const addWebsite = useCallback(
     async (url: string): Promise<boolean> => {
+      if (demo) {
+        demo.restrict('auditUrl');
+        return false;
+      }
       setBusy('audit');
       setNotice(null);
       try {
@@ -115,7 +131,7 @@ export function useUrlAudits() {
         setBusy(null);
       }
     },
-    [addSite, discoverContacts]
+    [addSite, demo, discoverContacts]
   );
 
   /**
@@ -124,6 +140,10 @@ export function useUrlAudits() {
    */
   const findEmail = useCallback(
     async (url: string): Promise<boolean> => {
+      if (demo) {
+        demo.restrict('auditUrl');
+        return false;
+      }
       setBusy('email');
       setNotice(null);
       try {
@@ -139,8 +159,53 @@ export function useUrlAudits() {
         setBusy(null);
       }
     },
-    [addSite, findContacts]
+    [addSite, demo, findContacts]
   );
 
-  return { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness };
+  /** The cross on a card, or "Clear all": opens the "remove?" dialog for these sites */
+  const askRemove = useCallback((sites: BusinessWithData[]) => {
+    if (sites.length > 0) setRemoval({ sites, busy: false, error: null });
+  }, []);
+
+  const cancelRemove = useCallback(() => setRemoval(null), []);
+
+  /** The dialog's yes: deletes the sites with their audits and takes them off the list */
+  const confirmRemove = useCallback(async () => {
+    if (!removal || removal.busy) return;
+    setRemoval({ ...removal, busy: true, error: null });
+    try {
+      const res = await fetch(API_ROUTES.AUDIT_URL, {
+        method: 'DELETE',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ ids: removal.sites.map((site) => site.id) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRemoval({ ...removal, busy: false, error: data.error ?? "Couldn't remove it. Try again." });
+        return;
+      }
+      const removed = new Set<string>(data.removed ?? []);
+      setBusinesses((prev) => prev.filter((b) => !removed.has(b.id)));
+      // A note about a site that is gone would only confuse
+      setNotice(null);
+      setRemoval(null);
+    } catch {
+      setRemoval({ ...removal, busy: false, error: "Couldn't reach Auditely. Check your connection and try again." });
+    }
+  }, [removal, setBusinesses]);
+
+  return {
+    businesses,
+    isLoading,
+    busy,
+    notice,
+    autoRunId,
+    addWebsite,
+    findEmail,
+    updateBusiness,
+    removal,
+    askRemove,
+    cancelRemove,
+    confirmRemove,
+  };
 }

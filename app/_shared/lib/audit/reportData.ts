@@ -41,7 +41,7 @@ export const formatSsl = (valid: boolean | null | undefined): string =>
 export function siteReasonText(reason: string): string {
   // "Blocked (403)" / "Blocked (bot challenge)": the site's bot protection turned the audit away
   if (reason.startsWith('Blocked')) {
-    return "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
+    return "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
   }
   return `Couldn't read site: ${reason}`;
 }
@@ -69,7 +69,7 @@ export function sortFindings(findings: Finding[]): Finding[] {
 }
 
 // v1 audits never measured SEO or SSL (their 0 / false meant "unknown")
-function measuredSeoAndSsl(audit: AuditLike): { seo: number | null; ssl: boolean | null } {
+export function measuredSeoAndSsl(audit: AuditLike): { seo: number | null; ssl: boolean | null } {
   return isOutdatedAudit(audit.engine_version)
     ? { seo: null, ssl: null }
     : { seo: audit.seo_score, ssl: audit.ssl_valid };
@@ -107,7 +107,8 @@ export function buildPdfProps(
   audit: AuditLike,
   business: { name: string; website: string | null; address: string; phone: string | null },
   report: { summary: string; improvements: unknown },
-  contact: PdfContact
+  // null: no "next step" box (the public demo)
+  contact: PdfContact | null
 ): PdfDocumentProps {
   const problems = rankedProblems(audit).slice(0, PDF_PROBLEMS_LIMIT);
   const { seo, ssl } = measuredSeoAndSsl(audit);

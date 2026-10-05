@@ -1,0 +1,96 @@
+# Bulk Audit and Send Email — Design Spec
+
+**Date:** 2026-10-02
+**Status:** Built (user asked to start directly: "start with bulk audit … enable email sending from auditely", no bulk email sending)
+**Project:** the time-saving follow-up to `update.txt` — #1 (queue) in the form that fits Vercel, plus sending the outreach email from the app.
+
+## Background
+
+Per lead the user clicked "Run audit" and waited about a minute, then downloaded the PDF, then copied the email draft into a mail client and attached the PDF. Three manual steps times every business in a search.
+
+## Goals
+
+1. One click audits every business in the current view and writes each AI summary.
+2. One lead's outreach email is reviewed, edited and sent from Auditely with the PDF attached.
+
+## Non-goals
+
+- Bulk email sending (user's decision: every email is reviewed and sent one at a time).
+- A server-side job queue. The run lives in the browser tab; that needs no new infrastructure on Vercel and each audit stays one request under the 300 s limit.
+- Bulk "Send to HubSpot".
+- Re-auditing stale or outdated audits in bulk (that stays "Re-audit" on the card).
+
+## Bulk audit
+
+| Decision | Choice | Why |
+|---|---|---|
+| What it covers | Businesses matching the active filters that have a website and no audit, or no AI summary | The filters are the selection: "Has email" + Audit all audits only leads you can email |
+| Order | The current sort order | The likeliest prospects first |
+| How many at once | 3 | An audit runs PageSpeed twice and the summary calls the AI; 3 stays inside both rate limits |
+| Stop | Nothing new starts; running audits finish | Their results are already paid for |
+| Failures | Shown on the card with its own "Try again"; the next "Audit all" picks them up | A dead website must not stop the run |
+| Leaving | A new search cancels the run; closing the tab asks first | What was audited is saved either way |
+| Afterwards | Cards finished by the run stay collapsed; the list re-arranges once | Dozens of open reports would bury the list; "Weakest site first" then means something |
+
+Code: `utils/pool.ts` (`runPool`), `utils/bulkAudit.ts` (`needsAudit`, `auditBusiness`, `shownStatus`), `hooks/useBulkAudit.ts`, `bulkAuditControl/`. Results reach the cards the way a card's own audit does: through the list (`onUpdate`) and back in through `initialAudit` / `initialReport`, so cards that aren't on screen are covered. A card's own activity always wins over bulk state (`shownStatus`).
+
+## Send email
+
+- **Send email** in the card footer (disabled without an email address) opens a dialog: recipient, subject, message, a note that the PDF is attached, and a warning when the lead was already emailed.
+- The draft is the AI's email: its "Subject:" line becomes the subject (Windows line endings included), and a sign-off the AI left on the offer's line, or the next, moves to its own paragraph.
+- `POST /api/send-email { business_id, subject, body }`: the recipient always comes from the stored business; subject and message are validated on both sides (`email/outreach.ts`); the PDF is the same one the download uses; sent from `FROM_EMAIL`, with `EMAIL_REPLY_TO` and `EMAIL_BCC` when set.
+- **How it is sent** (`email/mailer.ts`): through the mailbox's own SMTP server when `SMTP_HOST` is set (Zoho: `smtp.zoho.com` for a free account, `smtppro.zoho.com` for a paid one, port 465), otherwise through Resend. Added 2026-10-02 because an email sent through Resend never reaches the mailbox: nothing in its Sent folder. Sent through the mailbox, Zoho keeps each email in Sent and the reply threads under it in the Inbox. A half-filled mailbox setup is an error, never a quiet fall back to Resend.
+- `businesses.emailed_at` records the send (`docs/migrations/2026-10-02-emailed-at.sql`). When the email went out but the date couldn't be saved, the answer is still a success with a warning, so nobody sends it again thinking it failed.
+
+### What the lead receives (added 2026-10-02)
+
+The plain-text email looked unfinished next to the PDF, and a lead who never opens the PDF saw nothing of the audit. The email is now designed (`email/outreachEmail.ts`, tables and inline styles only):
+
+1. **Header** — the DevArtVentures logo and name on the site's navy. The logo travels inside the email (an inline attachment, `email/brandLogo.ts`), so it shows without the mail client loading anything from the web; if the file can't be read the email goes without it.
+2. **The message** — exactly as edited in the dialog, escaped; a blank line starts a paragraph.
+3. **Your website at a glance** — the business, its measured scores in owner language (Desktop speed, Phone speed, Google search, AI search, Direct answers, Easy to reach, Secure) coloured as in the PDF, and the three worst problems with what each costs (`rankedProblems`). Unmeasured scores are left out.
+4. **Book your free call** — `REPORT_BOOKING_URL`, or an email to `REPORT_CONTACT_EMAIL` when that isn't set (the PDF's rule).
+5. **Footer** — DevArtVentures, devartventures.com, the report contact's name, phone and email, and a line on how to opt out.
+
+A plain-text version with the same content goes with it for mail clients that show no HTML. The PDF stays attached.
+
+**The offer sentence changed** with it: the PDF is attached, so "want me to send it over?" was wrong. New reports end "I've attached a short report with N fixes for {business} — happy to walk you through it on a quick call." Drafts written before the change are rewritten the same way when shown or sent (`outreachDraft`); the stored text is untouched.
+
+**Shorter subjects:** the prompt asks for at most 6 words, and a subject over 50 characters is sent back once. Older reports keep their subject until the summary is written again; it can be edited in the dialog. The fallback subject names the business only when that stays under 50 characters.
+
+**Preview:** the dialog's Preview button shows the designed email (`POST /api/send-email` with `preview: true` answers `{ html }` and sends nothing; it works before email sending is set up). It is shown in an iframe with an empty sandbox.
+
+### Follow-up email (added 2026-10-02)
+
+Once a lead has been emailed (`emailed_at`), its card shows a **Follow-up email** under the outreach email and the button reads **Send follow-up**: the dialog then opens with the follow-up instead of the first email. The follow-up (`email/followUp.ts`) is a fixed text, not written by the AI: a reminder of the report, the audit's worst problem and its cost in the impact library's words, and the first email's sign-off. It is sent in the same design with the PDF attached again. Only the last send date is stored, so every send after the first starts from the follow-up.
+
+| Case | Status | Message |
+|---|---|---|
+| `FROM_EMAIL` missing, or neither a mailbox nor Resend | 503 | "Email sending isn't set up — add FROM_EMAIL and your mailbox's SMTP_HOST, SMTP_USER and SMTP_PASS (or RESEND_API_KEY) in Vercel." |
+| Some but not all of `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | 503 | "Email sending is half set up — SMTP_HOST, SMTP_USER and SMTP_PASS are all needed." |
+| No email address | 400 | "This business has no email address." |
+| No audit or summary | 400 | "Run the audit and AI summary first." |
+| Zoho answers "Access Restricted": the server isn't the one for the account's plan | 502 | "{SMTP_HOST} isn't the server for this mailbox (554 5.7.8 Access Restricted) — set SMTP_HOST to smtp.zoho.com for a free Zoho account, smtppro.zoho.com for a paid one." |
+| The mailbox refuses the login | 502 | "The mailbox refused the login ({its answer}) — check SMTP_USER and SMTP_PASS. SMTP_PASS must be an app password when two-step sign-in is on." |
+| The mailbox or Resend refuses the email (sender isn't the mailbox, unverified domain, bad address) | 502 | "The email wasn't sent: {its reason}" |
+| The mailbox stops answering (it can't be told whether the email went) | 502 | "The mailbox didn't confirm the email, so it may or may not have gone — check its Sent folder before sending again." |
+| No answer from Resend | 502 | "The email service couldn't be reached — try again." |
+
+## Setup (user, once)
+
+1. Run `docs/migrations/2026-10-02-emailed-at.sql` in Supabase.
+2. Mailbox (emails show in its Sent folder): in Zoho, create an app password (Security → App Passwords). `SMTP_HOST` is `smtp.zoho.com` for a free account and `smtppro.zoho.com` for a paid one. Checked 2026-10-02: this account's login is accepted on `smtp.zoho.com` and refused with "Access Restricted" on `smtppro.zoho.com`. Newer free accounts may have no SMTP access at all. Or Resend (no copy in the mailbox): verify the sending domain (DNS records) and create an API key.
+3. Vercel → Environment Variables: `FROM_EMAIL` (the mailbox, e.g. `DevArtVentures <contact@devartventures.com>`), then `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` or `RESEND_API_KEY`, optionally `EMAIL_REPLY_TO` and `EMAIL_BCC`; redeploy.
+
+## Testing
+
+- Unit (written first): `pool`, `bulkAudit`, `outreach`, `followUp`, `outreachEmail`, `mailer` (both ways of sending), the `/api/send-email` route.
+- The mailbox path against Zoho's real server with a made-up login: encrypted connection on 465 and 587, and the refused-login message.
+- Browser (Playwright against `next dev`, API calls faked): Audit all — 3 at a time, Stop, a failing site, a second run; Send email — prefilled draft, validation, a refusal, a send, the second-send warning.
+
+## Risks
+
+- **The tab must stay open** during a bulk run.
+- **Cold email rules** (CAN-SPAM and similar): the email now says how to opt out (reply), which has to be honoured by hand; it still carries no postal address.
+- **Mail clients differ**: the design was checked in a browser at desktop and phone widths and sent as a test through Zoho to Gmail; Outlook's desktop app ignores rounded corners.
+- **Attachments from a new sending domain** can land in spam; `EMAIL_BCC` to your own inbox shows what recipients get.

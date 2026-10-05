@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET, POST } from '@/app/api/audit-url/route';
+import { DELETE, GET, POST } from '@/app/api/audit-url/route';
 
 type Result = { data: unknown; error: { message: string } | null };
 
@@ -8,20 +8,23 @@ type Result = { data: unknown; error: { message: string } | null };
 const db = vi.hoisted(() => {
   const state = {
     responses: {} as Record<string, Result[]>,
-    calls: [] as { table: string; op: string; payload?: unknown }[],
+    calls: [] as { table: string; op: string; payload?: unknown; filters: unknown[][] }[],
   };
   const from = (table: string) => {
     let op = 'select';
     let payload: unknown;
+    const filters: unknown[][] = [];
     const resolve = (): Promise<Result> => {
-      state.calls.push({ table, op, payload });
+      state.calls.push({ table, op, payload, filters });
       const queue = state.responses[`${table}.${op}`] ?? [];
       return Promise.resolve((queue.length > 1 ? queue.shift() : queue[0]) ?? { data: null, error: null });
     };
     const chain = {
       select: () => chain,
       insert: (value: unknown) => ((op = 'insert'), (payload = value), chain),
-      eq: () => chain,
+      delete: () => ((op = 'delete'), chain),
+      eq: (column: string, value: unknown) => (filters.push(['eq', column, value]), chain),
+      in: (column: string, values: unknown) => (filters.push(['in', column, values]), chain),
       order: () => chain,
       limit: () => chain,
       single: resolve,
@@ -42,6 +45,12 @@ async function post(url: unknown) {
   const res = await POST(new NextRequest('http://localhost/api/audit-url', { method: 'POST', body: JSON.stringify({ url }) }));
   return { status: res.status, json: await res.json() };
 }
+
+async function remove(body: unknown) {
+  const res = await DELETE(new NextRequest('http://localhost/api/audit-url', { method: 'DELETE', body: JSON.stringify(body) }));
+  return { status: res.status, json: await res.json() };
+}
+const deletes = () => db.state.calls.filter((c) => c.op === 'delete');
 
 beforeEach(() => {
   db.state.responses = {};
@@ -106,5 +115,68 @@ describe('GET /api/audit-url', () => {
     };
     const { businesses } = await (await GET()).json();
     expect(businesses).toEqual([{ id: 'b1', audit: { id: 'a1' }, ai_report: { id: 'r1' } }]);
+  });
+});
+
+describe('DELETE /api/audit-url', () => {
+  const A = '6f1c2f0e-8a52-4a53-9d0f-3c1c6b7e2a11';
+  const B = '0b9d7c44-1e2a-4f6b-8c3d-5a4e3f2b1c00';
+
+  it('removes the given sites, and only among the websites added by URL', async () => {
+    db.state.responses = {
+      'searches.select': [ok({ id: 'direct' })],
+      'businesses.delete': [ok([{ id: A }, { id: B }])],
+    };
+    const { status, json } = await remove({ ids: [A, B] });
+    expect(status).toBe(200);
+    expect(json).toEqual({ removed: [A, B] });
+    expect(deletes()).toHaveLength(1);
+    expect(deletes()[0].table).toBe('businesses');
+    expect(deletes()[0].filters).toEqual([
+      ['eq', 'search_id', 'direct'],
+      ['in', 'id', [A, B]],
+    ]);
+  });
+
+  it('reports only what was really removed', async () => {
+    db.state.responses = {
+      'searches.select': [ok({ id: 'direct' })],
+      // B belongs to a lead search: the search_id filter leaves it alone
+      'businesses.delete': [ok([{ id: A }])],
+    };
+    expect((await remove({ ids: [A, B] })).json).toEqual({ removed: [A] });
+  });
+
+  it('refuses a request that names no sites, before touching the database', async () => {
+    for (const body of [{}, { ids: [] }, { ids: 'all' }, { ids: [A, 7] }, { ids: ['not-an-id'] }, { ids: [`${A}' or true`] }, { all: true }]) {
+      const { status, json } = await remove(body);
+      expect(status, JSON.stringify(body)).toBe(400);
+      expect(json.error).toBeTruthy();
+    }
+    expect(db.state.calls).toHaveLength(0);
+  });
+
+  it('refuses more sites than one list can hold', async () => {
+    const { status } = await remove({ ids: Array.from({ length: 501 }, () => A) });
+    expect(status).toBe(400);
+    expect(db.state.calls).toHaveLength(0);
+  });
+
+  it('has nothing to remove before any site was added', async () => {
+    db.state.responses = { 'searches.select': [ok(null)] };
+    const { status, json } = await remove({ ids: [A] });
+    expect(status).toBe(200);
+    expect(json).toEqual({ removed: [] });
+    expect(deletes()).toHaveLength(0);
+  });
+
+  it('says so when the database refuses', async () => {
+    db.state.responses = {
+      'searches.select': [ok({ id: 'direct' })],
+      'businesses.delete': [{ data: null, error: { message: 'boom' } }],
+    };
+    const { status, json } = await remove({ ids: [A] });
+    expect(status).toBe(500);
+    expect(json.error).toMatch(/remove/i);
   });
 });

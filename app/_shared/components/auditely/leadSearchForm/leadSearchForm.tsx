@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { CommandField } from '@/app/_shared/components/ui/commandField/commandField';
 import { MapPinIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 
 interface Suggestion {
   description: string;
@@ -18,6 +19,7 @@ interface LeadSearchFormProps {
 }
 
 export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
+  const demo = useDemo();
   const [niche, setNiche] = useState('');
   const [location, setLocation] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -27,7 +29,8 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchSuggestions = useCallback(async (input: string) => {
-    if (input.trim().length < 2) {
+    // The demo makes no requests, so it has no city suggestions
+    if (demo || input.trim().length < 2) {
       setSuggestions([]);
       setIsOpen(false);
       return;
@@ -42,7 +45,7 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
       setSuggestions([]);
       setIsOpen(false);
     }
-  }, []);
+  }, [demo]);
 
   const handleLocationChange = (value: string) => {
     setLocation(value);
@@ -88,7 +91,8 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
     e.preventDefault();
     const n = niche.trim();
     const l = location.trim();
-    if (!n || !l || isLoading) return;
+    // In the demo the button always answers (with the notice), even with empty fields
+    if (isLoading || (!demo && (!n || !l))) return;
     setIsOpen(false);
     onSearch(n, l);
   };
@@ -167,7 +171,7 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
         variant="primary"
         size="md"
         isLoading={isLoading}
-        disabled={isLoading || !niche.trim() || !location.trim()}
+        disabled={isLoading || (!demo && (!niche.trim() || !location.trim()))}
         className="h-12"
       >
         {isLoading ? 'Searching…' : 'Find leads'}

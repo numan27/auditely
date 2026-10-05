@@ -5,15 +5,12 @@ import { adminLoginSchema, type AdminLoginFormValues } from '@/app/_shared/lib/v
 import { Input } from '@/app/_shared/components/ui/input/input';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { API_ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
-import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
   callbackUrl?: string;
 }
 
 export function LoginForm({ callbackUrl }: LoginFormProps) {
-  const router = useRouter();
-
   const formik = useFormik<AdminLoginFormValues>({
     initialValues: {
       password: '',
@@ -31,8 +28,9 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           setErrors({ password: data.error ?? 'Invalid password' });
           return;
         }
-        router.replace(safeCallbackUrl(callbackUrl));
-        router.refresh();
+        // A full page load, not a client-side navigation: the router may still hold
+        // the home page as prefetched before the login, which leads to the public demo
+        window.location.replace(safeCallbackUrl(callbackUrl));
       } catch {
         setErrors({ password: 'Something went wrong. Please try again.' });
       } finally {

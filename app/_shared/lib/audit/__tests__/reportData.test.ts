@@ -79,7 +79,7 @@ describe('siteReasonText', () => {
   it('explains bot blocking in plain words, for new and old audits', () => {
     for (const reason of ['Blocked (403)', 'Blocked (bot challenge)']) {
       expect(siteReasonText(reason)).toBe(
-        "This website blocks automated visitors, so GEO and AEO couldn't be checked. The PageSpeed scores come from Google and aren't affected."
+        "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected."
       );
     }
   });
@@ -223,6 +223,10 @@ describe('buildPdfProps', () => {
   it('passes the report contact through', () => {
     const withBooking = { ...contact, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
     expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
+  });
+
+  it('builds a report without a contact, for the public demo', () => {
+    expect(buildPdfProps(audit, business, noReport, null).contact).toBeNull();
   });
 });
 

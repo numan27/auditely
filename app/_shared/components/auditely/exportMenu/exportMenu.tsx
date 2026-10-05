@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Dropdown, DropdownItem } from '@/app/_shared/components/ui/dropdown/dropdown';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { leadTable, toDelimited, toHtmlTable } from '@/app/_shared/lib/utils/leadExport';
 import { copyToClipboard, downloadBlob } from '@/app/_shared/lib/utils/browserExport';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
@@ -37,6 +38,7 @@ type Status = { kind: 'copied'; rows: number } | { kind: 'error' };
 
 /** Export button: CSV download, or a copy that pastes into Google Sheets as cells */
 export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
+  const demo = useDemo();
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,8 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
   }, [status]);
 
   const downloadCsv = () => {
+    // The demo doesn't hand out its list
+    if (demo) return demo.restrict('export');
     setStatus(null);
     // The BOM makes Excel read the file as UTF-8
     const csv = `﻿${toDelimited(leadTable(getLeads()), ',')}`;
@@ -53,6 +57,8 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
   };
 
   const copyForSheets = async () => {
+    // The demo doesn't hand out its list
+    if (demo) return demo.restrict('export');
     const leads = getLeads();
     const table = leadTable(leads);
     try {

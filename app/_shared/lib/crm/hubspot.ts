@@ -55,8 +55,12 @@ async function findId(call: Call, object: 'companies' | 'contacts', property: st
   return found?.results?.[0]?.id ?? null;
 }
 
-// Updates (id) or creates the company. HubSpot's industry codes aren't published:
-// one it rejects is dropped so the lead still goes through.
+// What a company can go without: an industry code HubSpot doesn't know, and the
+// email, which only accounts with a custom company "email" property can hold
+const OPTIONAL = ['industry', 'email'];
+
+// Updates (id) or creates the company. An optional property HubSpot rejects is
+// dropped so the lead still goes through.
 async function saveCompany(call: Call, id: string | null, lead: LeadPayload): Promise<string> {
   const write = (properties: Record<string, string>) =>
     id
@@ -65,9 +69,12 @@ async function saveCompany(call: Call, id: string | null, lead: LeadPayload): Pr
   try {
     return (await write(lead.company)).id;
   } catch (err) {
-    if (!(err instanceof HubSpotError) || err.status !== 400 || !lead.company.industry) throw err;
-    console.warn('[hubspot] industry rejected, saving without it:', lead.company.industry, err.message);
-    return (await write(Object.fromEntries(Object.entries(lead.company).filter(([key]) => key !== 'industry')))).id;
+    if (!(err instanceof HubSpotError) || err.status !== 400) throw err;
+    // HubSpot names each property it rejected: "name":"industry"
+    const rejected = OPTIONAL.filter((key) => key in lead.company && err.message.includes(`"name":"${key}"`));
+    if (!rejected.length) throw err;
+    console.warn('[hubspot] company saved without what HubSpot rejected:', rejected.join(', '));
+    return (await write(Object.fromEntries(Object.entries(lead.company).filter(([key]) => !rejected.includes(key))))).id;
   }
 }
 

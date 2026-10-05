@@ -4,9 +4,12 @@ import { useCallback, useState } from 'react';
 import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/auditely';
 import type { ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 
-/** A list of businesses that contact discovery and the cards write back into */
-export function useBusinessList() {
-  const [businesses, setBusinesses] = useState<BusinessWithData[]>([]);
+/**
+ * A list of businesses that contact discovery and the cards write back into.
+ * @param initial what the list starts with (the public demo's sample)
+ */
+export function useBusinessList(initial: BusinessWithData[] | (() => BusinessWithData[]) = []) {
+  const [businesses, setBusinesses] = useState<BusinessWithData[]>(initial);
 
   // Merge discovered contacts into the list (cards re-render via prop sync)
   const mergeContacts = useCallback((found: ContactsFound[]) => {

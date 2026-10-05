@@ -1,16 +1,15 @@
 /**
  * Image Assets
  *
- * Usage: import { images } from '@/public/images';
- * Then use in Image component: src={images.heroBanner}
+ * Usage: import { images } from '@/app/_shared/assets/images';
  *
- * Note: For static files, use path strings. Next.js serves files from /public at root.
+ * Paths are from the project root: these files are read on the server (the
+ * outreach email attaches the logo). next.config.ts lists them so they are
+ * deployed with the routes that read them.
  */
 
 export const images = {
-  // Add image paths here
-  // Example: heroBanner: '/images/hero-banner.jpg',
-  // Example: userAvatar: '/images/user-avatar.png',
+  devartventuresLogo: 'app/_shared/assets/images/devartventuresLogo.png',
 } as const;
 
 export type ImageKey = keyof typeof images;

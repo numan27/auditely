@@ -2,13 +2,10 @@
 
 'use client';
 
+import type { ReactNode } from 'react';
 import { ExportMenu } from '@/app/_shared/components/auditely/exportMenu/exportMenu';
-import {
-  FILTER_OPTIONS,
-  SORT_OPTIONS,
-  type LeadFilter,
-  type LeadSort,
-} from '@/app/_shared/lib/utils/leadView';
+import { SortMenu } from '@/app/_shared/components/auditely/sortMenu/sortMenu';
+import { FILTER_OPTIONS, type LeadFilter, type LeadSort } from '@/app/_shared/lib/utils/leadView';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 
 interface LeadToolbarProps {
@@ -19,6 +16,8 @@ interface LeadToolbarProps {
   onToggleFilter: (filter: LeadFilter) => void;
   getExportLeads: () => BusinessWithData[];
   exportFileName: string;
+  /** Shown before the sort order ("Audit all") */
+  actions?: ReactNode;
 }
 
 /** Filter chips, sort order and export for the results list */
@@ -30,6 +29,7 @@ export function LeadToolbar({
   onToggleFilter,
   getExportLeads,
   exportFileName,
+  actions,
 }: LeadToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -67,21 +67,12 @@ export function LeadToolbar({
         })}
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-tertiary)]">
-          Sort
-          <select
-            value={sort}
-            onChange={(e) => onSortChange(e.target.value as LeadSort)}
-            className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-sm font-medium text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)]"
-          >
-            {SORT_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        {actions}
+        <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-tertiary)]">
+          <span aria-hidden>Sort</span>
+          <SortMenu sort={sort} onSortChange={onSortChange} />
+        </div>
         <ExportMenu getLeads={getExportLeads} fileName={exportFileName} />
       </div>
     </div>

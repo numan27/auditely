@@ -3,13 +3,19 @@
 'use client';
 
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditForm } from '@/app/_shared/components/auditely/urlAuditForm/urlAuditForm';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUrlAudits } from '@/app/_shared/lib/hooks/useUrlAudits';
 
 /** "Audit a website": audit any URL, with every site audited this way listed below */
 export function UrlAuditPanel() {
-  const { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness } = useUrlAudits();
+  const demo = useDemo();
+  const { businesses, isLoading, busy, notice, autoRunId, addWebsite, findEmail, updateBusiness, removal, askRemove, cancelRemove, confirmRemove } =
+    useUrlAudits();
+  // The demo's sample stays put: nothing there can be removed
+  const canRemove = !demo;
 
   return (
     <>
@@ -32,9 +38,20 @@ export function UrlAuditPanel() {
         </p>
       ) : (
         <section className="mt-10" aria-labelledby="url-audits-title">
-          <h2 id="url-audits-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-            Audited websites
-          </h2>
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 id="url-audits-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+              Audited websites
+            </h2>
+            {canRemove && businesses.length > 1 && (
+              <button
+                type="button"
+                onClick={() => askRemove(businesses)}
+                className="shrink-0 cursor-pointer text-sm font-medium text-[var(--color-text-secondary)] hover:text-red-600 hover:underline dark:hover:text-red-400"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
           <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
             {businesses.length} {businesses.length === 1 ? 'site' : 'sites'}, newest first
           </p>
@@ -47,10 +64,22 @@ export function UrlAuditPanel() {
                 initialReport={business.ai_report}
                 onUpdate={updateBusiness}
                 autoRun={business.id === autoRunId}
+                defaultOpen={!!demo}
+                onRemove={canRemove ? () => askRemove([business]) : undefined}
               />
             ))}
           </div>
         </section>
+      )}
+
+      {removal && (
+        <RemoveSitesModal
+          sites={removal.sites}
+          removing={removal.busy}
+          error={removal.error}
+          onConfirm={confirmRemove}
+          onClose={cancelRemove}
+        />
       )}
     </>
   );

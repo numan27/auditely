@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
 
     if (businessInsertError) {
       console.error('[search] Failed to store businesses:', businessInsertError.message);
+      // Drop the empty search, or the next identical search would reuse it and find nothing
+      const { error: cleanupError } = await supabase.from('searches').delete().eq('id', newSearch.id);
+      if (cleanupError) console.error('[search] Failed to remove the empty search:', cleanupError.message);
       return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
     }
     businesses = data ?? [];
