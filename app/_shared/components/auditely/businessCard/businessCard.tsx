@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/app/_shared/components/ui/badge/badge';
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MapPinIcon, PhoneIcon, StarIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
+import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, GlobeIcon, MailIcon, MapPinIcon, PhoneIcon, StarIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPanel';
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
@@ -17,6 +17,7 @@ import { checkFor } from '@/app/_shared/lib/email/emailCheck';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
+import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 import type { BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
 
@@ -107,6 +108,16 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon size={11} strokeWidth={3} />
                 Audited
+              </span>
+            )}
+            {/* In the header, so a closed card says it too; the day is the latest email's */}
+            {mail.sentAt && (
+              <span
+                title={`Last emailed ${new Date(mail.sentAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`}
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-600)]/10 px-2 py-0.5 text-xs font-medium text-[var(--color-primary-600)]"
+              >
+                <MailIcon size={11} strokeWidth={2.5} />
+                Emailed {sentOn(mail.sentAt)}
               </span>
             )}
             {isOutdated && <Badge variant="warning" size="sm">Outdated</Badge>}

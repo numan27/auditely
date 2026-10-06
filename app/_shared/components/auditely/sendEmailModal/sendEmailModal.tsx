@@ -11,6 +11,7 @@ import { TextArea } from '@/app/_shared/components/ui/textArea/textArea';
 import { MailIcon } from '@/app/_shared/components/ui/icons/icons';
 import { blocksSending, checkReason, type EmailCheck } from '@/app/_shared/lib/email/emailCheck';
 import { BODY_MAX, outreachProblem, SUBJECT_MAX, type OutreachDraft } from '@/app/_shared/lib/email/outreach';
+import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 
 interface SendEmailModalProps {
   businessName: string;
@@ -31,8 +32,6 @@ interface SendEmailModalProps {
   onPreview: (draft: OutreachDraft) => Promise<string>;
   onClose: () => void;
 }
-
-const sentOn = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 /**
  * Review, edit and send one lead's outreach email. Mount it only while open:

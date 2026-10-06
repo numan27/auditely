@@ -34,7 +34,7 @@ export function BulkAuditControl({ pending, progress, onStart, onStop }: BulkAud
 
   const audited = progress ? progress.finished - progress.failed : 0;
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 empty:hidden">
       {progress && (
         <span className="text-xs tabular-nums text-[var(--color-text-tertiary)]" role="status">
           {audited} audited

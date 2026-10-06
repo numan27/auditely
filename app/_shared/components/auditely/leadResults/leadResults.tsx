@@ -43,9 +43,9 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
   const visible = view.leads.slice(0, visibleCount);
   const hasMore = visibleCount < view.leads.length;
   const withoutWebsite = businesses.filter((b) => !b.website).length;
-  const isFiltered = view.filters.length > 0;
+  const isFiltered = view.filters.length > 0 || view.emailed !== 'all';
   // "Audit all" covers the businesses the filters show, whether or not they're scrolled into view
-  const toAudit = businesses.filter((b) => needsAudit(b) && matchesFilters(b, view.filters)).length;
+  const toAudit = businesses.filter((b) => needsAudit(b) && matchesFilters(b, view.filters, view.emailed)).length;
   const { currentLeads } = view;
   const { start: startBulk } = bulk;
   const auditAll = useCallback(() => startBulk(currentLeads().filter(needsAudit)), [startBulk, currentLeads]);
@@ -91,6 +91,9 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
           filters={view.filters}
           counts={view.counts}
           onToggleFilter={view.toggleFilter}
+          emailed={view.emailed}
+          countEmailed={view.countEmailed}
+          onEmailedChange={view.setEmailed}
           getExportLeads={view.currentLeads}
           exportFileName={exportFileName(query)}
           actions={<BulkAuditControl pending={toAudit} progress={bulk.progress} onStart={auditAll} onStop={bulk.stop} />}

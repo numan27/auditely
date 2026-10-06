@@ -3,9 +3,11 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { EmailedFilterMenu } from '@/app/_shared/components/auditely/emailedFilterMenu/emailedFilterMenu';
 import { ExportMenu } from '@/app/_shared/components/auditely/exportMenu/exportMenu';
+import { FilterChip } from '@/app/_shared/components/auditely/filterChip/filterChip';
 import { SortMenu } from '@/app/_shared/components/auditely/sortMenu/sortMenu';
-import { FILTER_OPTIONS, type LeadFilter, type LeadSort } from '@/app/_shared/lib/utils/leadView';
+import { FILTER_OPTIONS, type EmailedFilter, type LeadFilter, type LeadSort } from '@/app/_shared/lib/utils/leadView';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 
 interface LeadToolbarProps {
@@ -14,6 +16,10 @@ interface LeadToolbarProps {
   filters: LeadFilter[];
   counts: Record<LeadFilter, number>;
   onToggleFilter: (filter: LeadFilter) => void;
+  emailed: EmailedFilter;
+  /** How many leads an emailed option would show, on top of the chips */
+  countEmailed: (option: EmailedFilter) => number;
+  onEmailedChange: (emailed: EmailedFilter) => void;
   getExportLeads: () => BusinessWithData[];
   exportFileName: string;
   /** Shown before the sort order ("Audit all") */
@@ -27,47 +33,42 @@ export function LeadToolbar({
   filters,
   counts,
   onToggleFilter,
+  emailed,
+  countEmailed,
+  onEmailedChange,
   getExportLeads,
   exportFileName,
   actions,
 }: LeadToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      {/* One scrollable row on phones, wrapping on wider screens */}
-      <div
-        className="-mx-4 flex w-[calc(100%+2rem)] items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0"
-        role="group"
-        aria-label="Filter results"
-      >
-        {FILTER_OPTIONS.map(({ value, label }) => {
-          const active = filters.includes(value);
-          return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onToggleFilter(value)}
-              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                active
-                  ? 'border-[var(--color-primary-600)] bg-[var(--color-primary-600)]/10 text-[var(--color-primary-600)]'
-                  : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-              }`}
-            >
-              {active && (
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
-                  <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-              {label}
-              <span className={`tabular-nums ${active ? '' : 'text-[var(--color-text-tertiary)]'}`}>
-                {counts[value]}
-              </span>
-            </button>
-          );
-        })}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-3 sm:justify-between sm:gap-x-3">
+      {/* Beside the chips on wider screens. On phones the chips' row scrolls and would cut the menu off, so it goes below */}
+      <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-1.5">
+        {/* One scrollable row on phones, wrapping on wider screens */}
+        <div
+          className="-mx-4 flex w-[calc(100%+2rem)] items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0"
+          role="group"
+          aria-label="Filter results"
+        >
+          {FILTER_OPTIONS.map(({ value, label }) => {
+            const active = filters.includes(value);
+            return (
+              <FilterChip
+                key={value}
+                active={active}
+                label={label}
+                count={counts[value]}
+                aria-pressed={active}
+                onClick={() => onToggleFilter(value)}
+              />
+            );
+          })}
+        </div>
+        <EmailedFilterMenu emailed={emailed} count={countEmailed} onChange={onEmailedChange} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+      {/* On phones these carry on along the emailed menu's row instead of starting their own */}
+      <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2">
         {actions}
         <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-tertiary)]">
           <span aria-hidden>Sort</span>

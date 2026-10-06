@@ -13,6 +13,7 @@ import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 
 interface ReportActionsProps {
   businessName: string;
@@ -20,8 +21,6 @@ interface ReportActionsProps {
   crm: ReturnType<typeof useCrmSend>;
   mail: ReturnType<typeof useEmailSend>;
 }
-
-const sentOn = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
 export function ReportActions({ businessName, state, crm, mail }: ReportActionsProps) {

@@ -6,6 +6,7 @@ import {
   arrangeLeads,
   matchesFilters,
   FILTER_OPTIONS,
+  type EmailedFilter,
   type LeadFilter,
   type LeadSort,
 } from '@/app/_shared/lib/utils/leadView';
@@ -24,12 +25,13 @@ import {
 export function useLeadView(businesses: BusinessWithData[], refreshKey: string) {
   const [sort, setSort] = useState<LeadSort>('email');
   const [filters, setFilters] = useState<LeadFilter[]>([]);
+  const [emailed, setEmailed] = useState<EmailedFilter>('all');
   const [snapshot, setSnapshot] = useState({ key: '', ids: [] as string[] });
 
   // Adjusting state during render (instead of in an effect) avoids a frame in the old order
-  const key = `${refreshKey}|${sort}|${filters.join(',')}`;
+  const key = `${refreshKey}|${sort}|${filters.join(',')}|${JSON.stringify(emailed)}`;
   if (snapshot.key !== key) {
-    setSnapshot({ key, ids: arrangeLeads(businesses, sort, filters).map((b) => b.id) });
+    setSnapshot({ key, ids: arrangeLeads(businesses, sort, filters, emailed).map((b) => b.id) });
   }
 
   const byId = new Map(businesses.map((b) => [b.id, b]));
@@ -39,18 +41,27 @@ export function useLeadView(businesses: BusinessWithData[], refreshKey: string) 
   const counts = Object.fromEntries(
     FILTER_OPTIONS.map(({ value }) => {
       const combined = filters.includes(value) ? filters : [...filters, value];
-      return [value, businesses.filter((b) => matchesFilters(b, combined)).length];
+      return [value, businesses.filter((b) => matchesFilters(b, combined, emailed)).length];
     })
   ) as Record<LeadFilter, number>;
+
+  // Live match count for an emailed option, on top of the chips already active
+  const countEmailed = (option: EmailedFilter) => businesses.filter((b) => matchesFilters(b, filters, option)).length;
 
   const toggleFilter = useCallback((filter: LeadFilter) => {
     setFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
   }, []);
 
-  const clearFilters = useCallback(() => setFilters([]), []);
+  const clearFilters = useCallback(() => {
+    setFilters([]);
+    setEmailed('all');
+  }, []);
 
   // Exports use the live data, so anything found since the last re-arrange is included
-  const currentLeads = useCallback(() => arrangeLeads(businesses, sort, filters), [businesses, sort, filters]);
+  const currentLeads = useCallback(
+    () => arrangeLeads(businesses, sort, filters, emailed),
+    [businesses, sort, filters, emailed]
+  );
 
-  return { sort, setSort, filters, toggleFilter, clearFilters, counts, leads, currentLeads };
+  return { sort, setSort, filters, toggleFilter, clearFilters, counts, emailed, setEmailed, countEmailed, leads, currentLeads };
 }
