@@ -81,3 +81,6 @@ export type BusinessUpdate = Partial<
 
 export type AuditStatus = 'idle' | 'loading' | 'done' | 'error';
 export type ReportStatus = 'idle' | 'loading' | 'done' | 'error';
+
+/** An audit's PDF report: the full one, or the one to attach on Upwork (no contact details, nothing to click) */
+export type PdfVariant = 'full' | 'upwork';

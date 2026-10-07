@@ -2,17 +2,18 @@
 
 // An audit's PDF report, built from its stored data and newest AI report. Used
 // by the download (/api/pdf) and the private report link (/report/{token}).
-// Server-only.
+// Only the download offers the Upwork version. Server-only.
 
 import { supabase } from '@/app/_shared/lib/supabase/client';
-import { pdfFileName, renderPdf, type PdfBusiness } from '@/app/_shared/lib/audit/pdfRender';
+import { pdfFileName, renderPdf, renderUpworkPdf, type PdfBusiness } from '@/app/_shared/lib/audit/pdfRender';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
+import type { PdfVariant } from '@/app/_shared/lib/types/auditely';
 
 export type AuditPdfResult =
   | { ok: true; pdf: Buffer; filename: string }
   | { ok: false; status: 404 | 500; error: string };
 
-export async function renderAuditPdf(auditId: string): Promise<AuditPdfResult> {
+export async function renderAuditPdf(auditId: string, variant: PdfVariant = 'full'): Promise<AuditPdfResult> {
   const { data: audit } = await supabase.from('audits').select('*, businesses(*)').eq('id', auditId).single();
   if (!audit) return { ok: false, status: 404, error: 'Audit not found' };
 
@@ -27,8 +28,11 @@ export async function renderAuditPdf(auditId: string): Promise<AuditPdfResult> {
 
   const business = audit.businesses as PdfBusiness;
   try {
-    const pdf = await renderPdf(audit, business, aiReport, reportContact());
-    return { ok: true, pdf, filename: pdfFileName(business.name) };
+    const pdf =
+      variant === 'upwork'
+        ? await renderUpworkPdf(audit, business, aiReport)
+        : await renderPdf(audit, business, aiReport, reportContact());
+    return { ok: true, pdf, filename: pdfFileName(business.name, variant) };
   } catch {
     return { ok: false, status: 500, error: 'Failed to generate PDF' };
   }

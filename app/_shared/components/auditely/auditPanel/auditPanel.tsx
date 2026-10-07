@@ -24,6 +24,8 @@ interface AuditPanelProps {
   crm: ReturnType<typeof useCrmSend>;
   /** "Send email", owned by the card for the same reason */
   mail: ReturnType<typeof useEmailSend>;
+  /** Also offer the report's Upwork version (websites added by URL) */
+  upworkPdf?: boolean;
 }
 
 const ROW = 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between';
@@ -57,7 +59,7 @@ function Failed({ message, onRetry }: { message: string; onRetry: () => void }):
 }
 
 /** The body of a business card: audit states, scores, findings and the AI report */
-export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
+export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanelProps) {
   const demo = useDemo();
   const { audit, report, auditStatus, auditError, reportStatus, queued } = state;
 
@@ -154,7 +156,7 @@ export function AuditPanel({ business, state, crm, mail }: AuditPanelProps) {
         </section>
       </div>
 
-      {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} />}
+      {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} upworkPdf={upworkPdf} />}
     </>
   );
 }

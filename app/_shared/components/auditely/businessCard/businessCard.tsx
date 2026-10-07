@@ -35,6 +35,8 @@ interface BusinessCardProps {
   defaultOpen?: boolean;
   /** Adds a cross that asks to remove this business from its list (websites added by URL) */
   onRemove?: () => void;
+  /** Also offer the report's Upwork version, without contact details (websites added by URL) */
+  upworkPdf?: boolean;
 }
 
 const PILL_TONES: Record<ScoreTone, string> = {
@@ -75,7 +77,7 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, onRemove }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, onRemove, upworkPdf }: BusinessCardProps) {
   const demo = useDemo();
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
@@ -203,7 +205,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
         </div>
       </div>
 
-      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} mail={mail} />}
+      {(!isCompleted || isExpanded) && <AuditPanel business={business} state={state} crm={crm} mail={mail} upworkPdf={upworkPdf} />}
     </article>
   );
 }

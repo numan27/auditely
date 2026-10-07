@@ -103,10 +103,13 @@ function pdfFindings(findings: Finding[] | undefined): PdfFinding[] {
     }));
 }
 
+type ReportBusiness = { name: string; website: string | null; address: string; phone: string | null };
+type ReportText = { summary: string; improvements: unknown };
+
 export function buildPdfProps(
   audit: AuditLike,
-  business: { name: string; website: string | null; address: string; phone: string | null },
-  report: { summary: string; improvements: unknown },
+  business: ReportBusiness,
+  report: ReportText,
   // null: no "next step" box (the public demo)
   contact: PdfContact | null
 ): PdfDocumentProps {
@@ -150,4 +153,12 @@ export function buildPdfProps(
     improvements,
     contact,
   };
+}
+
+/**
+ * The report to attach on Upwork, which removes a file that carries a way to
+ * reach someone outside it: no "next step" box, no links and no phone number.
+ */
+export function buildUpworkPdfProps(audit: AuditLike, business: ReportBusiness, report: ReportText): PdfDocumentProps {
+  return { ...buildPdfProps(audit, { ...business, phone: null }, report, null), brandLink: false };
 }

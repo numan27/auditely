@@ -7,7 +7,7 @@ import { API_ROUTES, demoReportPath } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
 import { shownStatus, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
-import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, ReportStatus } from '@/app/_shared/lib/types/auditely';
+import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, PdfVariant, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -16,6 +16,15 @@ const send: Post = async (path, body) => {
   const res = await fetch(path, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
   return { ok: res.ok, data: await res.json() };
 };
+
+/** An audit's PDF report, in the version asked for. The demo's are built ahead from the saved sample, in one version. */
+export const requestPdf = (auditId: string, variant: PdfVariant, demo: boolean): Promise<Response> =>
+  demo
+    ? fetch(demoReportPath(auditId))
+    : fetch(API_ROUTES.PDF, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ audit_id: auditId, variant }) });
+
+export const pdfDownloadName = (businessName: string, variant: PdfVariant): string =>
+  `audit-${businessName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}${variant === 'upwork' ? '-upwork' : ''}.pdf`;
 
 /**
  * Audit + AI-report state and actions for one business card.
@@ -50,7 +59,8 @@ export function useBusinessAudit(
   const [auditError, setAuditError] = useState<string | null>(null);
   const [reportStatus, setReportStatus] = useState<ReportStatus>(initialReport ? 'done' : 'idle');
   const [email, setEmail] = useState<string | null>(business.email ?? null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  // Which version is being prepared
+  const [pdfLoading, setPdfLoading] = useState<PdfVariant | null>(null);
   const lastForce = useRef(false);
 
   // Reflect emails discovered by background discovery (updates the prop).
@@ -141,30 +151,26 @@ export function useBusinessAudit(
   const reAudit = useCallback(() => (demo ? demo.restrict('reaudit') : runAudit(true)), [demo, runAudit]);
   const retryAudit = useCallback(() => runAudit(lastForce.current), [runAudit]);
 
-  const downloadPdf = useCallback(async () => {
-    if (!audit) return;
-    setPdfLoading(true);
-    try {
-      // The demo's reports are built ahead from the saved sample
-      const res = demo
-        ? await fetch(demoReportPath(audit.id))
-        : await fetch(API_ROUTES.PDF, {
-            method: 'POST',
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ audit_id: audit.id }),
-          });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error);
+  const downloadPdf = useCallback(
+    async (variant: PdfVariant = 'full') => {
+      if (!audit) return;
+      setPdfLoading(variant);
+      try {
+        const res = await requestPdf(audit.id, variant, !!demo);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error);
+        }
+        const blob = await res.blob();
+        downloadBlob(blob, pdfDownloadName(business.name, variant));
+      } catch (err) {
+        console.error('PDF download failed:', err);
+      } finally {
+        setPdfLoading(null);
       }
-      const blob = await res.blob();
-      downloadBlob(blob, `audit-${business.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`);
-    } catch (err) {
-      console.error('PDF download failed:', err);
-    } finally {
-      setPdfLoading(false);
-    }
-  }, [audit, business.name, demo]);
+    },
+    [audit, business.name, demo]
+  );
 
   return {
     audit,

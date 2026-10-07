@@ -6,8 +6,9 @@
 
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
-import { PdfDocument, type PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
-import { buildPdfProps, type AuditLike } from '@/app/_shared/lib/audit/reportData';
+import { PdfDocument, type PdfContact, type PdfDocumentProps } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { buildPdfProps, buildUpworkPdfProps, type AuditLike } from '@/app/_shared/lib/audit/reportData';
+import type { PdfVariant } from '@/app/_shared/lib/types/auditely';
 
 export interface PdfBusiness {
   name: string;
@@ -16,16 +17,22 @@ export interface PdfBusiness {
   phone: string | null;
 }
 
-export const pdfFileName = (businessName: string): string =>
-  `audit-${businessName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().replace(/-+/g, '-')}.pdf`;
+type PdfReport = { summary: string; improvements: unknown };
+
+export const pdfFileName = (businessName: string, variant: PdfVariant = 'full'): string => {
+  const name = variant === 'upwork' ? `${businessName} upwork` : businessName;
+  return `audit-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().replace(/-+/g, '-')}.pdf`;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const draw = (props: PdfDocumentProps): Promise<Buffer> => renderToBuffer(createElement(PdfDocument, props) as any);
 
 /** @param contact null leaves out the "next step" box */
-export function renderPdf(
-  audit: AuditLike,
-  business: PdfBusiness,
-  report: { summary: string; improvements: unknown },
-  contact: PdfContact | null
-): Promise<Buffer> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return renderToBuffer(createElement(PdfDocument, buildPdfProps(audit, business, report, contact)) as any);
+export function renderPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport, contact: PdfContact | null): Promise<Buffer> {
+  return draw(buildPdfProps(audit, business, report, contact));
+}
+
+/** The report to attach on Upwork: no contact details and nothing to click */
+export function renderUpworkPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport): Promise<Buffer> {
+  return draw(buildUpworkPdfProps(audit, business, report));
 }

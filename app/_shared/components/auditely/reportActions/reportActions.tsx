@@ -20,10 +20,12 @@ interface ReportActionsProps {
   state: ReturnType<typeof useBusinessAudit>;
   crm: ReturnType<typeof useCrmSend>;
   mail: ReturnType<typeof useEmailSend>;
+  /** Also offers the report without contact details or links, to attach on Upwork */
+  upworkPdf?: boolean;
 }
 
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
-export function ReportActions({ businessName, state, crm, mail }: ReportActionsProps) {
+export function ReportActions({ businessName, state, crm, mail, upworkPdf }: ReportActionsProps) {
   const demo = useDemo();
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
@@ -68,14 +70,29 @@ export function ReportActions({ businessName, state, crm, mail }: ReportActionsP
         <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
           {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
         </Button>
+        {/* The demo's reports are built ahead, in one version */}
+        {upworkPdf && !demo && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => state.downloadPdf('upwork')}
+            isLoading={state.pdfLoading === 'upwork'}
+            disabled={state.pdfLoading === 'full'}
+            title="This report without contact details or links, to attach on Upwork"
+            leftIcon={<DownloadIcon size={14} />}
+          >
+            {state.pdfLoading === 'upwork' ? 'Preparing PDF…' : 'Upwork PDF'}
+          </Button>
+        )}
         <Button
           variant="primary"
           size="sm"
-          onClick={state.downloadPdf}
-          isLoading={state.pdfLoading}
+          onClick={() => state.downloadPdf()}
+          isLoading={state.pdfLoading === 'full'}
+          disabled={state.pdfLoading === 'upwork'}
           leftIcon={<DownloadIcon size={14} />}
         >
-          {state.pdfLoading ? 'Preparing PDF…' : 'Download PDF report'}
+          {state.pdfLoading === 'full' ? 'Preparing PDF…' : 'Download PDF report'}
         </Button>
       </div>
 

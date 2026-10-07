@@ -22,6 +22,15 @@ describe('POST /api/pdf', () => {
     expect((await res.json()).error).toBe('AI report not found — generate the report first');
   });
 
+  it('draws the full report unless the Upwork version is asked for', async () => {
+    vi.mocked(renderAuditPdf).mockResolvedValue({ ok: true, pdf: Buffer.from('%PDF-1.4'), filename: 'audit-smile-dental.pdf' });
+    await post({ audit_id: 'a1' });
+    await post({ audit_id: 'a1', variant: 'upwork' });
+    // Anything it does not know is the full report, never an error
+    await post({ audit_id: 'a1', variant: 'print' });
+    expect(vi.mocked(renderAuditPdf).mock.calls.slice(-3)).toEqual([['a1', 'full'], ['a1', 'upwork'], ['a1', 'full']]);
+  });
+
   it('asks for an audit id', async () => {
     expect((await post({})).status).toBe(400);
   });

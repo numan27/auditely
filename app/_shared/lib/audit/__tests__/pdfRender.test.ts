@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pdfFileName, renderPdf } from '@/app/_shared/lib/audit/pdfRender';
+import { pdfFileName, renderPdf, renderUpworkPdf } from '@/app/_shared/lib/audit/pdfRender';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
 
 const audit: AuditLike = {
@@ -28,8 +28,24 @@ describe('renderPdf', () => {
   }, 30_000);
 });
 
+describe('renderUpworkPdf', () => {
+  // A link in a PDF is an annotation with a /URI: the full report has them, this one must not
+  it('draws a PDF with nothing to click', async () => {
+    const full = await renderPdf(audit, business, report, contact);
+    const upwork = await renderUpworkPdf(audit, business, report);
+    expect(upwork.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(full.includes('/URI')).toBe(true);
+    expect(upwork.includes('/URI')).toBe(false);
+  }, 30_000);
+});
+
 describe('pdfFileName', () => {
   it('names the file after the business, in lowercase with dashes', () => {
     expect(pdfFileName('Smile Dental & Co.')).toBe('audit-smile-dental-co-.pdf');
+  });
+
+  it('marks the Upwork version, so the two downloads are told apart', () => {
+    expect(pdfFileName('Smile Dental', 'upwork')).toBe('audit-smile-dental-upwork.pdf');
+    expect(pdfFileName('Smile Dental & Co.', 'upwork')).toBe('audit-smile-dental-co-upwork.pdf');
   });
 });

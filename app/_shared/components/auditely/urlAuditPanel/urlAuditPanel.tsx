@@ -66,6 +66,7 @@ export function UrlAuditPanel() {
                 autoRun={business.id === autoRunId}
                 defaultOpen={!!demo}
                 onRemove={canRemove ? () => askRemove([business]) : undefined}
+                upworkPdf
               />
             ))}
           </div>

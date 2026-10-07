@@ -88,7 +88,11 @@ export interface PdfDocumentProps {
   improvements: string[];
   /** null leaves out the "next step" box and the footer's contact */
   contact: PdfContact | null;
+  /** false names DevArtVentures without linking to its website (the Upwork version) */
+  brandLink?: boolean;
 }
+
+const BRAND_URL = 'https://devartventures.com';
 
 export function PdfDocument({
   businessName,
@@ -110,6 +114,7 @@ export function PdfDocument({
   summary,
   improvements,
   contact,
+  brandLink = true,
 }: PdfDocumentProps) {
   return (
     <Document>
@@ -118,7 +123,7 @@ export function PdfDocument({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Website Audit Report</Text>
           <Text style={styles.headerSubtitle}>
-            Prepared by <Link src="https://devartventures.com" style={styles.link}>DevArtVentures</Link> · {auditDate}
+            Prepared by {brandLink ? <Link src={BRAND_URL} style={styles.link}>DevArtVentures</Link> : 'DevArtVentures'} · {auditDate}
           </Text>
         </View>
 
@@ -202,9 +207,10 @@ export function PdfDocument({
 
         {/* Footer */}
         <View style={styles.footer} fixed>
+          {/* Without the link it is the name: a PDF reader makes a bare domain clickable */}
           <Text style={styles.footerText}>
             Powered by{' '}
-            <Link src="https://devartventures.com" style={styles.link}>devartventures.com</Link>
+            {brandLink ? <Link src={BRAND_URL} style={styles.link}>devartventures.com</Link> : 'DevArtVentures'}
           </Text>
           {contact && (
             <Text style={styles.footerText}>
