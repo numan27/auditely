@@ -38,7 +38,21 @@ export interface Business {
   emailed_at?: string | null;
   /** What Verifalia said about the email address; absent before the email-check migration */
   email_check?: EmailCheck | null;
+  /** Set when the audit was requested on devartventures.com; absent before the audit-requests migration */
+  request?: AuditRequest | null;
   created_at: string;
+}
+
+/** A free audit someone requested on devartventures.com (businesses.request) */
+export interface AuditRequest {
+  /** The request's id on devartventures.com, so a resent request isn't stored twice */
+  source_id: string;
+  /** Who asked; the email address is the business's `email` */
+  name: string;
+  business_type: string | null;
+  main_concern: string | null;
+  /** When it was requested on the site (ISO) */
+  requested_at: string;
 }
 
 export interface Audit {

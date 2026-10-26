@@ -1,0 +1,91 @@
+// app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel.tsx
+
+'use client';
+
+import { Button } from '@/app/_shared/components/ui/button/button';
+import { RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
+import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
+import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
+import { useAuditRequests } from '@/app/_shared/lib/hooks/useAuditRequests';
+
+/** "Requests": free audits requested on devartventures.com, each ready to reply to with its report */
+export function AuditRequestsPanel() {
+  const { businesses, isLoading, refreshing, error, loadKey, refresh, updateBusiness, removal, askRemove, cancelRemove, confirmRemove } =
+    useAuditRequests();
+  const waiting = businesses.filter((b) => !b.emailed_at).length;
+  const auditing = businesses.some((b) => !b.audit);
+
+  return (
+    <>
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
+
+      {isLoading ? (
+        <ResultsSkeleton label="Loading audit requests" count={2} />
+      ) : businesses.length === 0 ? (
+        <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+          <p className="max-w-lg text-sm leading-relaxed text-[var(--color-text-tertiary)]">
+            When someone requests a free audit on devartventures.com, it appears here already audited, with a reply
+            ready to send with the PDF report.
+          </p>
+          <Button variant="outline" size="sm" onClick={refresh} isLoading={refreshing} leftIcon={<RefreshIcon size={14} />}>
+            Refresh
+          </Button>
+        </div>
+      ) : (
+        <section className="mt-6" aria-labelledby="audit-requests-title">
+          <div className="flex flex-wrap items-baseline justify-between gap-4">
+            <h2 id="audit-requests-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+              Audit requests
+            </h2>
+            <div className="flex items-center gap-3">
+              {businesses.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => askRemove(businesses)}
+                  className="shrink-0 cursor-pointer text-sm font-medium text-[var(--color-text-secondary)] hover:text-red-600 hover:underline dark:hover:text-red-400"
+                >
+                  Clear all
+                </button>
+              )}
+              <Button variant="outline" size="sm" onClick={refresh} isLoading={refreshing} leftIcon={<RefreshIcon size={14} />}>
+                Refresh
+              </Button>
+            </div>
+          </div>
+          <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
+            {businesses.length} {businesses.length === 1 ? 'request' : 'requests'}, newest first
+            {waiting > 0 && `, ${waiting} waiting for a reply`}.
+            {auditing && ' A new request is audited in the background: Refresh in a minute or two to see its scores.'}
+          </p>
+          <div className="mt-5 space-y-4">
+            {businesses.map((business) => (
+              <BusinessCard
+                key={`${business.id}-${loadKey}`}
+                business={business}
+                initialAudit={business.audit}
+                initialReport={business.ai_report}
+                onUpdate={updateBusiness}
+                onRemove={() => askRemove([business])}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {removal && (
+        <RemoveSitesModal
+          sites={removal.sites}
+          removing={removal.busy}
+          error={removal.error}
+          onConfirm={confirmRemove}
+          onClose={cancelRemove}
+        />
+      )}
+    </>
+  );
+}

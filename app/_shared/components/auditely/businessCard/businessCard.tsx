@@ -9,6 +9,7 @@ import { AuditPanel } from '@/app/_shared/components/auditely/auditPanel/auditPa
 import { BusinessEmail } from '@/app/_shared/components/auditely/businessEmail/businessEmail';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { ContactLinks } from '@/app/_shared/components/auditely/contactLinks/contactLinks';
+import { RequestStatusPill, RequestSummary } from '@/app/_shared/components/auditely/requestSummary/requestSummary';
 import { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
@@ -112,8 +113,10 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
                 Audited
               </span>
             )}
+            {/* A request's reply is due within a business day: its pill says when, or when it went */}
+            {business.request && <RequestStatusPill request={business.request} emailedAt={mail.sentAt} />}
             {/* In the header, so a closed card says it too; the day is the latest email's */}
-            {mail.sentAt && (
+            {mail.sentAt && !business.request && (
               <span
                 title={`Last emailed ${new Date(mail.sentAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`}
                 className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-600)]/10 px-2 py-0.5 text-xs font-medium text-[var(--color-primary-600)]"
@@ -160,6 +163,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
           </div>
 
           <ContactLinks contactPage={business.contact_page} socials={business.socials} />
+          {business.request && <RequestSummary request={business.request} />}
           {isCompleted && !isExpanded && audit && <ScorePills audit={audit} />}
         </div>
 

@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   emailed_at          TIMESTAMPTZ,
   -- What Verifalia said about the email address: { address, verdict, status, checked_at }
   email_check         JSONB,
+  -- A free audit requested on devartventures.com (the Requests tab):
+  -- { source_id, name, business_type, main_concern, requested_at }; NULL otherwise
+  request             JSONB,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -79,6 +82,9 @@ CREATE TABLE IF NOT EXISTS pagespeed_cache (
 -- Indexes for common lookups (audits/ai_reports are covered by their UNIQUE indexes)
 CREATE INDEX IF NOT EXISTS idx_businesses_search_id  ON businesses(search_id);
 CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location, created_at);
+-- The site's id for an audit request: one sent twice is stored once
+CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_request_source
+  ON businesses ((request->>'source_id')) WHERE request IS NOT NULL;
 
 -- Row Level Security: on, with no policies. The public anon key can read/write
 -- nothing; the app's server uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.

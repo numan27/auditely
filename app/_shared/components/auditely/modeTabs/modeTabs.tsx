@@ -3,14 +3,19 @@
 'use client';
 
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { GaugeIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
+import { GaugeIcon, MailIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 
-export type WorkspaceMode = 'leads' | 'audit';
+export type WorkspaceMode = 'leads' | 'audit' | 'requests';
 
-const TABS: { value: WorkspaceMode; label: string; icon: ReactNode }[] = [
+const ALL_TABS: { value: WorkspaceMode; label: string; icon: ReactNode }[] = [
   { value: 'leads', label: 'Find leads', icon: <SearchIcon size={15} /> },
   { value: 'audit', label: 'Audit a website', icon: <GaugeIcon size={15} /> },
+  { value: 'requests', label: 'Requests', icon: <MailIcon size={15} /> },
 ];
+
+// The demo has no inbox: requests come from devartventures.com visitors
+const DEMO_TABS = ALL_TABS.filter((tab) => tab.value !== 'requests');
 
 interface ModeTabsProps {
   value: WorkspaceMode;
@@ -20,8 +25,10 @@ interface ModeTabsProps {
 export const tabId = (mode: WorkspaceMode) => `workspace-tab-${mode}`;
 export const panelId = (mode: WorkspaceMode) => `workspace-panel-${mode}`;
 
-/** Switches the home page between searching for leads and auditing one URL */
+/** Switches the home page between searching for leads, auditing one URL and the audit requests */
 export function ModeTabs({ value, onChange }: ModeTabsProps) {
+  const demo = useDemo();
+  const TABS = demo ? DEMO_TABS : ALL_TABS;
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Arrow keys move between tabs, as in any tab list

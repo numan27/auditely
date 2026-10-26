@@ -105,7 +105,7 @@ export function NextStepSection({ contact }: { contact: PdfContact }) {
     <View style={styles.ctaBox} wrap={false}>
       <Text style={styles.ctaTitle}>Want help fixing these?</Text>
       <Text style={styles.ctaText}>
-        We can walk you through every issue in this report on a free 15-minute call, with no obligation.
+        We can walk you through every issue in this report on a free 30-minute call, with no obligation.
       </Text>
       <Text style={styles.ctaContact}>{details}</Text>
       {/* Calendly when set, otherwise email; "Contact us" only alongside Calendly */}

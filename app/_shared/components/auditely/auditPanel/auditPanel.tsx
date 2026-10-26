@@ -134,7 +134,7 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
 
         <section className="border-t border-[var(--color-border)] pt-6">
           {reportStatus === 'done' && report ? (
-            <AiReportSection report={report} businessName={business.name} audit={audit} emailedAt={mail.sentAt} />
+            <AiReportSection report={report} businessName={business.name} audit={audit} emailedAt={mail.sentAt} request={business.request} />
           ) : (
             <div className={ROW}>
               {reportStatus === 'loading' ? (
@@ -156,7 +156,7 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
         </section>
       </div>
 
-      {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} upworkPdf={upworkPdf} />}
+      {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} upworkPdf={upworkPdf} request={business.request} />}
     </>
   );
 }

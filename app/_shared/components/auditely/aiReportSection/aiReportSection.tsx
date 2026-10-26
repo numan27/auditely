@@ -8,7 +8,7 @@ import { CheckIcon, CopyIcon } from '@/app/_shared/components/ui/icons/icons';
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
-import type { AiReport } from '@/app/_shared/lib/types/auditely';
+import type { AiReport, AuditRequest } from '@/app/_shared/lib/types/auditely';
 
 interface AiReportSectionProps {
   report: AiReport;
@@ -16,6 +16,8 @@ interface AiReportSectionProps {
   audit: AuditLike;
   /** When the first email went out; the follow-up shows from then on */
   emailedAt: string | null;
+  /** Set for an audit requested on devartventures.com: the first email replies to it */
+  request?: AuditRequest | null;
 }
 
 /** One email as "Send email" will send it, with a button to copy it */
@@ -47,8 +49,8 @@ function EmailDraft({ title, hint, draft }: { title: string; hint?: string; draf
   );
 }
 
-export function AiReportSection({ report, businessName, audit, emailedAt }: AiReportSectionProps) {
-  const drafts = leadDrafts(report.cold_email, businessName, audit);
+export function AiReportSection({ report, businessName, audit, emailedAt, request }: AiReportSectionProps) {
+  const drafts = leadDrafts(report.cold_email, businessName, audit, request);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -74,7 +76,7 @@ export function AiReportSection({ report, businessName, audit, emailedAt }: AiRe
       </div>
 
       <div className="space-y-6">
-        <EmailDraft title="Outreach email" draft={drafts.first} />
+        <EmailDraft title={request ? 'Reply email' : 'Outreach email'} draft={drafts.first} />
         {emailedAt && <EmailDraft title="Follow-up email" hint="Sent by “Send follow-up”" draft={drafts.followUp} />}
       </div>
     </div>

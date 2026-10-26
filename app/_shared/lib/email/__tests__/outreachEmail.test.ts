@@ -46,7 +46,7 @@ describe('outreachHtml', () => {
 
   it('gives Outlook the button padding and the card width it would otherwise ignore', () => {
     const html = outreachHtml(email());
-    expect(html).toMatch(/<td bgcolor="#530fff" style="[^"]*mso-padding-alt:13px 28px;/);
+    expect(html).toMatch(/<td bgcolor="#15172a" style="[^"]*mso-padding-alt:13px 28px;/);
     expect(html).toMatch(/<!--\[if mso\]><table [^>]*width="600" align="center">/);
     expect(html).toContain('<!--[if mso]></td></tr></table><![endif]-->');
   });
@@ -126,6 +126,29 @@ describe('outreachHtml', () => {
     expect(html).toContain('+1 555 0100');
     expect(html).toContain('href="mailto:contact@devartventures.com"');
     expect(html).toContain("we won't email again");
+    expect(html).not.toContain('requested a free website audit');
+  });
+
+  // They asked for it: an opt-out line would read as if they hadn't
+  it('tells someone who requested the audit why it came, instead of offering to stop', () => {
+    const html = outreachHtml(email({ requested: true }));
+    expect(html).toContain('You received this because you requested a free website audit on devartventures.com.');
+    expect(html).not.toContain("we won't email again");
+    expect(html).toContain('Book your free call');
+  });
+
+  it('offers the same 30-minute call as devartventures.com', () => {
+    expect(outreachHtml(email())).toContain('free 30-minute call');
+    expect(outreachHtml(email())).not.toContain('15-minute');
+  });
+
+  // The site's light theme: ink on white and mist, no old navy or purple, no all-caps labels
+  it('is in the light DevArtVentures colours, with labels in sentence case', () => {
+    const html = outreachHtml(email());
+    expect(html).not.toMatch(/#000529|#530fff|text-transform:uppercase/i);
+    expect(html).toContain('background:#f4f5f8;');
+    expect(html).toMatch(/<td width="25%" height="4" bgcolor="#2fbf7d"/);
+    expect(html).toMatch(/<p style="[^"]*color:#15172a;">Your website at a glance<\/p>/);
   });
 });
 
@@ -142,5 +165,12 @@ describe('outreachText', () => {
     expect(noBooking).not.toContain('mailto:');
     expect(text).toContain('DevArtVentures · https://devartventures.com');
     expect(text).toContain("we won't email again");
+    expect(text).toContain('free 30-minute call');
+  });
+
+  it('ends a requested audit with why it came, not the opt-out line', () => {
+    const text = outreachText(email({ requested: true }));
+    expect(text).toContain('You received this because you requested a free website audit on devartventures.com.');
+    expect(text).not.toContain("we won't email again");
   });
 });

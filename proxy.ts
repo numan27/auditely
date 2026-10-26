@@ -11,7 +11,8 @@ import {
 import { SESSION_COOKIE, verifySessionToken } from "@/app/_shared/lib/auth/session";
 
 // This proxy handles authentication and route protection.
-// The whole app is private except the login page, the login API, report links and the demo.
+// The whole app is private except the login page, the login API, report links, the demo and
+// the route devartventures.com sends audit requests to (it checks its own secret).
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 

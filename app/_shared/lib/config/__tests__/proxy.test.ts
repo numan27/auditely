@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from '@/proxy';
 import { createSessionToken, SESSION_COOKIE } from '@/app/_shared/lib/auth/session';
-import { API_ROUTES, demoReportPath, ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 
 const visit = (path: string, session?: string) =>
   proxy(new NextRequest(`http://localhost${path}`, session ? { headers: { cookie: `${SESSION_COOKIE}=${session}` } } : undefined));
@@ -42,6 +42,12 @@ describe('proxy', () => {
     for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH)) {
       expect((await visit(path)).status).toBe(401);
     }
+  });
+
+  it('lets devartventures.com send audit requests without a session', async () => {
+    const res = await visit(INBOUND_ROUTES.AUDIT_REQUEST);
+    expect(res.status).not.toBe(401);
+    expect(sentTo(res)).toBeNull();
   });
 
   it('gives a logged-in user the real home page, and the demo when asked for', async () => {

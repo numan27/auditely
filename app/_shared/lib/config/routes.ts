@@ -26,11 +26,19 @@ export const API_ROUTES = {
   CRM: '/api/crm',
   SEND_EMAIL: '/api/send-email',
   VERIFY_EMAIL: '/api/verify-email',
+  AUDIT_REQUESTS: '/api/audit-requests',
+} as const;
+
+// Called by other servers, not by the app: no session, each checks its own secret
+export const INBOUND_ROUTES = {
+  // devartventures.com sends each free audit request here (AUDITELY_INBOUND_SECRET)
+  AUDIT_REQUEST: '/api/inbound/audit-request',
 } as const;
 
 // Everything is private (single-admin tool) except these; /report/{token} is checked by
-// its signature, and /demo shows only the sample checked into the repo
-export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT, ROUTES.DEMO] as const;
+// its signature, /demo shows only the sample checked into the repo, and the inbound
+// route checks its secret
+export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT, ROUTES.DEMO, INBOUND_ROUTES.AUDIT_REQUEST] as const;
 
 // Pages a logged-in user should be bounced away from
 export const AUTH_ROUTES = [ROUTES.LOGIN] as const;

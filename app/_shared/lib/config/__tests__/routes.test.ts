@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { API_ROUTES, demoReportPath, isHomeAlias, isProtectedRoute, isPublicRoute, ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, demoReportPath, INBOUND_ROUTES, isHomeAlias, isProtectedRoute, isPublicRoute, ROUTES } from '@/app/_shared/lib/config/routes';
 
 describe('route access', () => {
   it('opens report links without a login, and nothing else new', () => {
@@ -24,5 +24,13 @@ describe('route access', () => {
     expect(isPublicRoute('/demos')).toBe(false);
     for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(path !== API_ROUTES.AUTH);
     expect(isProtectedRoute('/api/autocomplete')).toBe(true);
+  });
+
+  // devartventures.com's server has no session: the route checks the shared secret itself
+  it('opens the inbound audit request route, and not the Requests tab behind it', () => {
+    expect(isPublicRoute(INBOUND_ROUTES.AUDIT_REQUEST)).toBe(true);
+    expect(isProtectedRoute(API_ROUTES.AUDIT_REQUESTS)).toBe(true);
+    expect(isProtectedRoute('/api/inbound')).toBe(true);
+    expect(isProtectedRoute('/api/inbound/other')).toBe(true);
   });
 });

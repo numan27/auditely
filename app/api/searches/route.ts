@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
-import { isDirectAuditSearch } from '@/app/_shared/lib/config/directAudits';
+import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 
 export async function GET() {
   const { data, error } = await supabase
@@ -15,8 +15,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to load searches' }, { status: 500 });
   }
 
-  // Websites added by URL live on the home page's Audit tab, not here
-  const searches = (data ?? []).filter((s) => !isDirectAuditSearch(s)).map((s) => ({
+  // Websites added by URL and requested audits live on the home page's tabs, not here
+  const searches = (data ?? []).filter((s) => !isUrlOnlySearch(s)).map((s) => ({
     id: s.id,
     niche: s.niche,
     location: s.location,

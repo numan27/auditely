@@ -12,23 +12,27 @@ import { ModeTabs, panelId, tabId, type WorkspaceMode } from '@/app/_shared/comp
 import { RecentSearches } from '@/app/_shared/components/auditely/recentSearches/recentSearches';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
+import { AuditRequestsPanel } from '@/app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel';
 import { useLeadSearch } from '@/app/_shared/lib/hooks/useLeadSearch';
 
 const INTRO: Record<WorkspaceMode, string> = {
   leads: 'Search local businesses, audit their websites and get a ready-to-send outreach email for each one.',
   audit: 'Paste any website to check its speed, SEO, mobile experience, SSL and AI-search readiness.',
+  requests: 'Free audits requested on devartventures.com, audited on arrival. Reply to each within one business day.',
 };
 
-/** The home page: "Find leads" and "Audit a website". The public demo renders it inside DemoProvider. */
+/** The home page: "Find leads", "Audit a website" and "Requests". The public demo renders it inside DemoProvider. */
 export function Workspace() {
   const [mode, setMode] = useState<WorkspaceMode>('leads');
-  // The audit tab loads its list the first time it's opened, then stays mounted
+  // The audit and requests tabs load their lists the first time they're opened, then stay mounted
   const [auditOpened, setAuditOpened] = useState(false);
+  const [requestsOpened, setRequestsOpened] = useState(false);
   const leads = useLeadSearch();
 
   const changeMode = (next: WorkspaceMode) => {
     setMode(next);
     if (next === 'audit') setAuditOpened(true);
+    if (next === 'requests') setRequestsOpened(true);
   };
 
   return (
@@ -81,6 +85,10 @@ export function Workspace() {
 
         <div id={panelId('audit')} role="tabpanel" aria-labelledby={tabId('audit')} hidden={mode !== 'audit'} className="mt-3">
           {auditOpened && <UrlAuditPanel />}
+        </div>
+
+        <div id={panelId('requests')} role="tabpanel" aria-labelledby={tabId('requests')} hidden={mode !== 'requests'} className="mt-3">
+          {requestsOpened && <AuditRequestsPanel />}
         </div>
       </main>
     </div>

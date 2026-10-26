@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
   }
 
   const logo = await brandLogo();
-  const email = { body: text, business, audit: business.audit, contact: reportContact() };
+  // A request from devartventures.com asked for this email: no opt-out line
+  const email = { body: text, business, audit: business.audit, contact: reportContact(), requested: Boolean(business.request) };
   if (preview) {
     // A browser can't load the email's attached logo, so the preview carries the image itself
     const logoSrc = logo && `data:image/png;base64,${logo.toString('base64')}`;

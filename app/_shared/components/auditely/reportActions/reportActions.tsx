@@ -13,6 +13,7 @@ import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import type { AuditRequest } from '@/app/_shared/lib/types/auditely';
 import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 
 interface ReportActionsProps {
@@ -22,10 +23,12 @@ interface ReportActionsProps {
   mail: ReturnType<typeof useEmailSend>;
   /** Also offers the report without contact details or links, to attach on Upwork */
   upworkPdf?: boolean;
+  /** Set for an audit requested on devartventures.com: the first email replies to it */
+  request?: AuditRequest | null;
 }
 
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
-export function ReportActions({ businessName, state, crm, mail, upworkPdf }: ReportActionsProps) {
+export function ReportActions({ businessName, state, crm, mail, upworkPdf, request }: ReportActionsProps) {
   const demo = useDemo();
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
@@ -101,7 +104,7 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf }: Rep
           businessName={businessName}
           to={email}
           // Once the first email has gone, the next one is the follow-up
-          draft={leadDrafts(report.cold_email, businessName, audit)[mail.sentAt ? 'followUp' : 'first']}
+          draft={leadDrafts(report.cold_email, businessName, audit, request)[mail.sentAt ? 'followUp' : 'first']}
           sentAt={mail.sentAt}
           sending={mail.sending}
           error={mail.error}

@@ -94,6 +94,21 @@ describe('POST /api/send-email', () => {
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
   });
 
+  // They asked for the audit on devartventures.com: no "we won't email again"
+  it('tells a requester why the email came instead of offering to stop', async () => {
+    db.state.business = businessRow({ request: { source_id: 'req-1', name: 'Sarah', business_type: null, main_concern: null, requested_at: '2026-10-27T09:00:00Z' } });
+    expect((await post(draft)).status).toBe(200);
+    const { html, text } = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(html).toContain('you requested a free website audit on devartventures.com');
+    expect(html).not.toContain("we won't email again");
+    expect(text).not.toContain("we won't email again");
+  });
+
+  it('keeps the opt-out line for a lead', async () => {
+    await post(draft);
+    expect(vi.mocked(sendEmail).mock.calls[0][0].html).toContain("we won't email again");
+  });
+
   it('still sends, without the logo, when the logo file can not be read', async () => {
     vi.mocked(brandLogo).mockResolvedValue(null);
     expect((await post(draft)).status).toBe(200);
