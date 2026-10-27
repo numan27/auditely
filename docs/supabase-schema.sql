@@ -1,9 +1,14 @@
 -- Run this in your Supabase project: Dashboard → SQL Editor → New query
 -- (Existing databases: run the files in docs/migrations/ in date/name order instead.)
 
+-- Every user-owned row (searches, businesses, notifications) has a user_id. A row a
+-- signed-in user adds is theirs: the default auth.uid() is the session's user id.
+-- The service role has no user, so the server sets user_id itself (the inbound route).
+
 -- 1. searches
 CREATE TABLE IF NOT EXISTS searches (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   niche       TEXT        NOT NULL,
   location    TEXT        NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -12,6 +17,7 @@ CREATE TABLE IF NOT EXISTS searches (
 -- 2. businesses
 CREATE TABLE IF NOT EXISTS businesses (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   search_id   UUID        NOT NULL REFERENCES searches(id) ON DELETE CASCADE,
   name        TEXT        NOT NULL,
   address     TEXT        NOT NULL DEFAULT '',
@@ -83,6 +89,7 @@ CREATE TABLE IF NOT EXISTS pagespeed_cache (
 --    same event one notification (a request resent, a due reminder seen twice).
 CREATE TABLE IF NOT EXISTS notifications (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   kind        TEXT        NOT NULL,
   title       TEXT        NOT NULL,
   body        TEXT        NOT NULL DEFAULT '',
@@ -93,6 +100,26 @@ CREATE TABLE IF NOT EXISTS notifications (
   read_at     TIMESTAMPTZ
 );
 
+-- 7. profiles: one per account, added when the account is created. The server
+--    finds the owner's id here by email (ownerUserId); a signed-in user reads only their own.
+CREATE TABLE IF NOT EXISTS profiles (
+  id          UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email       TEXT        NOT NULL UNIQUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF NEW.email IS NOT NULL THEN
+    INSERT INTO public.profiles (id, email) VALUES (NEW.id, lower(NEW.email)) ON CONFLICT (id) DO NOTHING;
+  END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- Accounts created before this file was run
+INSERT INTO profiles (id, email) SELECT id, lower(email) FROM auth.users WHERE email IS NOT NULL ON CONFLICT (id) DO NOTHING;
+
 -- Indexes for common lookups (audits/ai_reports are covered by their UNIQUE indexes)
 CREATE INDEX IF NOT EXISTS idx_businesses_search_id  ON businesses(search_id);
 CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location, created_at);
@@ -100,12 +127,49 @@ CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location
 CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_request_source
   ON businesses ((request->>'source_id')) WHERE request IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_searches_user         ON searches (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_businesses_user       ON businesses (user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user    ON notifications (user_id, created_at DESC);
 
--- Row Level Security: on, with no policies. The public anon key can read/write
--- nothing; the app's server uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
+-- Row Level Security: each signed-in user reaches only their own rows. The app's
+-- API routes use SUPABASE_ANON_KEY with the user's session (role authenticated,
+-- auth.uid() = their id). An audit, and its AI report, belong to whoever owns the
+-- business. anon has no policy, so it reads/writes nothing. The service role key
+-- (SUPABASE_SERVICE_ROLE_KEY) bypasses RLS; the server uses it only for the shared
+-- pagespeed_cache (no policy: server only), the devartventures.com inbound route,
+-- signed report links and the owner lookup.
+ALTER TABLE profiles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE searches   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audits     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagespeed_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own_profile ON profiles;
+CREATE POLICY own_profile ON profiles FOR SELECT TO authenticated USING (id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS own_rows ON searches;
+CREATE POLICY own_rows ON searches FOR ALL TO authenticated
+  USING (user_id = (SELECT auth.uid())) WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS own_rows ON businesses;
+CREATE POLICY own_rows ON businesses FOR ALL TO authenticated
+  USING (user_id = (SELECT auth.uid())) WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS own_rows ON notifications;
+CREATE POLICY own_rows ON notifications FOR ALL TO authenticated
+  USING (user_id = (SELECT auth.uid())) WITH CHECK (user_id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS own_rows ON audits;
+CREATE POLICY own_rows ON audits FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM businesses b WHERE b.id = audits.business_id AND b.user_id = (SELECT auth.uid())))
+  WITH CHECK (EXISTS (SELECT 1 FROM businesses b WHERE b.id = audits.business_id AND b.user_id = (SELECT auth.uid())));
+DROP POLICY IF EXISTS own_rows ON ai_reports;
+CREATE POLICY own_rows ON ai_reports FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM audits a JOIN businesses b ON b.id = a.business_id
+                 WHERE a.id = ai_reports.audit_id AND b.user_id = (SELECT auth.uid())))
+  WITH CHECK (EXISTS (SELECT 1 FROM audits a JOIN businesses b ON b.id = a.business_id
+                      WHERE a.id = ai_reports.audit_id AND b.user_id = (SELECT auth.uid())));
+
+-- The signed-in role may use these tables at all; the policies above pick the rows.
+-- Supabase usually grants this already. Nothing is granted to anon.
+GRANT SELECT, INSERT, UPDATE, DELETE ON searches, businesses, audits, ai_reports, notifications TO authenticated;
+GRANT SELECT ON profiles TO authenticated;
+-- The server's owner lookup (ownerUserId) reads profiles with the service role key
+GRANT SELECT ON profiles TO service_role;
