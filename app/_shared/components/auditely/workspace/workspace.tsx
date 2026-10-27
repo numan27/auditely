@@ -15,6 +15,7 @@ import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesM
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
 import { AuditRequestsPanel } from '@/app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel';
+import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useLeadSearch } from '@/app/_shared/lib/hooks/useLeadSearch';
 import { useWorkspaceNavigate } from '@/app/_shared/lib/hooks/useWorkspaceNavigate';
@@ -43,10 +44,14 @@ const TAB_HOME: Record<WorkspaceMode, WorkspaceView> = {
  */
 export function Workspace() {
   const demo = useDemo();
+  const account = useAccount();
   const pathname = usePathname();
   const navigate = useWorkspaceNavigate();
   const [demoMode, setDemoMode] = useState<WorkspaceMode>('leads');
-  const view: WorkspaceView = demo ? TAB_HOME[demoMode] : (parseWorkspacePath(pathname) ?? TAB_HOME.leads);
+  const parsed = demo ? null : parseWorkspacePath(pathname);
+  // Requests are the owner's: anyone else who opens a request's link lands on Find leads, and Requests never mounts
+  const hidden = parsed?.mode === 'requests' && !account?.isOwner;
+  const view: WorkspaceView = demo ? TAB_HOME[demoMode] : hidden ? TAB_HOME.leads : (parsed ?? TAB_HOME.leads);
   const { mode } = view;
 
   // The audit and requests tabs load their lists the first time they're opened, then stay mounted
@@ -56,8 +61,8 @@ export function Workspace() {
   // Each tab reopens where it was left: the search on screen, the request open
   const lastPath = useRef<Partial<Record<WorkspaceMode, string>>>({});
   useEffect(() => {
-    if (!demo) lastPath.current[mode] = pathname;
-  }, [demo, mode, pathname]);
+    if (!demo && !hidden) lastPath.current[mode] = pathname;
+  }, [demo, hidden, mode, pathname]);
 
   // The search the leads show, or are opening: a search just run is already on screen when the address catches up
   const shownSearch = useRef<string | null>(null);

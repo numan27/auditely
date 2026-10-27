@@ -9,6 +9,7 @@ import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import { freshCheck } from '@/app/_shared/lib/email/emailCheck';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
+import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
@@ -30,6 +31,9 @@ interface ReportActionsProps {
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
 export function ReportActions({ businessName, state, crm, mail, upworkPdf, request }: ReportActionsProps) {
   const demo = useDemo();
+  // Sending and HubSpot are the owner's; the demo handles them itself
+  const account = useAccount();
+  const canSend = !!demo || !!account?.isOwner;
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
 
@@ -59,20 +63,24 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
         )}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={openComposer}
-          // In the demo the button always answers, with the notice
-          disabled={!email && !demo}
-          title={email || demo ? undefined : 'No email address found for this business'}
-          leftIcon={<MailIcon size={14} />}
-        >
-          {mail.sentAt ? 'Send follow-up' : 'Send email'}
-        </Button>
-        <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
-          {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
-        </Button>
+        {canSend && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openComposer}
+              // In the demo the button always answers, with the notice
+              disabled={!email && !demo}
+              title={email || demo ? undefined : 'No email address found for this business'}
+              leftIcon={<MailIcon size={14} />}
+            >
+              {mail.sentAt ? 'Send follow-up' : 'Send email'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
+              {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
+            </Button>
+          </>
+        )}
         {/* The demo's reports are built ahead, in one version */}
         {upworkPdf && !demo && (
           <Button
