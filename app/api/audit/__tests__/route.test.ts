@@ -68,6 +68,14 @@ vi.mock('@/app/_shared/lib/audit/runAudit', () => ({
   runAudit: vi.fn(),
 }));
 vi.mock('@/app/_shared/lib/utils/emailFinder', () => ({ findEmail: vi.fn(async () => null) }));
+// Each account's meter; refusal() stays real
+const meter = vi.hoisted(() => ({ claim: vi.fn(), release: vi.fn() }));
+vi.mock('@/app/_shared/lib/usage/usage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/usage/usage')>()),
+  meterFor: () => ({ claim: meter.claim, notOnPlan: () => null }),
+}));
+
+const freeAuditLimit = { kind: 'audit', plan: 'free', limit: 5, resetsAt: '2026-11-01T00:00:00.000Z' };
 
 const business = {
   name: 'Smile Dental',
@@ -111,6 +119,8 @@ beforeEach(() => {
   session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   db.reset();
   vi.mocked(runAudit).mockReset().mockResolvedValue(outcome);
+  meter.release.mockReset().mockResolvedValue(undefined);
+  meter.claim.mockReset().mockResolvedValue({ ok: true, release: meter.release });
   vi.stubEnv('GOOGLE_PAGESPEED_API_KEY', 'test-key');
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -253,5 +263,65 @@ describe('POST /api/audit', () => {
     const { status, json } = await post({ business_id: 'biz-1', force: true });
     expect(status).toBe(500);
     expect(json.error).toBe('Failed to store audit');
+  });
+
+  describe('against the plan', () => {
+    it('serves a cached audit without claiming one', async () => {
+      givenDb({ 'audits.select': [ok(storedAudit())] });
+      const { status } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(200);
+      expect(meter.claim).not.toHaveBeenCalled();
+    });
+
+    it('claims an audit before running it, a Re-audit too', async () => {
+      givenDb({ 'audits.select': [ok(storedAudit())], 'audits.update': [ok(storedAudit())] });
+      const { status } = await post({ business_id: 'biz-1', force: true });
+      expect(status).toBe(200);
+      expect(meter.claim).toHaveBeenCalledOnce();
+      expect(meter.claim).toHaveBeenCalledWith('audit');
+      expect(meter.claim.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runAudit).mock.invocationCallOrder[0]);
+      expect(meter.release).not.toHaveBeenCalled();
+    });
+
+    it('refuses at the limit without running the audit', async () => {
+      givenDb({ 'audits.select': [ok(null)] });
+      meter.claim.mockResolvedValue({ ok: false, status: 402, error: "You've used your 5 audits this month. They reset on Nov 1.", limit: freeAuditLimit });
+      const { status, json } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(402);
+      expect(json).toEqual({ error: "You've used your 5 audits this month. They reset on Nov 1.", limit: freeAuditLimit });
+      expect(runAudit).not.toHaveBeenCalled();
+    });
+
+    it('keeps the claim when the site cannot be audited', async () => {
+      givenDb({ 'audits.select': [ok(null)] });
+      vi.mocked(runAudit).mockRejectedValue(new AuditUnavailableError('Blocked (403)'));
+      const { status } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(502);
+      expect(meter.claim).toHaveBeenCalledOnce();
+      expect(meter.release).not.toHaveBeenCalled();
+    });
+
+    it('gives the audit back when it cannot be stored', async () => {
+      givenDb({ 'audits.select': [ok(null)], 'audits.insert': [fail('permission denied')] });
+      const { status, json } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(500);
+      expect(json.error).toBe('Failed to store audit');
+      expect(meter.release).toHaveBeenCalledOnce();
+    });
+
+    it('does not claim when the PageSpeed key is missing', async () => {
+      vi.stubEnv('GOOGLE_PAGESPEED_API_KEY', '');
+      givenDb({ 'audits.select': [ok(null)] });
+      const { status } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(503);
+      expect(meter.claim).not.toHaveBeenCalled();
+    });
+
+    it('does not claim for a business without a website', async () => {
+      givenDb({ 'businesses.select': [ok({ ...business, website: null })], 'audits.select': [ok(null)] });
+      const { status } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(400);
+      expect(meter.claim).not.toHaveBeenCalled();
+    });
   });
 });

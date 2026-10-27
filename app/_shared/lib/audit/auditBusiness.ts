@@ -2,8 +2,9 @@
 
 // One business's audit: a current cached audit is served as it is, otherwise
 // the website is audited and the result stored. Used by "Run audit"
-// (api/audit) and by free audits requested on devartventures.com, which are
-// audited as soon as they arrive (api/inbound/audit-request). Server-only.
+// (api/audit), where each audit that runs counts against the account's plan, and
+// by free audits requested on devartventures.com, which are audited as soon as
+// they arrive (api/inbound/audit-request) and never count. Server-only.
 
 import type { Db } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
@@ -12,6 +13,8 @@ import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
 import { isOutdatedAudit, isStaleAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 import type { Audit } from '@/app/_shared/lib/types/auditely';
+import { UNMETERED, type Meter } from '@/app/_shared/lib/usage/usage';
+import type { LimitReached } from '@/app/_shared/lib/usage/plans';
 
 interface BusinessRecord {
   name: string;
@@ -69,9 +72,14 @@ async function replaceAudit(db: Db, auditId: string, row: AuditRow) {
 
 export type AuditBusinessResult =
   | { ok: true; audit: Audit; email: string | null }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; limit?: LimitReached };
 
-export async function auditBusiness(db: Db, businessId: string, force = false): Promise<AuditBusinessResult> {
+export async function auditBusiness(
+  db: Db,
+  businessId: string,
+  force = false,
+  meter: Meter = UNMETERED
+): Promise<AuditBusinessResult> {
   const { data, error: businessError } = await db
     .from('businesses')
     .select('name, address, phone, website, email, searches(niche, location)')
@@ -121,6 +129,11 @@ export async function auditBusiness(db: Db, businessId: string, force = false): 
   // is nothing to compare.
   const direct = isUrlOnlySearch(business.searches);
 
+  // The audit counts from here: PageSpeed is called even when the site can't be
+  // audited. Only a result that can't be stored is given back.
+  const claim = await meter.claim('audit');
+  if (!claim.ok) return { ok: false, status: claim.status, error: claim.error, limit: claim.limit };
+
   // PageSpeed results are shared with other listings of the same website for
   // 30 days; a Re-audit measures afresh.
   let outcome: AuditOutcome;
@@ -150,6 +163,7 @@ export async function auditBusiness(db: Db, businessId: string, force = false): 
     : await insertAudit(db, businessId, outcome.row);
 
   if (!saved) {
+    await claim.release();
     return { ok: false, status: 500, error: 'Failed to store audit' };
   }
 

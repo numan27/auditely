@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { auditBusiness } from '@/app/_shared/lib/audit/auditBusiness';
+import { meterFor } from '@/app/_shared/lib/usage/usage';
 
 // PageSpeed can be slow; runAudit keeps PageSpeed inside a 240 s budget.
 export const maxDuration = 300;
@@ -19,7 +20,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'business_id is required' }, { status: 400 });
   }
 
-  const result = await auditBusiness(session.db, businessId, force);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  // Each audit that runs counts against the plan; a cached one is free
+  const result = await auditBusiness(session.db, businessId, force, meterFor(session.account));
+  if (!result.ok) return NextResponse.json({ error: result.error, limit: result.limit }, { status: result.status });
   return NextResponse.json({ audit: result.audit, email: result.email });
 }
