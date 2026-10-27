@@ -88,6 +88,10 @@ function Price({ plan, interval }: { plan: Plan; interval: BillingInterval | nul
   );
 }
 
+/** Checkout is open: Stripe is set up, the account can buy, has no plan, and isn't waiting on a payment */
+const isBuying = (billing: PlansBilling) =>
+  billing.ready && billing.canBuy && !billing.subscription && !billing.justSubscribed;
+
 /** Buy it, manage it, or "Coming soon" until Stripe is set up; nothing for Free, the plan held, or the owner */
 function PlanAction({ plan, current, billing }: { plan: Plan; current: boolean; billing: PlansBilling }) {
   if (!plan.monthlyPrice || !billing.canBuy) return null;
@@ -95,6 +99,8 @@ function PlanAction({ plan, current, billing }: { plan: Plan; current: boolean; 
     return current ? null : <p className="mt-auto pt-5 text-sm text-[var(--color-text-tertiary)]">Coming soon</p>;
   }
   const { subscription } = billing;
+  // Back from a payment Stripe hasn't confirmed yet: a second Checkout would buy a second plan
+  if (!subscription && billing.justSubscribed) return null;
   // Switching and cancelling happen in Stripe's portal, so a second Checkout can't start a second subscription
   const button = subscription ? (
     <BillingButton
@@ -164,7 +170,7 @@ function Welcome({ subscription }: { subscription: Subscription | null }) {
 }
 
 function PlanColumn({ plan, current, billing }: { plan: Plan; current: boolean; billing: PlansBilling }) {
-  const buying = billing.ready && billing.canBuy && !billing.subscription;
+  const buying = isBuying(billing);
   return (
     <section
       aria-label={plan.name}
@@ -210,7 +216,7 @@ function PlanColumn({ plan, current, billing }: { plan: Plan; current: boolean; 
 
 /** The account's plan and this month's usage, beside what Free, Pro and Agency include and the way to buy them */
 export function PlansView({ summary, billing }: { summary: UsageSummary | null; billing: PlansBilling }) {
-  const buying = billing.ready && billing.canBuy && !billing.subscription;
+  const buying = isBuying(billing);
   const limited =
     summary && summary.plan !== 'owner'
       ? USAGE_KINDS.flatMap((kind) => {

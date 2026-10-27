@@ -120,6 +120,13 @@ describe('PlansView', () => {
     expect(owner).not.toContain('Manage billing');
   });
 
+  it('offers no second Checkout while a payment is being confirmed', () => {
+    const html = render(free, { ...base, justSubscribed: true });
+    expect(html).not.toContain('Choose Pro');
+    expect(html).not.toContain('Choose Agency');
+    expect(html).not.toContain('billing=yearly');
+  });
+
   it('welcomes a new subscriber, or says the payment is on its way', () => {
     expect(render(proSummary, { ...base, subscription: yearly, justSubscribed: true })).toContain(
       'You&#x27;re on the Pro plan. Your new allowances start today.'
