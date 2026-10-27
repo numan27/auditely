@@ -55,4 +55,9 @@ describe('PlansView', () => {
     expect(renderToStaticMarkup(createElement(PlansView, { summary: null }))).toContain(
       'Couldn&#x27;t load this month&#x27;s usage. Refresh the page to try again.'
     ));
+
+  it('lists branding, mailbox and HubSpot as paid features', () => {
+    const html = renderToStaticMarkup(createElement(PlansView, { summary: freeSummary(0, 0) }));
+    for (const label of ['Your name and logo on reports', 'Send from your mailbox', 'HubSpot handoff']) expect(html).toContain(label);
+  });
 });

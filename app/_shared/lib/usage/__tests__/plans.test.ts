@@ -72,3 +72,12 @@ describe('readLimit', () => {
     expect(readLimit({ limit: { ...limit, limit: '5' } })).toBeNull();
   });
 });
+
+describe('per-user settings features', () => {
+  it('keeps branding, mailbox and HubSpot for paid plans and the owner', () => {
+    for (const f of ['branding', 'mailbox', 'hubspot'] as const) {
+      expect(planHas('free', f)).toBe(false);
+      expect([planHas('pro', f), planHas('agency', f), planHas('owner', f)]).toEqual([true, true, true]);
+    }
+  });
+});

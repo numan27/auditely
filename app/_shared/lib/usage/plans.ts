@@ -11,7 +11,7 @@ export type UsageKind = 'search' | 'audit' | 'email_lookup';
 export const USAGE_KINDS: readonly UsageKind[] = ['search', 'audit', 'email_lookup'];
 
 export type PlanId = 'free' | 'pro' | 'agency' | 'owner';
-export type Feature = 'auditAll' | 'export';
+export type Feature = 'auditAll' | 'export' | 'branding' | 'mailbox' | 'hubspot';
 
 export interface Plan {
   id: PlanId;
@@ -27,22 +27,22 @@ export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free', name: 'Free', monthlyPrice: 0, yearlyPrice: 0,
     limits: { search: 1, audit: 5, email_lookup: 0 },
-    features: { auditAll: false, export: false },
+    features: { auditAll: false, export: false, branding: false, mailbox: false, hubspot: false },
   },
   pro: {
     id: 'pro', name: 'Pro', monthlyPrice: 24, yearlyPrice: 240,
     limits: { search: 25, audit: 250, email_lookup: 100 },
-    features: { auditAll: true, export: true },
+    features: { auditAll: true, export: true, branding: true, mailbox: true, hubspot: true },
   },
   agency: {
     id: 'agency', name: 'Agency', monthlyPrice: 59, yearlyPrice: 590,
     limits: { search: 80, audit: 1000, email_lookup: 400 },
-    features: { auditAll: true, export: true },
+    features: { auditAll: true, export: true, branding: true, mailbox: true, hubspot: true },
   },
   owner: {
     id: 'owner', name: 'Owner', monthlyPrice: null, yearlyPrice: null,
     limits: { search: null, audit: null, email_lookup: null },
-    features: { auditAll: true, export: true },
+    features: { auditAll: true, export: true, branding: true, mailbox: true, hubspot: true },
   },
 };
 

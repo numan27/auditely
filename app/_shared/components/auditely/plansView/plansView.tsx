@@ -7,6 +7,9 @@ import { countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
 const FEATURES: { feature: Feature; label: string }[] = [
   { feature: 'auditAll', label: 'Audit all' },
   { feature: 'export', label: 'CSV and Google Sheets export' },
+  { feature: 'branding', label: 'Your name and logo on reports' },
+  { feature: 'mailbox', label: 'Send from your mailbox' },
+  { feature: 'hubspot', label: 'HubSpot handoff' },
 ];
 
 const NONE: Record<UsageKind, string> = {

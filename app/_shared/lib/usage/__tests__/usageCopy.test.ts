@@ -51,3 +51,11 @@ describe('meterLabel', () => {
   it('never goes below zero', () => expect(meterLabel(summary(0, 9))?.text).toBe('No audits left this month'));
   it('shows nothing for an account without limits', () => expect(meterLabel(summary(3, 3, 'owner'))).toBeNull());
 });
+
+describe('featureMessage for per-user settings', () => {
+  it('names the new features', () => {
+    expect(featureMessage('mailbox')).toBe('Sending from your own mailbox comes with the Pro and Agency plans.');
+    expect(featureMessage('hubspot')).toBe('The HubSpot handoff comes with the Pro and Agency plans.');
+    expect(featureMessage('branding')).toBe('Your own branding on reports comes with the Pro and Agency plans.');
+  });
+});

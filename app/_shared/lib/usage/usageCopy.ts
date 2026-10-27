@@ -14,6 +14,9 @@ const NOUNS: Record<UsageKind, [string, string]> = {
 const FEATURE_NAMES: Record<Feature, string> = {
   auditAll: 'Audit all',
   export: 'Exporting to CSV and Google Sheets',
+  branding: 'Your own branding on reports',
+  mailbox: 'Sending from your own mailbox',
+  hubspot: 'The HubSpot handoff',
 };
 
 /** The meter's tie-break: audits first, then searches, then email lookups */
