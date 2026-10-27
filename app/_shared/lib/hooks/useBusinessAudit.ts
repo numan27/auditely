@@ -12,6 +12,7 @@ import { shownStatus, type BulkState, type Post } from '@/app/_shared/lib/utils/
 import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, PdfVariant, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+const REWRITE_FAILED = "Couldn't write it again. Try again in a minute.";
 
 // The real routes. In the public demo the saved sample answers instead (demo/replay.ts).
 const send: Post = async (path, body) => {
@@ -34,6 +35,8 @@ export const pdfDownloadName = (businessName: string, variant: PdfVariant): stri
  * - reAudit(): forces a fresh audit; the server replaces the row and drops the
  *   stale report, so the report is regenerated afterwards
  * - retryAudit(): repeats the last request (normal or forced)
+ * - rewriteReport(): "Write again", a new summary and email in place of the
+ *   saved ones; the old ones stay on screen until the new ones are in
  * Every result is also passed to `onUpdate`, so the results list can sort,
  * filter and export on it. With `autoRun`, the audit starts on mount.
  * While "Audit all" handles the business (`bulk`), the statuses show its
@@ -64,6 +67,8 @@ export function useBusinessAudit(
   const [email, setEmail] = useState<string | null>(business.email ?? null);
   // Which version is being prepared
   const [pdfLoading, setPdfLoading] = useState<PdfVariant | null>(null);
+  const [rewriting, setRewriting] = useState(false);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
   const lastForce = useRef(false);
 
   // Reflect emails discovered by background discovery (updates the prop).
@@ -109,6 +114,25 @@ export function useBusinessAudit(
       setReportStatus('error');
     }
   }, [business.id, onUpdate, request]);
+
+  const rewriteReport = useCallback(
+    async (auditId: string) => {
+      setRewriting(true);
+      setRewriteError(null);
+      try {
+        const { ok, data } = await request(API_ROUTES.GENERATE, { audit_id: auditId, rewrite: true });
+        const { ai_report, error } = data as { ai_report: AiReport; error?: string };
+        if (!ok) return setRewriteError(error || REWRITE_FAILED);
+        setReport(ai_report);
+        onUpdate?.(business.id, { ai_report });
+      } catch {
+        setRewriteError(REWRITE_FAILED);
+      } finally {
+        setRewriting(false);
+      }
+    },
+    [business.id, onUpdate, request]
+  );
 
   const runAudit = useCallback(
     async (force = false) => {
@@ -196,6 +220,9 @@ export function useBusinessAudit(
     reAudit,
     retryAudit,
     generateReport,
+    rewriteReport,
+    rewriting,
+    rewriteError,
     downloadPdf,
   };
 }

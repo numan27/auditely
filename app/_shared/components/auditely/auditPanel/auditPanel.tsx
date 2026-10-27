@@ -119,7 +119,7 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
                 size="sm"
                 onClick={state.reAudit}
                 // Queued: "Audit all" is about to write this audit's summary
-                disabled={reportStatus === 'loading' || queued}
+                disabled={reportStatus === 'loading' || queued || state.rewriting}
                 leftIcon={<RefreshIcon size={14} />}
               >
                 Re-audit
@@ -134,7 +134,17 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
 
         <section className="border-t border-[var(--color-border)] pt-6">
           {reportStatus === 'done' && report ? (
-            <AiReportSection report={report} businessName={business.name} audit={audit} emailedAt={mail.sentAt} request={business.request} />
+            <AiReportSection
+              report={report}
+              businessName={business.name}
+              audit={audit}
+              emailedAt={mail.sentAt}
+              request={business.request}
+              // The demo's summaries are the saved sample's: nothing to write again
+              onRewrite={demo ? undefined : () => state.rewriteReport(audit.id)}
+              rewriting={state.rewriting}
+              rewriteError={state.rewriteError}
+            />
           ) : (
             <div className={ROW}>
               {reportStatus === 'loading' ? (

@@ -5,6 +5,7 @@
 // numbers or writes a long email. Server-side (used by /api/generate).
 
 import type { Problem } from '@/app/_shared/lib/audit/impact';
+import type { ReportWriter } from '@/app/_shared/lib/brand/brandRules';
 import { OFFER_CLOSING } from '@/app/_shared/lib/email/outreach';
 
 export interface ReportInput {
@@ -12,8 +13,8 @@ export interface ReportInput {
   website: string;
   /** Worst first (rankedProblems) */
   problems: Problem[];
-  /** REPORT_CONTACT_NAME; null signs as the team */
-  sender: string | null;
+  /** Who the email is written for and signed by: the account's brand (resolveBrand) */
+  writer: ReportWriter;
 }
 
 export interface WrittenReport {
@@ -48,8 +49,6 @@ export function offerSentence({ businessName, problems }: ReportInput): string {
   return `I've attached ${report} — ${OFFER_CLOSING}`;
 }
 
-const signOff = (sender: string | null) => (sender ? `${sender}, DevArtVentures` : 'The DevArtVentures team');
-
 function factLines(problems: Problem[]): string {
   if (problems.length === 0) return NOTHING_FOUND;
   return problems
@@ -75,7 +74,7 @@ export function buildReportPrompt(input: ReportInput, rejection?: string): strin
   const opening = found
     ? 'Open with problem 1 and what it costs them; you may mention one more problem briefly.'
     : "Open by saying their website did well in our checks. Don't claim any problem.";
-  return `You write for DevArtVentures, a web agency, about a local business's website. Respond in JSON only.
+  return `You write for ${input.writer.about}, about a local business's website. Respond in JSON only.
 
 Business: ${input.businessName}
 Website: ${input.website}
@@ -89,7 +88,7 @@ Write:
    - First line: "Subject: " and a subject of at most 6 words that names their biggest problem.
    - Body under 90 words. ${opening}
    - End the body with this sentence, word for word: "${offerSentence(input)}"
-   - Sign off with: ${signOff(input.sender)}
+   - Sign off with: ${input.writer.signOff}
    - No bullet points.
 
 Rules:
@@ -108,12 +107,13 @@ const emailBody = (email: string) => email.trimStart().replace(/^subject:[^\n]*/
 // Letters and digits only, so dash style, quotes and line breaks don't matter
 const bare = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** Numbers the model may use: those in the facts it was given (not their list positions) */
+/** Numbers the model may use: those in the facts it was given (not their list positions) and in the writer's own name */
 function allowedNumbers(input: ReportInput): Set<string> {
   const facts = input.problems
     .slice(0, PROMPT_PROBLEMS)
     .flatMap((p) => [p.problem, p.cost, p.evidence ?? '', p.stat ? `${p.stat.text} ${p.stat.source}` : '']);
-  const text = [...facts, offerSentence(input), input.businessName, input.website, input.sender ?? ''].join(' ');
+  const { about, signOff } = input.writer;
+  const text = [...facts, offerSentence(input), input.businessName, input.website, about, signOff].join(' ');
   return new Set(text.match(NUMBER) ?? []);
 }
 
@@ -129,7 +129,7 @@ export function replyProblem(reply: WrittenReport, input: ReportInput): string |
   const subject = reply.cold_email.trimStart().match(/^subject:\s*([^\n]*)/i)?.[1].trim() ?? '';
   if (subject.length > MAX_SUBJECT_CHARS) return `The subject is ${subject.length} characters; keep it to 6 words at most.`;
   if (!bare(reply.cold_email).includes(bare(offerSentence(input)))) return "It didn't end with the offer sentence.";
-  const signature = signOff(input.sender);
+  const signature = input.writer.signOff;
   return bare(reply.cold_email).includes(bare(signature)) ? null : `It didn't sign off as ${signature}.`;
 }
 

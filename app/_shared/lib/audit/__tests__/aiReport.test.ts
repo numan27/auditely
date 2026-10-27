@@ -22,11 +22,13 @@ const slow = problem(0, {
   evidence: 'Real visitors on phones wait about 4.1 s',
   stat: { text: '53% of mobile site visits are abandoned if a page takes longer than 3 seconds to load.', source: 'Think with Google, 2016' },
 });
+// The owner's writer, as resolveBrand gives it with a blank profile
+const owner = { about: 'DevArtVentures, a web agency', signOff: 'Numan, DevArtVentures' };
 const input = (over: Partial<ReportInput> = {}): ReportInput => ({
   businessName: 'Smile Dental',
   website: 'https://smiledental.com',
   problems: [slow, problem(1), problem(2)],
-  sender: 'Numan',
+  writer: owner,
   ...over,
 });
 // An email that ends as asked: the offer sentence, then the sign-off
@@ -63,7 +65,22 @@ describe('buildReportPrompt', () => {
     expect(prompt).toContain('Research: 53% of mobile site visits are abandoned if a page takes longer than 3 seconds to load. (Think with Google, 2016)');
     expect(prompt).toContain(offerSentence(input()));
     expect(prompt).toContain('Sign off with: Numan, DevArtVentures');
-    expect(buildReportPrompt(input({ sender: null }))).toContain('Sign off with: The DevArtVentures team');
+    expect(buildReportPrompt(input({ writer: { ...owner, signOff: 'The DevArtVentures team' } }))).toContain(
+      'Sign off with: The DevArtVentures team'
+    );
+  });
+
+  it('opens and signs off exactly as today for the owner', () => {
+    const prompt = buildReportPrompt(input({ writer: owner }));
+    expect(prompt.startsWith("You write for DevArtVentures, a web agency, about a local business's website. Respond in JSON only.")).toBe(true);
+    expect(prompt).toContain('Sign off with: Numan, DevArtVentures');
+  });
+
+  it('writes for a Free account without a word of DevArtVentures', () => {
+    const prompt = buildReportPrompt(input({ writer: { about: 'a web consultant', signOff: '[Your name]' } }));
+    expect(prompt.toLowerCase()).not.toContain('devart');
+    expect(prompt.startsWith("You write for a web consultant, about a local business's website.")).toBe(true);
+    expect(prompt).toContain('Sign off with: [Your name]');
   });
 
   it('asks for an honest positive note, and no problems, when nothing was found', () => {
@@ -120,6 +137,21 @@ describe('replyProblem', () => {
     );
     const short = signed('Your site is slow.').replace('Subject: Hi', "Subject: Patients can't reach you online");
     expect(replyProblem(reply(short), input())).toBeNull();
+  });
+
+  it('checks the account’s own sign-off, and lets its numbers through', () => {
+    const studio = { about: 'Studio 54', signOff: 'Sam, Studio 54' };
+    const offer = offerSentence(input({ writer: studio }));
+    expect(replyProblem(reply(`Subject: Hi\n\nYour site is slow. ${offer}\n\nSam, Studio 54`), input({ writer: studio }))).toBeNull();
+    expect(replyProblem(reply(`Subject: Hi\n\nYour site is slow. ${offer}\n\nNuman, DevArtVentures`), input({ writer: studio }))).toBe(
+      "It didn't sign off as Sam, Studio 54."
+    );
+  });
+
+  it('takes the Free sign-off placeholder as written, brackets and all', () => {
+    const free = { about: 'a web consultant', signOff: '[Your name]' };
+    const offer = offerSentence(input({ writer: free }));
+    expect(replyProblem(reply(`Subject: Hi\n\nYour site is slow. ${offer}\n\n[Your name]`), input({ writer: free }))).toBeNull();
   });
 
   it('requires the offer sentence and the sign-off, in any dash or line style', () => {

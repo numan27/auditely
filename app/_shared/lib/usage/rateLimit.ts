@@ -7,9 +7,12 @@
 /** City suggestions one account may ask Google for: enough for typing, not for a loop */
 export const AUTOCOMPLETE_PER_MINUTE = 30;
 export const AUTOCOMPLETE_PER_DAY = 500;
+/** "Write again" on a summary: a model call each time, while the audit was counted once */
+export const REWRITES_PER_HOUR = 10;
 
 const MINUTE_MS = 60_000;
-const DAY_MS = 24 * 60 * MINUTE_MS;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 interface WindowLimitOptions {
   limit: number;
@@ -42,3 +45,8 @@ const autocompletePerDay = windowLimit({ limit: AUTOCOMPLETE_PER_DAY, windowMs: 
 /** Whether this account may ask Google for city suggestions now */
 export const autocompleteAllowed = (accountId: string, now: number = Date.now()): boolean =>
   autocompletePerMinute(accountId, now) && autocompletePerDay(accountId, now);
+
+const rewritesPerHour = windowLimit({ limit: REWRITES_PER_HOUR, windowMs: HOUR_MS });
+
+/** Whether this account may have a summary and email written again now */
+export const rewriteAllowed = (accountId: string, now: number = Date.now()): boolean => rewritesPerHour(accountId, now);

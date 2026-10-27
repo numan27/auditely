@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
-import { CheckIcon, CopyIcon } from '@/app/_shared/components/ui/icons/icons';
+import { CheckIcon, CopyIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
@@ -18,6 +18,10 @@ interface AiReportSectionProps {
   emailedAt: string | null;
   /** Set for an audit requested on devartventures.com: the first email replies to it */
   request?: AuditRequest | null;
+  /** "Write again": a new summary and email in place of these. Left out, the button is too (the demo). */
+  onRewrite?: () => void;
+  rewriting?: boolean;
+  rewriteError?: string | null;
 }
 
 /** One email as "Send email" will send it, with a button to copy it */
@@ -49,15 +53,23 @@ function EmailDraft({ title, hint, draft }: { title: string; hint?: string; draf
   );
 }
 
-export function AiReportSection({ report, businessName, audit, emailedAt, request }: AiReportSectionProps) {
+export function AiReportSection({ report, businessName, audit, emailedAt, request, onRewrite, rewriting, rewriteError }: AiReportSectionProps) {
   const drafts = leadDrafts(report.cold_email, businessName, audit, request);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="space-y-6">
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">Summary</h4>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Summary</h4>
+            {onRewrite && (
+              <Button variant="ghost" size="sm" onClick={onRewrite} disabled={rewriting} leftIcon={<RefreshIcon size={14} />}>
+                {rewriting ? 'Writing…' : 'Write again'}
+              </Button>
+            )}
+          </div>
           <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{report.summary}</p>
+          {rewriteError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{rewriteError}</p>}
         </div>
 
         <div>

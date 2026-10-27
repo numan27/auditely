@@ -15,8 +15,8 @@ export const SETTINGS_MIGRATION = 'docs/migrations/2026-10-29-settings.sql';
 export const BRAND_UNAVAILABLE = "Couldn't load this account's branding. Try again in a minute.";
 
 export class BrandUnavailable extends Error {
-  constructor(reason: string) {
-    super(`Couldn't read the profile: ${reason}`);
+  constructor(reason?: string) {
+    super(reason ? `Couldn't read the profile: ${reason}` : "Couldn't read the profile");
     this.name = 'BrandUnavailable';
   }
 }

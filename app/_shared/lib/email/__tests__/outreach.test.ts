@@ -34,7 +34,7 @@ describe('outreachDraft', () => {
 
 describe('outreachDraft layout', () => {
   // The AI often runs the sign-off into the offer sentence that ends its email
-  const offer = offerSentence({ businessName: 'Smile Dental', website: 'https://smiledental.com', problems: [], sender: null });
+  const offer = offerSentence({ businessName: 'Smile Dental', website: 'https://smiledental.com', problems: [], writer: { about: 'DevArtVentures, a web agency', signOff: 'The DevArtVentures team' } });
 
   it('puts a sign-off that follows the offer on the same line into its own paragraph', () => {
     const { body } = outreachDraft(`Subject: Hi\nHi, your site is slow. ${offer} The DevArtVentures team`, 'Smile Dental');
