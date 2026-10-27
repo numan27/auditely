@@ -1,7 +1,7 @@
 // app/api/results/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,6 +9,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_REMOVED = 500;
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
   const { searchParams } = new URL(request.url);
   const searchId = searchParams.get('search_id');
 
@@ -16,8 +20,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'search_id query parameter is required' }, { status: 400 });
   }
 
-  const searchQuery = serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
-  const businessQuery = serviceDb
+  const searchQuery = db.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const businessQuery = db
     .from('businesses')
     .select(`
       *,
@@ -45,6 +49,10 @@ export async function GET(request: NextRequest) {
 // them (ON DELETE CASCADE), and the same search run again reuses this one, so they
 // don't come back. Websites added by URL and audit requests have their own lists.
 export async function DELETE(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
   const body = await request.json().catch(() => ({}));
   const searchId: unknown = body?.search_id;
   const ids: unknown = body?.ids;
@@ -57,13 +65,13 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the businesses to remove' }, { status: 400 });
 
-  const { data: search } = await serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const { data: search } = await db.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
   if (!search) return NextResponse.json({ removed: [] });
   if (isUrlOnlySearch(search)) {
     return NextResponse.json({ error: 'Remove these from their own tab' }, { status: 400 });
   }
 
-  const { data, error } = await serviceDb
+  const { data, error } = await db
     .from('businesses')
     .delete()
     .eq('search_id', searchId)

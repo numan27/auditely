@@ -5,7 +5,9 @@
 // visitor's name and email, then audited and summarised in the background, so
 // the scores are usually ready by the time it's opened. A request sent twice
 // is stored once. The header bell hears of it when it arrives and when its
-// audit is done (or failed).
+// audit is done (or failed). Requests are the owner's (OWNER_EMAIL): no one is
+// signed in here, so the service client stores them in the owner's own
+// requests search with the owner's user_id, and tells only the owner's bell.
 
 import { after, NextRequest, NextResponse } from 'next/server';
 import { serviceDb } from '@/app/_shared/lib/supabase/client';
@@ -65,7 +67,10 @@ export async function POST(request: NextRequest) {
   const { website, host, email, request: details } = parsed.value;
 
   const ownerId = await ownerUserId();
-  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+  if (!ownerId) {
+    console.error('[inbound] OWNER_EMAIL has no Auditely account yet: audit requests are refused until the owner signs in');
+    return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+  }
 
   const searchId = await ensureRequestSearchId(serviceDb, ownerId);
   if (!searchId) return NextResponse.json({ error: 'Failed to save the request' }, { status: 500 });
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await serviceDb
     .from('businesses')
-    .insert({ search_id: searchId, name: host, address: '', website, email, request: details })
+    .insert({ search_id: searchId, name: host, address: '', website, email, user_id: ownerId, request: details })
     .select('id')
     .single();
   if (error || !data) {

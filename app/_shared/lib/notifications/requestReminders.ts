@@ -57,6 +57,7 @@ export async function syncRequestReminders(db: Db, userId: string, now: Date, ti
     const { data: unread } = await db
       .from('notifications')
       .select('id, kind, business_id')
+      .eq('user_id', userId)
       .is('read_at', null)
       .not('business_id', 'is', null);
     const done = (unread ?? [])

@@ -23,13 +23,29 @@ const db = vi.hoisted(() => {
   };
   return { state, from };
 });
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
 vi.mock('@/app/_shared/lib/email/brandLogo', () => ({ LOGO_CID: 'devartventures-logo', brandLogo: vi.fn() }));
 // The mailer (mailbox or Resend) has its own tests
 vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
 // The address check (Verifalia) has its own tests
 vi.mock('@/app/_shared/lib/email/leadEmailCheck', () => ({ checkLeadEmail: vi.fn() }));
+
+// The signed-in user's client: the route must hand this one to the libraries
+const userDb = { from: db.from };
+// Signed in, but not as the owner; the client records any query it is asked for
+function signInAsMember() {
+  const from = vi.fn(db.from);
+  session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+  return from;
+}
 
 const PDF = Buffer.from('%PDF-1.7');
 const LOGO = Buffer.from('logo-png');
@@ -52,6 +68,7 @@ const post = async (body: unknown) => {
 };
 
 beforeEach(() => {
+  session.current = { db: userDb, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   vi.spyOn(console, 'error').mockImplementation(() => {});
   db.state.business = businessRow();
   db.state.updates = [];
@@ -89,7 +106,7 @@ describe('POST /api/send-email', () => {
     expect(html).toContain('<img src="cid:devartventures-logo"');
     expect(html).toContain('Smile Dental');
     expect(html).toContain('Book your free call');
-    expect(renderAuditPdf).toHaveBeenCalledWith(expect.anything(), 'a1');
+    expect(renderAuditPdf).toHaveBeenCalledWith(userDb, 'a1');
     expect(db.state.updates).toEqual([{ emailed_at: json.emailed_at }]);
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
   });
@@ -200,7 +217,7 @@ describe('POST /api/send-email', () => {
   it('checks the stored address', async () => {
     db.state.business = businessRow({ email_check: { verdict: 'Deliverable' } });
     await post({ ...draft, email: 'someone@else.com' });
-    expect(checkLeadEmail).toHaveBeenCalledWith(expect.anything(), { id: 'b1', email: 'office@smiledental.com', email_check: { verdict: 'Deliverable' } });
+    expect(checkLeadEmail).toHaveBeenCalledWith(userDb, { id: 'b1', email: 'office@smiledental.com', email_check: { verdict: 'Deliverable' } });
   });
 
   it.each([
@@ -223,5 +240,16 @@ describe('POST /api/send-email', () => {
     vi.mocked(emailSetupProblem).mockReturnValue(null);
     await post(draft);
     expect(checkLeadEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('/api/send-email for an account that is not the owner', () => {
+  it('answers 403, before reading the lead or sending anything', async () => {
+    const from = signInAsMember();
+    expect(await post(draft)).toEqual({ status: 403, json: { error: "This isn't available on your account yet." } });
+    expect((await post({ ...draft, preview: true })).status).toBe(403);
+    expect(from).not.toHaveBeenCalled();
+    expect(checkLeadEmail).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,8 @@
 // the same site if it was added before); DELETE removes the ones named.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import type { Db } from '@/app/_shared/lib/supabase/client';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { DIRECT_AUDIT_SEARCH } from '@/app/_shared/lib/config/directAudits';
 import { normalizeWebsiteUrl, websiteKey } from '@/app/_shared/lib/utils/websiteUrl';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
@@ -14,8 +15,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // More than the list will hold; a longer request isn't from the app
 const MAX_REMOVED = 500;
 
-async function findDirectSearchId(): Promise<string | null> {
-  const { data } = await serviceDb
+// This account's reserved search: Row Level Security shows only its own
+async function findDirectSearchId(db: Db): Promise<string | null> {
+  const { data } = await db
     .from('searches')
     .select('id')
     .eq('niche', DIRECT_AUDIT_SEARCH.niche)
@@ -26,16 +28,20 @@ async function findDirectSearchId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-async function loadBusiness(id: string) {
-  const { data } = await serviceDb.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', id).single();
+async function loadBusiness(db: Db, id: string) {
+  const { data } = await db.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', id).single();
   return data ? withAuditData(data as BusinessRow) : null;
 }
 
 export async function GET() {
-  const searchId = await findDirectSearchId();
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
+  const searchId = await findDirectSearchId(db);
   if (!searchId) return NextResponse.json({ businesses: [] });
 
-  const { data, error } = await serviceDb
+  const { data, error } = await db
     .from('businesses')
     .select(BUSINESS_WITH_AUDIT)
     .eq('search_id', searchId)
@@ -49,13 +55,17 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
   const body = await request.json().catch(() => ({}));
   const parsed = normalizeWebsiteUrl(typeof body.url === 'string' ? body.url : '');
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  let searchId = await findDirectSearchId();
+  let searchId = await findDirectSearchId(db);
   if (!searchId) {
-    const { data, error } = await serviceDb.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
+    const { data, error } = await db.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
     if (error || !data) {
       console.error('[audit-url] Failed to create search:', error?.message);
       return NextResponse.json({ error: 'Failed to save the website' }, { status: 500 });
@@ -64,15 +74,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Added before → return it with its audit, so it isn't audited twice
-  const { data: sites } = await serviceDb.from('businesses').select('id, website').eq('search_id', searchId);
+  const { data: sites } = await db.from('businesses').select('id, website').eq('search_id', searchId);
   const key = websiteKey(parsed.url);
   const match = sites?.find((b) => b.website && websiteKey(b.website) === key);
   if (match) {
-    const business = await loadBusiness(match.id);
+    const business = await loadBusiness(db, match.id);
     if (business) return NextResponse.json({ business, existing: true });
   }
 
-  const { data, error } = await serviceDb
+  const { data, error } = await db
     .from('businesses')
     .insert({ search_id: searchId, name: parsed.host, address: '', website: parsed.url })
     .select()
@@ -87,6 +97,10 @@ export async function POST(request: NextRequest) {
 // Removes sites from the list for good: their audits and reports go with them
 // (ON DELETE CASCADE). Only websites added by URL: a lead's id is left alone.
 export async function DELETE(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
   const body = await request.json().catch(() => ({}));
   const ids: unknown = body?.ids;
   const valid =
@@ -96,10 +110,10 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the websites to remove' }, { status: 400 });
 
-  const searchId = await findDirectSearchId();
+  const searchId = await findDirectSearchId(db);
   if (!searchId) return NextResponse.json({ removed: [] });
 
-  const { data, error } = await serviceDb
+  const { data, error } = await db
     .from('businesses')
     .delete()
     .eq('search_id', searchId)

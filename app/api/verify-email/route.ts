@@ -5,13 +5,18 @@
 // it is fresh, otherwise asks Verifalia (email/leadEmailCheck.ts).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, ownerOnly, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 
 // Verifalia gets 20 seconds (email/verifalia.ts); the rest is the database
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  if (!session.account.isOwner) return ownerOnly();
+  const { db } = session;
+
   // Anything that isn't a JSON object (a bare null, a string) is treated as empty
   const parsed: unknown = await request.json().catch(() => null);
   const input = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
@@ -20,9 +25,9 @@ export async function POST(request: NextRequest) {
 
   // The address always comes from the stored business, never from the request.
   // `*` rather than the column's name: it must also work before the migration is run.
-  const { data } = await serviceDb.from('businesses').select('*').eq('id', businessId).single();
+  const { data } = await db.from('businesses').select('*').eq('id', businessId).single();
   if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   if (!data.email) return NextResponse.json({ error: 'This business has no email address.' }, { status: 400 });
 
-  return NextResponse.json(await checkLeadEmail(serviceDb, { id: data.id, email: data.email, email_check: data.email_check }));
+  return NextResponse.json(await checkLeadEmail(db, { id: data.id, email: data.email, email_check: data.email_check }));
 }

@@ -1,13 +1,13 @@
 // app/api/notifications/route.ts
 
-// The header bell. GET lists the latest notifications and the unread count,
-// after adding the reply reminders due on the viewer's calendar (?tz=, their
-// IANA time zone). PATCH marks some read, or all. POST records an "Audit all"
-// run that finished: the run happens in the browser, so the server can't tell.
+// The header bell, each account's own. GET lists the latest notifications and
+// the unread count, after adding the owner's reply reminders due on the viewer's
+// calendar (?tz=, their IANA time zone). PATCH marks some read, or all. POST
+// records an "Audit all" run that finished: the run happens in the browser, so
+// the server can't tell.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
-import { ownerUserId } from '@/app/_shared/lib/supabase/server';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { bulkDone } from '@/app/_shared/lib/notifications/messages';
 import { isMissingTable, notify, NOTIFICATIONS_MIGRATION } from '@/app/_shared/lib/notifications/notify';
 import { syncRequestReminders } from '@/app/_shared/lib/notifications/requestReminders';
@@ -26,14 +26,20 @@ const COLUMNS = 'id, kind, title, body, business_id, search_id, created_at, read
 const SETUP_NEEDED: NotificationsResponse = { notifications: [], unread: 0, setupNeeded: true };
 
 export async function GET(request: NextRequest) {
-  const timeZone = knownTimeZone(new URL(request.url).searchParams.get('tz'));
-  const ownerId = await ownerUserId();
-  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
-  await syncRequestReminders(serviceDb, ownerId, new Date(), timeZone);
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db, account } = session;
 
+  // Audit requests, and so their reply reminders, are the owner's alone
+  if (account.isOwner) {
+    const timeZone = knownTimeZone(new URL(request.url).searchParams.get('tz'));
+    await syncRequestReminders(db, account.id, new Date(), timeZone);
+  }
+
+  // Row Level Security shows each account only its own notifications
   const [listed, counted] = await Promise.all([
-    serviceDb.from('notifications').select(COLUMNS).order('created_at', { ascending: false }).limit(LIST_LIMIT),
-    serviceDb.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+    db.from('notifications').select(COLUMNS).order('created_at', { ascending: false }).limit(LIST_LIMIT),
+    db.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
   ]);
   const error = listed.error ?? counted.error;
   if (isMissingTable(error)) return NextResponse.json(SETUP_NEEDED);
@@ -46,6 +52,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   const body = await request.json().catch(() => ({}));
   const all = body?.all === true;
   const ids: unknown = body?.ids;
@@ -54,7 +63,7 @@ export async function PATCH(request: NextRequest) {
     (Array.isArray(ids) && ids.length > 0 && ids.length <= MAX_IDS && ids.every((id) => typeof id === 'string' && UUID.test(id)));
   if (!valid) return NextResponse.json({ error: 'Choose the notifications to mark as read' }, { status: 400 });
 
-  const update = serviceDb.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
+  const update = session.db.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
   const { error } = await (all ? update : update.in('id', ids as string[]));
   if (error) {
     console.error(
@@ -69,18 +78,19 @@ export async function PATCH(request: NextRequest) {
 const isCount = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_COUNT;
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db, account } = session;
+
   const body = await request.json().catch(() => ({}));
   const { kind, search_id: searchId, audited, failed } = body ?? {};
   const valid =
     kind === 'bulk_done' && typeof searchId === 'string' && UUID.test(searchId) && isCount(audited) && isCount(failed) && audited + failed > 0;
   if (!valid) return NextResponse.json({ error: 'Not a finished "Audit all" run' }, { status: 400 });
 
-  const ownerId = await ownerUserId();
-  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
-
-  const { data: search } = await serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const { data: search } = await db.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
   if (!search) return NextResponse.json({ error: 'Search not found' }, { status: 404 });
 
-  const stored = await notify(serviceDb, ownerId, bulkDone({ searchId, search, audited, failed }));
+  const stored = await notify(db, account.id, bulkDone({ searchId, search, audited, failed }));
   return stored ? NextResponse.json({ ok: true }, { status: 201 }) : NextResponse.json({ error: "Couldn't store the notification" }, { status: 500 });
 }

@@ -32,7 +32,14 @@ const db = vi.hoisted(() => {
 });
 const groq = vi.hoisted(() => ({ create: vi.fn() }));
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 vi.mock('groq-sdk', () => ({
   default: class {
     chat = { completions: { create: groq.create } };
@@ -47,6 +54,7 @@ async function post() {
 }
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   vi.stubEnv('GROQ_API_KEY', 'test-key');
   vi.spyOn(console, 'error').mockImplementation(() => {});
   db.state.inserted = null;

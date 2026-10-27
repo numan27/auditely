@@ -36,8 +36,14 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
-vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 
 const { GET, PATCH, POST } = await import('@/app/api/notifications/route');
 
@@ -55,6 +61,13 @@ const requestRow = (id: string, requestedAt: string, emailedAt: string | null = 
   request: { name: `Owner ${id}`, requested_at: requestedAt },
 });
 
+// Signed in, but not as the owner; the client records any query it is asked for
+function signInAsMember() {
+  const from = vi.fn(db.from);
+  session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+  return from;
+}
+
 async function call(handler: (req: NextRequest) => Promise<Response>, method: string, body?: unknown, query = '') {
   const res = await handler(
     new NextRequest(`http://localhost/api/notifications${query}`, { method, body: body === undefined ? undefined : JSON.stringify(body) })
@@ -63,6 +76,7 @@ async function call(handler: (req: NextRequest) => Promise<Response>, method: st
 }
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   db.state.responses = {};
   db.state.calls = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -132,12 +146,26 @@ describe('GET /api/notifications', () => {
     await call(GET, 'GET');
     const [update] = calls('notifications', 'update');
     expect(update.filters).toContainEqual(['in', 'id', ['n-answered', 'n-late-due']]);
+    // Only the owner's own unread notifications are looked through
+    expect(calls('notifications', 'select')[0].filters).toContainEqual(['eq', 'user_id', 'owner-1']);
   });
 
   it('ignores a time zone it does not know', async () => {
     db.state.responses = { 'searches.select': [ok([])], 'notifications.select': [ok([])], 'notifications.count': [ok(null, 0)] };
     const { status } = await call(GET, 'GET', undefined, '?tz=Mars/Olympus');
     expect(status).toBe(200);
+  });
+
+  it("lists another account's own notifications without looking for audit requests", async () => {
+    const from = signInAsMember();
+    const list = [{ id: N1, kind: 'bulk_done', title: '"Audit all" finished: Dentists in Austin', read_at: null }];
+    db.state.responses = { 'notifications.select': [ok(list)], 'notifications.count': [ok(null, 1)] };
+    const { status, json } = await call(GET, 'GET', undefined, '?tz=America/New_York');
+    expect(status).toBe(200);
+    expect(json).toEqual({ notifications: list, unread: 1 });
+    expect(from.mock.calls.map(([table]) => table)).toEqual(['notifications', 'notifications']);
+    expect(calls('businesses', 'select')).toHaveLength(0);
+    expect(upserted()).toEqual([]);
   });
 
   it('says the migration is needed instead of failing while the table is missing', async () => {
@@ -183,8 +211,17 @@ describe('POST /api/notifications', () => {
         body: '18 websites audited, 2 failed. Run "Audit all" again to retry them.',
         search_id: SEARCH,
         dedupe_key: null,
+        user_id: 'owner-1',
       }),
     ]);
+  });
+
+  it('records the run for whoever ran it, owner or not', async () => {
+    signInAsMember();
+    db.state.responses = { 'searches.select': [ok({ niche: 'dentists', location: 'austin, tx, usa' })] };
+    const { status } = await call(POST, 'POST', { kind: 'bulk_done', search_id: SEARCH, audited: 3, failed: 0 });
+    expect(status).toBe(201);
+    expect(upserted()).toEqual([expect.objectContaining({ kind: 'bulk_done', user_id: 'user-2' })]);
   });
 
   it('refuses anything else', async () => {

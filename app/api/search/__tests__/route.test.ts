@@ -50,7 +50,14 @@ const db = vi.hoisted(() => {
   return { inserts, state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 vi.mock('@/app/_shared/lib/places/searchPlaces', () => ({ searchPlaces: vi.fn() }));
 
 async function post(body: Record<string, unknown>) {
@@ -59,6 +66,7 @@ async function post(body: Record<string, unknown>) {
 }
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   for (const key of Object.keys(db.inserts)) delete db.inserts[key];
   db.state.businessInsertError = null;
   db.state.deletes = [];

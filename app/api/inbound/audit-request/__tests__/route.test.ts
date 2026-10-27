@@ -37,9 +37,16 @@ const db = vi.hoisted(() => {
 // The work the route leaves for after the response, run by the test when it wants
 const background = vi.hoisted(() => ({ tasks: [] as (() => Promise<unknown> | unknown)[] }));
 const audits = vi.hoisted(() => ({ auditBusiness: vi.fn(), generateAiReport: vi.fn() }));
+// The owner's account, found by OWNER_EMAIL; null before the owner first signs in
+const owner = vi.hoisted(() => ({ id: 'owner-1' as string | null }));
 
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
-vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  // devartventures.com calls without a session: the work is the owner's
+  getSession: async () => null,
+  ownerUserId: async () => owner.id,
+}));
 vi.mock('next/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/server')>()),
   after: (task: () => unknown) => background.tasks.push(task),
@@ -48,6 +55,7 @@ vi.mock('@/app/_shared/lib/audit/auditBusiness', () => ({ auditBusiness: audits.
 vi.mock('@/app/_shared/lib/audit/generateAiReport', () => ({ generateAiReport: audits.generateAiReport }));
 
 const { POST } = await import('@/app/api/inbound/audit-request/route');
+const { serviceDb } = await import('@/app/_shared/lib/supabase/client');
 
 const SECRET = 's'.repeat(64);
 const ok = (data: unknown): Result => ({ data, error: null });
@@ -56,7 +64,7 @@ const inserts = (table: string) => db.state.calls.filter((c) => c.table === tabl
 const notified = () =>
   db.state.calls
     .filter((c) => c.table === 'notifications' && c.op === 'upsert')
-    .flatMap((c) => c.payload as { kind: string; title: string; business_id: string }[]);
+    .flatMap((c) => c.payload as { kind: string; title: string; business_id: string; user_id: string }[]);
 const request = (over: Record<string, unknown> = {}) => ({
   id: 'req-1',
   name: 'Sarah Jones',
@@ -79,6 +87,7 @@ async function send(body: unknown, authorization: string | null = `Bearer ${SECR
 
 beforeEach(() => {
   vi.stubEnv('AUDITELY_INBOUND_SECRET', SECRET);
+  owner.id = 'owner-1';
   db.state.responses = {};
   db.state.calls = [];
   background.tasks = [];
@@ -109,6 +118,33 @@ describe('POST /api/inbound/audit-request', () => {
     expect(db.state.calls).toHaveLength(0);
   });
 
+  it('refuses requests while the owner has no account yet, and stores nothing', async () => {
+    owner.id = null;
+    const { status, json } = await send(request());
+    expect(status).toBe(503);
+    expect(json).toEqual({ error: 'Audit requests are not set up' });
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('OWNER_EMAIL has no Auditely account yet'));
+    expect(inserts('searches')).toHaveLength(0);
+    expect(inserts('businesses')).toHaveLength(0);
+    expect(background.tasks).toHaveLength(0);
+  });
+
+  it("only ever uses the owner's requests search, never another account's with the same name", async () => {
+    db.state.responses = {
+      'searches.select': [ok([{ id: 'requests' }])],
+      'businesses.select': [ok(null)],
+      'businesses.insert': [ok({ id: 'b1' })],
+    };
+    await send(request());
+    const lookup = db.state.calls.find((c) => c.table === 'searches' && c.op === 'select');
+    expect(lookup?.filters).toEqual([
+      ['eq', 'user_id', 'owner-1'],
+      ['eq', 'niche', 'audit requests'],
+      ['eq', 'location', 'devartventures.com'],
+    ]);
+    expect(inserts('businesses')[0].payload).toMatchObject({ search_id: 'requests', user_id: 'owner-1' });
+  });
+
   it('stores a new request under the requests search, then audits and summarises it after answering', async () => {
     db.state.responses = {
       'searches.select': [ok([])],
@@ -129,6 +165,7 @@ describe('POST /api/inbound/audit-request', () => {
       address: '',
       website: 'https://smiledental.com',
       email: 'sarah@smiledental.com',
+      user_id: 'owner-1',
       request: {
         source_id: 'req-1',
         name: 'Sarah Jones',
@@ -142,12 +179,12 @@ describe('POST /api/inbound/audit-request', () => {
     expect(audits.auditBusiness).not.toHaveBeenCalled();
     expect(background.tasks).toHaveLength(1);
     await background.tasks[0]();
-    expect(audits.auditBusiness).toHaveBeenCalledWith(expect.anything(), 'b1');
-    expect(audits.generateAiReport).toHaveBeenCalledWith(expect.anything(), 'a1');
-    // The bell hears of the request, then of its finished report
+    expect(audits.auditBusiness).toHaveBeenCalledWith(serviceDb, 'b1');
+    expect(audits.generateAiReport).toHaveBeenCalledWith(serviceDb, 'a1');
+    // The owner's bell hears of the request, then of its finished report
     expect(notified()).toEqual([
-      expect.objectContaining({ kind: 'request_new', title: 'New audit request from Sarah Jones', business_id: 'b1' }),
-      expect.objectContaining({ kind: 'request_audited', title: 'smiledental.com is audited', business_id: 'b1' }),
+      expect.objectContaining({ kind: 'request_new', title: 'New audit request from Sarah Jones', business_id: 'b1', user_id: 'owner-1' }),
+      expect.objectContaining({ kind: 'request_audited', title: 'smiledental.com is audited', business_id: 'b1', user_id: 'owner-1' }),
     ]);
   });
 
@@ -163,6 +200,7 @@ describe('POST /api/inbound/audit-request', () => {
     await background.tasks[0]();
     expect(notified().map((n) => n.kind)).toEqual(['request_new', 'request_audit_failed']);
     expect(notified()[1].title).toBe("Couldn't write the summary for smiledental.com");
+    expect(notified().map((n) => n.user_id)).toEqual(['owner-1', 'owner-1']);
   });
 
   it('still audits the request when the bell is not set up', async () => {
@@ -193,6 +231,7 @@ describe('POST /api/inbound/audit-request', () => {
     expect(inserts('searches')).toHaveLength(0);
     expect(notified().map((n) => n.kind)).toEqual(['request_new', 'request_audit_failed']);
     expect(notified()[1].title).toBe("Couldn't audit smiledental.com");
+    expect(notified().map((n) => n.user_id)).toEqual(['owner-1', 'owner-1']);
   });
 
   it('stores a request sent twice once, and audits it once', async () => {

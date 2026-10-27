@@ -55,7 +55,14 @@ const db = vi.hoisted(() => {
   return { state, from, reset, ops };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 vi.mock('@/app/_shared/lib/audit/runAudit', () => ({
   AuditUnavailableError: class AuditUnavailableError extends Error {},
   runAudit: vi.fn(),
@@ -101,6 +108,7 @@ async function post(body: Record<string, unknown>) {
 }
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   db.reset();
   vi.mocked(runAudit).mockReset().mockResolvedValue(outcome);
   vi.stubEnv('GOOGLE_PAGESPEED_API_KEY', 'test-key');

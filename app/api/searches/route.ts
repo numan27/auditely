@@ -1,11 +1,14 @@
 // app/api/searches/route.ts
 
 import { NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 
 export async function GET() {
-  const { data, error } = await serviceDb
+  const session = await getSession();
+  if (!session) return unauthorized();
+
+  const { data, error } = await session.db
     .from('searches')
     .select('*, businesses(count)')
     .order('created_at', { ascending: false });

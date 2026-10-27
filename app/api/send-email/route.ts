@@ -8,7 +8,7 @@
 // With `preview: true` nothing is sent: the answer is the email's HTML.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, ownerOnly, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import { brandLogo, LOGO_CID } from '@/app/_shared/lib/email/brandLogo';
 import { blocksSending, checkReason } from '@/app/_shared/lib/email/emailCheck';
@@ -25,6 +25,11 @@ export const maxDuration = 60;
 const MIGRATION = 'docs/migrations/2026-10-02-emailed-at.sql';
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  if (!session.account.isOwner) return ownerOnly();
+  const { db } = session;
+
   // Anything that isn't a JSON object (a bare null, a string) is treated as empty
   const parsed: unknown = await request.json().catch(() => null);
   const input = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (setupProblem) return NextResponse.json({ error: setupProblem }, { status: 503 });
 
   // The recipient always comes from the stored business, never from the request
-  const { data } = await serviceDb.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', businessId).single();
+  const { data } = await db.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', businessId).single();
   if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   const business = withAuditData(data as BusinessRow);
   if (!business.email) return NextResponse.json({ error: 'This business has no email address.' }, { status: 400 });
@@ -59,12 +64,12 @@ export async function POST(request: NextRequest) {
   }
 
   // The dialog checked the address when it opened, so this normally reads the saved result
-  const checked = await checkLeadEmail(serviceDb, { id: business.id, email: business.email, email_check: business.email_check });
+  const checked = await checkLeadEmail(db, { id: business.id, email: business.email, email_check: business.email_check });
   if (checked.state === 'checked' && blocksSending(checked.check)) {
     return NextResponse.json({ error: `Not sent: ${checkReason(checked.check)}`, email_check: checked.check }, { status: 400 });
   }
 
-  const report = await renderAuditPdf(serviceDb, business.audit.id);
+  const report = await renderAuditPdf(db, business.audit.id);
   if (!report.ok) return NextResponse.json({ error: report.error }, { status: report.status });
 
   const sent = await sendEmail({
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
 
   // The email has gone: a failed save must not read as a failed send, or it would be sent again
   const emailedAt = new Date().toISOString();
-  const { error: saveError } = await serviceDb.from('businesses').update({ emailed_at: emailedAt }).eq('id', businessId);
+  const { error: saveError } = await db.from('businesses').update({ emailed_at: emailedAt }).eq('id', businessId);
   if (saveError) {
     console.error('[send-email] could not record the send:', saveError.message);
     // Only a missing column is fixed by the migration

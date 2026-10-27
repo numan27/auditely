@@ -1,11 +1,14 @@
 // app/api/pdf/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import type { PdfVariant } from '@/app/_shared/lib/types/auditely';
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
   const body = await request.json().catch(() => ({}));
   const auditId: string = body.audit_id ?? '';
   const variant: PdfVariant = body.variant === 'upwork' ? 'upwork' : 'full';
@@ -14,7 +17,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'audit_id is required' }, { status: 400 });
   }
 
-  const result = await renderAuditPdf(serviceDb, auditId, variant);
+  const result = await renderAuditPdf(session.db, auditId, variant);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

@@ -36,7 +36,14 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 
 const ok = (data: unknown): Result => ({ data, error: null });
 const inserts = (table: string) => db.state.calls.filter((c) => c.table === table && c.op === 'insert');
@@ -53,6 +60,7 @@ async function remove(body: unknown) {
 const deletes = () => db.state.calls.filter((c) => c.op === 'delete');
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   db.state.responses = {};
   db.state.calls = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});

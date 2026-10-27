@@ -23,11 +23,25 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 vi.mock('@/app/_shared/lib/crm/hubspot', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/_shared/lib/crm/hubspot')>()),
   sendLead: vi.fn(),
 }));
+
+// Signed in, but not as the owner; the client records any query it is asked for
+function signInAsMember() {
+  const from = vi.fn(db.from);
+  session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+  return from;
+}
 
 const AUDIT = '3f2b7c1e-8a4d-4f6b-9c2e-1d5a7b9e0c3f';
 const businessRow = (over: Record<string, unknown> = {}) => ({
@@ -45,6 +59,7 @@ const post = (body: unknown) =>
   POST(new NextRequest('https://auditely.app/api/crm', { method: 'POST', body: JSON.stringify(body) }));
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   vi.stubEnv('HUBSPOT_TOKEN', 'token-1');
   vi.stubEnv('AUTH_SECRET', 'a'.repeat(40));
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -118,5 +133,16 @@ describe('POST /api/crm', () => {
     const res = await post({ business_id: 'b1' });
     expect(res.status).toBe(503);
     expect((await res.json()).error).toBe("HubSpot isn't connected — add HUBSPOT_TOKEN in Vercel.");
+  });
+});
+
+describe('/api/crm for an account that is not the owner', () => {
+  it('answers 403, before reading the lead or calling HubSpot', async () => {
+    const from = signInAsMember();
+    const res = await post({ business_id: 'b1' });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "This isn't available on your account yet." });
+    expect(from).not.toHaveBeenCalled();
+    expect(sendLead).not.toHaveBeenCalled();
   });
 });

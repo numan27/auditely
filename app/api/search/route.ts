@@ -1,10 +1,14 @@
 // app/api/search/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { searchPlaces } from '@/app/_shared/lib/places/searchPlaces';
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
+  const { db } = session;
+
   const body = await request.json().catch(() => ({}));
   const niche: string = (body.niche ?? '').trim().toLowerCase();
   const location: string = (body.location ?? '').trim().toLowerCase();
@@ -13,8 +17,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'niche and location are required' }, { status: 400 });
   }
 
-  // Cache check: same niche+location ever searched before
-  const { data: existingSearch } = await serviceDb
+  // Cache check: same niche+location searched before (Row Level Security shows only this account's searches)
+  const { data: existingSearch } = await db
     .from('searches')
     .select('id')
     .eq('niche', niche)
@@ -24,7 +28,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (existingSearch) {
-    const { data: businesses } = await serviceDb
+    const { data: businesses } = await db
       .from('businesses')
       .select('*')
       .eq('search_id', existingSearch.id)
@@ -41,7 +45,7 @@ export async function POST(request: NextRequest) {
   const allPlaces = result.places;
 
   // Create search record
-  const { data: newSearch, error: searchInsertError } = await serviceDb
+  const { data: newSearch, error: searchInsertError } = await db
     .from('searches')
     .insert({ niche, location })
     .select('id')
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
   let businesses: unknown[] = [];
   if (allPlaces.length > 0) {
     const insertedAt = Date.now();
-    const { data, error: businessInsertError } = await serviceDb
+    const { data, error: businessInsertError } = await db
       .from('businesses')
       .insert(
         allPlaces.map((place, i) => ({
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (businessInsertError) {
       console.error('[search] Failed to store businesses:', businessInsertError.message);
       // Drop the empty search, or the next identical search would reuse it and find nothing
-      const { error: cleanupError } = await serviceDb.from('searches').delete().eq('id', newSearch.id);
+      const { error: cleanupError } = await db.from('searches').delete().eq('id', newSearch.id);
       if (cleanupError) console.error('[search] Failed to remove the empty search:', cleanupError.message);
       return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
     }

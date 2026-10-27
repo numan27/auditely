@@ -31,11 +31,24 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
-vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
+const session = vi.hoisted(() => ({ current: null as unknown }));
+// The route runs as the signed-in user: the service client must stay unused
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
+  getSession: async () => session.current,
+  ownerUserId: async () => 'owner-1',
+}));
 
 const ok = (data: unknown): Result => ({ data, error: null });
 const ID = '0b6f7c1e-3f2a-4c55-9a0e-2b8d5f6a7c10';
+
+// Signed in, but not as the owner; the client records any query it is asked for
+function signInAsMember() {
+  const from = vi.fn(db.from);
+  session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+  return from;
+}
 
 async function remove(body: unknown) {
   const res = await DELETE(new NextRequest('http://localhost/api/audit-requests', { method: 'DELETE', body: JSON.stringify(body) }));
@@ -43,6 +56,7 @@ async function remove(body: unknown) {
 }
 
 beforeEach(() => {
+  session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   db.state.responses = {};
   db.state.calls = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -64,6 +78,9 @@ describe('GET /api/audit-requests', () => {
     expect(businesses).toEqual([{ id: 'b1', request: { name: 'Sarah' }, audit: { id: 'a1' }, ai_report: { id: 'r1' } }]);
     const list = db.state.calls.find((c) => c.table === 'businesses');
     expect(list?.filters).toContainEqual(['in', 'search_id', ['s1', 's2']]);
+    // Only the owner's own requests search, never another account's with the same name
+    const lookup = db.state.calls.find((c) => c.table === 'searches');
+    expect(lookup?.filters).toContainEqual(['eq', 'user_id', 'owner-1']);
   });
 
   it('says so when the list cannot be loaded', async () => {
@@ -89,5 +106,16 @@ describe('DELETE /api/audit-requests', () => {
       ['in', 'search_id', ['s1']],
       ['in', 'id', [ID]],
     ]);
+  });
+});
+
+describe('/api/audit-requests for an account that is not the owner', () => {
+  it('answers 403 to a list or a removal, and reads nothing', async () => {
+    const from = signInAsMember();
+    const listed = await GET();
+    expect(listed.status).toBe(403);
+    expect(await listed.json()).toEqual({ error: "This isn't available on your account yet." });
+    expect((await remove({ ids: [ID] })).status).toBe(403);
+    expect(from).not.toHaveBeenCalled();
   });
 });
