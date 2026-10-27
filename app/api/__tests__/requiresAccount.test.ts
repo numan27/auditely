@@ -30,6 +30,7 @@ const ROUTES = {
   crm: () => import('@/app/api/crm/route'),
   'verify-email': () => import('@/app/api/verify-email/route'),
   usage: () => import('@/app/api/usage/route'),
+  autocomplete: () => import('@/app/api/autocomplete/route'),
 };
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 

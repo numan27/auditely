@@ -2,11 +2,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { autocompleteGoogleCities } from '@/app/_shared/lib/places/googlePlaces';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
+import { autocompleteAllowed } from '@/app/_shared/lib/usage/rateLimit';
 // import { autocompleteCities } from '@/app/_shared/lib/places/geoapify';
 
+// Each suggestion is a billed Google request, so an account past its cap gets
+// none: the form simply stops suggesting. The owner is never capped.
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return unauthorized();
   const input = request.nextUrl.searchParams.get('input') ?? '';
   if (input.trim().length < 2) return NextResponse.json({ suggestions: [] });
+  const { account } = session;
+  if (!account.isOwner && !autocompleteAllowed(account.id)) return NextResponse.json({ suggestions: [] });
 
   // US cities only, via Google Places (New)
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
