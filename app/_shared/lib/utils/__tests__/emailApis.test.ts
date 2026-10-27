@@ -25,7 +25,7 @@ describe('lookupEmailViaApis', () => {
 
   it("skips Hunter's paid search when its free count says it has no emails", async () => {
     fetchMock.mockResolvedValue(json({ data: { total: 0 } }));
-    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toBeNull();
+    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toEqual({ email: null, refused: false });
     expect(paths(fetchMock)).toEqual(['/v2/email-count']);
   });
 
@@ -35,7 +35,7 @@ describe('lookupEmailViaApis', () => {
         ? json({ data: { total: 3 } })
         : json({ data: { emails: [{ value: 'Office@SmileDental.com' }] } })
     );
-    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toBe('office@smiledental.com');
+    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toEqual({ email: 'office@smiledental.com', refused: false });
     expect(paths(fetchMock)).toEqual(['/v2/email-count', '/v2/domain-search']);
   });
 
@@ -51,7 +51,7 @@ describe('lookupEmailViaApis', () => {
 
   it("tries Snov in the automatic pass, skipping its paid search when its free count is 0", async () => {
     fetchMock.mockImplementation(snov(0));
-    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toBeNull();
+    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toEqual({ email: null, refused: false });
     const urls = fetchMock.mock.calls.map(([url]) => url as string);
     expect(urls.some((url) => url.includes('get-domain-emails-count'))).toBe(true);
     expect(urls.some((url) => url.includes('domain-emails/start'))).toBe(false);
@@ -59,18 +59,76 @@ describe('lookupEmailViaApis', () => {
 
   it("uses Snov when it has emails, preferring a general inbox over an employee", async () => {
     fetchMock.mockImplementation(snov(5, ['jane.doe@smiledental.com', 'hr@smiledental.com', 'info@smiledental.com']));
-    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toBe('info@smiledental.com');
+    expect((await lookupEmailViaApis('smiledental.com', 'auto')).email).toBe('info@smiledental.com');
   });
 
   it('falls back to the first usable Snov address when there is no general inbox', async () => {
     fetchMock.mockImplementation(snov(2, ['hr@smiledental.com', 'jane.doe@smiledental.com']));
-    expect(await lookupEmailViaApis('smiledental.com', 'auto')).toBe('jane.doe@smiledental.com');
+    expect((await lookupEmailViaApis('smiledental.com', 'auto')).email).toBe('jane.doe@smiledental.com');
   });
 
   it('falls through to Snov when looking up manually', async () => {
     // Hunter has nothing; Snov returns no token and gives up
     fetchMock.mockImplementation(async (url: string) => (url.includes('hunter.io') ? json({ data: { total: 0 } }) : json({})));
-    expect(await lookupEmailViaApis('smiledental.com', 'all')).toBeNull();
+    expect(await lookupEmailViaApis('smiledental.com', 'all')).toEqual({ email: null, refused: false });
     expect(calledSnov(fetchMock)).toBe(true);
+  });
+
+  describe('the paid-call gate', () => {
+    const urls = () => fetchMock.mock.calls.map(([url]) => url as string);
+    // Every provider answers; Hunter's count and Snov's count say how many they hold
+    const providers = (hunterTotal: number, snovCount: number, snovEmails: string[] = []) => async (url: string) => {
+      if (url.includes('hunter.io/v2/email-count')) return json({ data: { total: hunterTotal } });
+      if (url.includes('hunter.io/v2/domain-search')) return json({ data: { emails: [] } });
+      if (url.includes('tomba.io')) return json({ data: { emails: [] } });
+      if (url.includes('apollo.io')) return json({ people: [] });
+      return snov(snovCount, snovEmails)(url);
+    };
+
+    it('asks before the first paid request and stops when refused', async () => {
+      vi.stubEnv('TOMBA_API_KEY', 'tomba-key');
+      vi.stubEnv('TOMBA_SECRET', 'tomba-secret');
+      vi.stubEnv('APOLLO_API_KEY', 'apollo-key');
+      fetchMock.mockImplementation(providers(3, 3));
+      const allow = vi.fn(async () => false);
+      expect(await lookupEmailViaApis('acme.com', 'all', allow)).toEqual({ email: null, refused: true });
+      expect(allow).toHaveBeenCalledTimes(1);
+      expect(urls().some((u) => u.includes('hunter.io/v2/domain-search'))).toBe(false);
+      expect(urls().some((u) => u.includes('tomba') || u.includes('apollo') || u.includes('snov'))).toBe(false);
+    });
+
+    it('never asks when only the free counts run', async () => {
+      fetchMock.mockImplementation(providers(0, 0));
+      const allow = vi.fn(async () => true);
+      expect(await lookupEmailViaApis('acme.com', 'auto', allow)).toEqual({ email: null, refused: false });
+      expect(allow).not.toHaveBeenCalled();
+    });
+
+    it('asks once however many providers it tries', async () => {
+      vi.stubEnv('TOMBA_API_KEY', 'tomba-key');
+      vi.stubEnv('TOMBA_SECRET', 'tomba-secret');
+      fetchMock.mockImplementation(providers(2, 1, ['info@acme.com']));
+      const allow = vi.fn(async () => true);
+      expect(await lookupEmailViaApis('acme.com', 'all', allow)).toEqual({ email: 'info@acme.com', refused: false });
+      expect(allow).toHaveBeenCalledTimes(1);
+      expect(urls().some((u) => u.includes('hunter.io/v2/domain-search'))).toBe(true);
+      expect(urls().some((u) => u.includes('tomba.io'))).toBe(true);
+    });
+
+    it('asks nothing of a provider without keys', async () => {
+      vi.stubEnv('HUNTER_API_KEY', '');
+      vi.stubEnv('SNOV_CLIENT_ID', '');
+      const allow = vi.fn(async () => true);
+      expect(await lookupEmailViaApis('acme.com', 'all', allow)).toEqual({ email: null, refused: false });
+      expect(allow).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('treats a gate that fails as a refusal', async () => {
+      fetchMock.mockImplementation(providers(3, 0));
+      const allow = vi.fn(async () => { throw new Error('network'); });
+      expect(await lookupEmailViaApis('acme.com', 'auto', allow)).toEqual({ email: null, refused: true });
+      expect(urls().some((u) => u.includes('hunter.io/v2/domain-search'))).toBe(false);
+    });
   });
 });

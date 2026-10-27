@@ -6,10 +6,27 @@
 //           (Hunter, then Snov), so a credit is spent only on a likely hit.
 //   'all':  the manual "Find email" action — Hunter, Tomba, Snov, then Apollo.
 // Each provider runs only if its keys are set; the first email found wins.
+//
+// One lookup is one business a credit is spent on: `allowPaidCall` is asked once,
+// straight before the first request that spends a credit (Hunter's, Tomba's or
+// Snov's domain search, Apollo's people search). The free checks (Hunter's email
+// count, Snov's token and count) never ask. When it answers no, nothing more is
+// requested and the lookup comes back refused.
 
 import { isValidBusinessEmail } from '@/app/_shared/lib/utils/emailValidation';
 
 export type EmailLookupMode = 'auto' | 'all';
+
+export interface EmailLookupResult {
+  email: string | null;
+  /** true when allowPaidCall said no, so no credit was spent */
+  refused: boolean;
+}
+
+// What a provider found, or that it stopped because the paid call was refused
+const REFUSED = Symbol('refused');
+type Found = string | null | typeof REFUSED;
+type Pay = () => Promise<boolean>;
 
 // A key counts as configured only when it's present and not a template
 // placeholder (`your_x_here`). This keeps the cascade from firing doomed
@@ -42,7 +59,7 @@ async function snovEmailCount(domain: string, accessToken: string): Promise<numb
   }
 }
 
-async function findViaSnov(domain: string, mode: EmailLookupMode): Promise<string | null> {
+async function findViaSnov(domain: string, mode: EmailLookupMode, pay: Pay): Promise<Found> {
   const clientId = process.env.SNOV_CLIENT_ID;
   const clientSecret = process.env.SNOV_CLIENT_SECRET;
   if (!clientId || !clientSecret || !configured(clientId, clientSecret)) return null;
@@ -67,6 +84,7 @@ async function findViaSnov(domain: string, mode: EmailLookupMode): Promise<strin
     const count = await snovEmailCount(domain, accessToken);
     if (count === 0 || (count === null && mode === 'auto')) return null;
 
+    if (!(await pay())) return REFUSED;
     const auth = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
@@ -104,10 +122,11 @@ async function findViaSnov(domain: string, mode: EmailLookupMode): Promise<strin
   }
 }
 
-async function findViaTomba(domain: string): Promise<string | null> {
+async function findViaTomba(domain: string, pay: Pay): Promise<Found> {
   const key = process.env.TOMBA_API_KEY;
   const secret = process.env.TOMBA_SECRET;
   if (!key || !secret || !configured(key, secret)) return null;
+  if (!(await pay())) return REFUSED;
 
   try {
     const res = await fetch(
@@ -137,7 +156,7 @@ async function hunterEmailCount(domain: string, key: string): Promise<number | n
   }
 }
 
-async function findViaHunter(domain: string, mode: EmailLookupMode): Promise<string | null> {
+async function findViaHunter(domain: string, mode: EmailLookupMode, pay: Pay): Promise<Found> {
   const key = process.env.HUNTER_API_KEY;
   if (!key || !configured(key)) return null;
 
@@ -145,6 +164,7 @@ async function findViaHunter(domain: string, mode: EmailLookupMode): Promise<str
   // count can't be read, the automatic pass stays frugal; a manual lookup tries.
   const count = await hunterEmailCount(domain, key);
   if (count === 0 || (count === null && mode === 'auto')) return null;
+  if (!(await pay())) return REFUSED;
 
   try {
     const res = await fetch(
@@ -158,9 +178,10 @@ async function findViaHunter(domain: string, mode: EmailLookupMode): Promise<str
   }
 }
 
-async function findViaApollo(domain: string): Promise<string | null> {
+async function findViaApollo(domain: string, pay: Pay): Promise<Found> {
   const key = process.env.APOLLO_API_KEY;
   if (!key || !configured(key)) return null;
+  if (!(await pay())) return REFUSED;
 
   try {
     const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
@@ -183,9 +204,29 @@ async function findViaApollo(domain: string): Promise<string | null> {
   }
 }
 
-export async function lookupEmailViaApis(domain: string, mode: EmailLookupMode): Promise<string | null> {
-  const hunter = await findViaHunter(domain, mode);
-  if (hunter) return hunter;
-  if (mode === 'auto') return findViaSnov(domain, mode);
-  return (await findViaTomba(domain)) ?? (await findViaSnov(domain, mode)) ?? (await findViaApollo(domain));
+export async function lookupEmailViaApis(
+  domain: string,
+  mode: EmailLookupMode,
+  allowPaidCall: () => Promise<boolean> = async () => true
+): Promise<EmailLookupResult> {
+  // Asked once per lookup, however many providers spend a credit; a gate that
+  // fails counts as no
+  let allowed: Promise<boolean> | null = null;
+  const pay: Pay = () => (allowed ??= allowPaidCall().catch(() => false));
+
+  const providers: (() => Promise<Found>)[] =
+    mode === 'auto'
+      ? [() => findViaHunter(domain, mode, pay), () => findViaSnov(domain, mode, pay)]
+      : [
+          () => findViaHunter(domain, mode, pay),
+          () => findViaTomba(domain, pay),
+          () => findViaSnov(domain, mode, pay),
+          () => findViaApollo(domain, pay),
+        ];
+  for (const provider of providers) {
+    const found = await provider();
+    if (found === REFUSED) return { email: null, refused: true };
+    if (found) return { email: found, refused: false };
+  }
+  return { email: null, refused: false };
 }

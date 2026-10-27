@@ -5,7 +5,6 @@
 // lookups (Hunter, Snov…) live in emailApis.ts.
 
 import { FREE_MAIL_DOMAINS, isValidBusinessEmail } from '@/app/_shared/lib/utils/emailValidation';
-import { lookupEmailViaApis } from '@/app/_shared/lib/utils/emailApis';
 import { readCapped } from '@/app/_shared/lib/audit/siteFetch';
 import { pageKey, sameSiteLinks } from '@/app/_shared/lib/audit/siteLinks';
 
@@ -182,24 +181,16 @@ async function scrapeWebsite(website: string, homepageHtml?: string | null, page
 
 // ─── Main entry point ────────────────────────────────────────────────────────
 
+// Scrapes the website only (free, fastest, highest trust). The paid APIs count
+// against the account's plan, so /api/find-emails runs them itself.
 export async function findEmail(
   website: string,
-  opts: { apiFallback?: boolean; homepageHtml?: string | null; pages?: KnownPage[] } = {}
+  opts: { homepageHtml?: string | null; pages?: KnownPage[] } = {}
 ): Promise<string | null> {
-  let domain: string;
   try {
-    domain = new URL(website).hostname.replace(/^www\./, '');
+    new URL(website);
   } catch {
     return null;
   }
-
-  // 1. Scrape the website (free, fastest, highest trust)
-  const scraped = await scrapeWebsite(website, opts.homepageHtml, opts.pages);
-  if (scraped) return scraped;
-
-  // 2. The paid APIs only when asked: the manual "Find email" action runs the
-  //    full cascade. (The automatic after-search pass calls lookupEmailViaApis
-  //    in 'auto' mode directly — see /api/find-emails.)
-  if (!opts.apiFallback) return null;
-  return lookupEmailViaApis(domain, 'all');
+  return scrapeWebsite(website, opts.homepageHtml, opts.pages);
 }

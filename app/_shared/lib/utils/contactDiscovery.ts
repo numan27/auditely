@@ -1,7 +1,8 @@
 // app/_shared/lib/utils/contactDiscovery.ts
 
 // Finds every way to reach a business from one homepage fetch: the email (via
-// the email finder), plus the phone, contact page and social profiles.
+// the email finder, which only scrapes), plus the phone, contact page and social
+// profiles.
 
 import { fetchSite } from '@/app/_shared/lib/audit/siteFetch';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
@@ -13,14 +14,11 @@ export interface DiscoveredContacts extends ContactChannels {
   email: string | null;
 }
 
-export async function discoverContacts(
-  website: string,
-  opts: { apiFallback?: boolean } = {}
-): Promise<DiscoveredContacts> {
+export async function discoverContacts(website: string): Promise<DiscoveredContacts> {
   const site = await fetchSite(website);
   const html = site.ok ? site.html : null;
   // Reuses the homepage HTML; the finder only fetches the contact/about pages itself
-  const email = await findEmail(website, { apiFallback: opts.apiFallback, homepageHtml: html });
+  const email = await findEmail(website, { homepageHtml: html });
 
   if (!html) return { fetched: false, email, phone: null, contactPage: null, socials: {} };
   return { fetched: true, email, ...extractContactChannels(html, site.finalUrl ?? website) };
