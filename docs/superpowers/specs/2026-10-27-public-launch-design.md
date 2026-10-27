@@ -69,7 +69,7 @@ Items marked **(owner)** were decided by the owner; the rest are the designer's 
 | Accounts **(owner, suggested)** | Supabase Auth | Already the database; RLS can enforce who sees what |
 | Sign-in methods | Email magic link and Google | No passwords to store or reset; Google is one click for most |
 | Data isolation | `user_id` on every user-owned table, RLS policies `user_id = auth.uid()`, and API routes use a per-request Supabase client signed in as the user | Two locks: a missed filter in a route still returns nothing. The service-role client is kept for webhooks, the inbound route and jobs only |
-| The owner | The existing data is assigned to the owner's new account; `ADMIN_EMAILS` names the owner | Nothing is lost; the owner signs in like everyone else |
+| The owner | The existing data is assigned to the owner's new account; `OWNER_EMAIL` names the owner | Nothing is lost; the owner signs in like everyone else |
 | Requests tab and inbound route | Owner-only | They belong to devartventures.com |
 | URLs | App views keep today's addresses (`/search/{id}`, `/audit`, `/requests/{id}`). `/` shows the landing page when signed out and the workspace when signed in | Shipped links keep working |
 | `/demo` | Kept, linked from the landing page as "See a sample search" | It already shows lead search without signing up |
@@ -78,7 +78,7 @@ Items marked **(owner)** were decided by the owner; the rest are the designer's 
 | Usage period | Calendar month for Free. Paid plans: monthly windows counted from the subscription's start date, yearly plans included | A yearly plan can't spend twelve months of searches in one |
 | Email lookups | Paid plans only. The automatic lookup after a search keeps running for paid plans but stops at the allowance; "Find email" asks first when none are left. One lookup = one business on which a paid provider credit was spent, however many providers the cascade tried | Free costs nothing to run; the counter matches what the owner pays |
 | Email verification (Verifalia) | Paid plans only, one check per email sent | Today's 25 free checks a day are shared by everyone, so they'd run out; the owner buys credits |
-| Until launch | Sign-ups stay closed (`SIGNUPS_OPEN=false`, `ADMIN_EMAILS` and an allowlist can still sign in). Sending email and HubSpot stay owner-only until per-user settings exist | A half-built phase can't spend the owner's credits or send from the owner's mailbox |
+| Until launch | Sign-ups stay closed (`SIGNUPS_OPEN=false`; `OWNER_EMAIL` and the `ALLOWED_EMAILS` allowlist can still sign in). Sending email and HubSpot stay owner-only until per-user settings exist | A half-built phase can't spend the owner's credits or send from the owner's mailbox |
 | Sending outreach email | Free: "Copy email" and "Open in Gmail/Outlook". Paid: connect your own mailbox (SMTP app password, like the owner's Zoho setup), stored encrypted | Mail comes from the user's own address, so deliverability is theirs |
 | HubSpot | Paid: each user pastes their own private-app token, stored encrypted | Today's handoff, per user |
 | Whose name is on it **(owner)** | Neutral: a Free user's report and email, and a visitor's free audit, say "Audited with Auditely" and invite the reader to try Auditely. Nothing outside the owner's account mentions DevArtVentures | Auditely stands on its own as a product |
