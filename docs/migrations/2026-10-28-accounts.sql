@@ -10,6 +10,22 @@ DO $$ BEGIN PERFORM set_config('auditely.owner_email', lower(trim('owner@example
 
 BEGIN;
 
+-- First, stop if these tables have policies of their own (a dashboard template such
+-- as "Enable read access for all users"). Postgres ORs policies together, so any
+-- other policy would let one account's rows through to another, whatever own_rows says.
+DO $$
+DECLARE stray text;
+BEGIN
+  SELECT string_agg(format('%I on %I', policyname, tablename), ', ') INTO stray
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename IN ('profiles','searches','businesses','audits','ai_reports','notifications','pagespeed_cache')
+    AND policyname NOT IN ('own_rows','own_profile');
+  IF stray IS NOT NULL THEN
+    RAISE EXCEPTION 'Other policies would show one account''s rows to another: %. Drop them (Authentication → Policies), then run this again.', stray;
+  END IF;
+END $$;
+
 -- profiles: one per account, added when the account is created. The server finds
 -- the owner's id here by email (ownerUserId); a signed-in user reads only their own.
 CREATE TABLE IF NOT EXISTS profiles (

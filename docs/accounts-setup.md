@@ -8,7 +8,8 @@ can sign in.
 
 These are the steps to switch the live app over, in order. Steps 1 to 6 don't touch the running app.
 Steps 7 and 8 go back to back: once the migration has run, the running app can still read everything
-but can't save new searches, sites or audit requests until the new code is live.
+but can't save new searches, sites or audit requests until the new code is live. Step 7 merges the code
+before it runs the migration, so step 8 is only a push and that gap stays short.
 
 The new code is on the `accounts` branch, not `main`.
 
@@ -78,6 +79,9 @@ Supabase → Authentication → Users → Add user → Create new user:
 The migration in step 7 gives today's data to this account. Sign in later with this same address, by
 link or with the Google account that uses it: Supabase links Google to this account, so the data stays yours.
 
+**Never delete your account in Authentication → Users: it permanently deletes all your searches, leads,
+audits and requests.**
+
 ## 6. Vercel environment variables
 
 Vercel → the Auditely project → Settings → Environment Variables, for **Production and Preview**:
@@ -90,9 +94,22 @@ Vercel → the Auditely project → Settings → Environment Variables, for **Pr
 Leave `ADMIN_PASSWORD` in place until step 9. New values only reach the next deployment (step 8), so the
 live site doesn't change yet.
 
-## 7. Run the migration
+Optional, for speed: Supabase → Project Settings → JWT Keys, switch to asymmetric signing keys. Without
+them, Auditely has to ask Supabase about the session on every request; with them, it checks the session
+itself. If you switch, don't revoke the legacy JWT secret afterwards: the anon and service role keys
+stop working without it.
 
-First, if you haven't run them yet, run `docs/migrations/2026-10-27-audit-requests.sql` and
+## 7. Merge the code, then run the migration
+
+First, on your computer, merge the new code into `main`. Nothing goes live until the push in step 8:
+
+```
+git checkout main
+git pull
+git merge accounts
+```
+
+Next, if you haven't run them yet, run `docs/migrations/2026-10-27-audit-requests.sql` and
 `docs/migrations/2026-10-27-notifications.sql`, each in its own query. Both are safe to run again. The
 accounts migration changes the notifications table, and the Requests tab needs `businesses.request`.
 
@@ -106,20 +123,24 @@ Then Supabase → SQL Editor → New query:
 It runs as one transaction: if it stops with an error, nothing was changed. "No account for …" means
 step 5 isn't done, or the account's address isn't the one on line 3.
 
+"Other policies would show one account's rows to another: …" means these tables have policies of their
+own, often a dashboard template such as "Enable read access for all users". Any one of them would let an
+account see another's rows. Auditely never used them: delete each one the message names in
+Authentication → Policies, then run the migration again.
+
+If the SQL editor later says "current transaction is aborted", run `ROLLBACK;` and try again.
+
 From here until step 8 is live, the running app can't save new rows. Go straight on.
 
 ## 8. Deploy
 
-Straight after step 7, merge `accounts` into `main` and push. The push deploys production. Do it
-yourself, or ask Claude to:
+Straight after step 7, push `main`. The push deploys production. Do it yourself, or ask Claude to:
 
 ```
-git checkout main
-git merge accounts
 git push origin main
 ```
 
-The merge alone changes nothing live, so you can do it before step 7 and only push here.
+If you didn't merge at the start of step 7, run its three `git` lines first.
 
 Wait until Vercel → Deployments shows the new production deployment as Ready.
 
@@ -129,8 +150,11 @@ Wait until Vercel → Deployments shows the new production deployment as Ready.
 - Your searches, URL audits and requests are all there, and so is the bell.
 - An `ALLOWED_EMAILS` test account sees an empty workspace with no Requests tab.
 - That account runs a niche and city you've already searched and gets a new search of its own, not
-  yours. Row Level Security scopes the "reuse a saved search" lookup, which no unit test can prove.
+  yours. This checks Row Level Security on the real database, which no unit test can.
 - A stranger's email is refused.
+
+If every page answers with an error, `/demo` and `/report` links included, `SUPABASE_ANON_KEY` is missing
+in Vercel. Add it (step 6), then redeploy (see "Adding or removing testers" below for how).
 
 Once all of that works, remove `ADMIN_PASSWORD` from Vercel and from `.env.local`. Nothing reads it any more.
 
@@ -147,6 +171,22 @@ ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL;
 
 Rows saved meanwhile belong to no one. Straight before you deploy, run the accounts migration again
 (step 7, with your address): it gives those rows to you and puts the rule back.
+
+## Adding or removing testers
+
+1. Vercel → the Auditely project → Settings → Environment Variables: edit `ALLOWED_EMAILS` for
+   **Production and Preview**. It's the addresses that may sign in besides yours, separated by commas.
+2. Redeploy: Vercel → Deployments → the latest production deployment → ⋯ → Redeploy. The change only
+   takes effect once that deployment is Ready.
+3. A new tester can then sign in with their address, by link or with Google. While Google's consent
+   screen is still "Testing" (step 2), add them there as a test user too.
+
+Removing an address locks that person out on their next request. Their data stays in the database until
+their user is deleted in Authentication → Users, and deleting it removes their searches, leads and audits
+for good.
+
+**Never delete your account in Authentication → Users: it permanently deletes all your searches, leads,
+audits and requests.**
 
 ## Local development
 
