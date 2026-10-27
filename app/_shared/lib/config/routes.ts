@@ -14,6 +14,9 @@ export const ROUTES = {
   REPORT: '/report',
   // The public demo: the workspace on a saved sample, with nothing live behind it
   DEMO: '/demo',
+  // Sign-in: the emailed link and Google come back to the callback; /auth/google starts Google
+  AUTH_CALLBACK: '/auth/callback',
+  AUTH_GOOGLE: '/auth/google',
 } as const;
 
 // API route paths. Only AUTH is public (see PUBLIC_ROUTES below).
@@ -40,12 +43,21 @@ export const INBOUND_ROUTES = {
   AUDIT_REQUEST: '/api/inbound/audit-request',
 } as const;
 
-// Everything is private (single-admin tool) except these; /report/{token} is checked by
-// its signature, /demo shows only the sample checked into the repo, and the inbound
-// route checks its secret
-export const PUBLIC_ROUTES = [ROUTES.LOGIN, API_ROUTES.AUTH, ROUTES.REPORT, ROUTES.DEMO, INBOUND_ROUTES.AUDIT_REQUEST] as const;
+// Everything needs a signed-in account except these; the sign-in routes run before
+// there is a session, /report/{token} is checked by its signature, /demo shows only
+// the sample checked into the repo, and the inbound route checks its secret
+export const PUBLIC_ROUTES = [
+  ROUTES.LOGIN,
+  API_ROUTES.AUTH,
+  ROUTES.AUTH_CALLBACK,
+  ROUTES.AUTH_GOOGLE,
+  ROUTES.REPORT,
+  ROUTES.DEMO,
+  INBOUND_ROUTES.AUDIT_REQUEST,
+] as const;
 
-// Pages a logged-in user should be bounced away from
+// Pages a logged-in user should be bounced away from (not the callback: a second
+// sign-in has to finish)
 export const AUTH_ROUTES = [ROUTES.LOGIN] as const;
 
 // Addresses people type or bookmark for the home page; they forward to it instead of a 404
@@ -84,11 +96,23 @@ export const isHomeAlias = (pathname: string): boolean =>
 export const isApiRoute = (pathname: string): boolean =>
   pathname === '/api' || pathname.startsWith('/api/');
 
-// Only allow same-origin relative redirects ("/foo"), never "//evil.com" or absolute URLs
-export const safeCallbackUrl = (value: string | null | undefined): string =>
-  value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
-    ? value
-    : DEFAULT_LOGIN_REDIRECT;
+// Resolving against a fixed origin reads the value the way a browser will: it drops tabs
+// and newlines and reads "\" as "/", so "/\t/evil.com" is caught as another site
+const CALLBACK_ORIGIN = 'http://auditely.invalid';
+
+// Only allow a path on this site ("/foo?x=1"), never "//evil.com" or an absolute URL
+export const safeCallbackUrl = (value: string | null | undefined): string => {
+  if (!value?.startsWith('/')) return DEFAULT_LOGIN_REDIRECT;
+  let url: URL;
+  try {
+    url = new URL(value, CALLBACK_ORIGIN);
+  } catch {
+    return DEFAULT_LOGIN_REDIRECT;
+  }
+  // "/.//evil.com" stays on the origin but resolves to the path "//evil.com", another site again
+  if (url.origin !== CALLBACK_ORIGIN || url.pathname.startsWith('//')) return DEFAULT_LOGIN_REDIRECT;
+  return `${url.pathname}${url.search}${url.hash}`;
+};
 
 /** A sample audit's PDF report in the demo */
 export const demoReportPath = (auditId: string): string => `${ROUTES.DEMO}/report/${encodeURIComponent(auditId)}`;

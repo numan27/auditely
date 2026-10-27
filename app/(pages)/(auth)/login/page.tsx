@@ -7,11 +7,14 @@ export const metadata: Metadata = {
 };
 
 interface LoginPageProps {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string | string[]; error?: string | string[] }>;
 }
 
+// A repeated query parameter arrives as a list; the first one counts
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, error } = await searchParams;
 
   return (
     <div className="space-y-6">
@@ -19,9 +22,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <h1 className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
           Sign in to Auditely
         </h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Enter the admin password to continue.</p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Use the email you were invited with.</p>
       </div>
-      <LoginForm callbackUrl={callbackUrl} />
+      <LoginForm callbackUrl={first(callbackUrl)} error={first(error)} />
     </div>
   );
 }

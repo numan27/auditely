@@ -1,57 +1,50 @@
 // app/api/auth/route.ts
 
-import { createHash, timingSafeEqual } from 'crypto';
+// Sign in with an emailed link (POST) and sign out (DELETE). The link goes only to
+// the owner and the allowlist while sign-ups are closed, and leads back to
+// /auth/callback on the site that asked for it, which finishes the sign-in.
+
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  SESSION_COOKIE,
-  SESSION_MAX_AGE_SECONDS,
-  createSessionToken,
-  isAuthConfigured,
-} from '@/app/_shared/lib/auth/session';
+import { userDb } from '@/app/_shared/lib/supabase/server';
+import { canSignIn } from '@/app/_shared/lib/auth/account';
+import { ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
 
-// Hash both sides so the compare is constant-time regardless of input length
-function passwordMatches(input: string, expected: string): boolean {
-  const a = createHash('sha256').update(input).digest();
-  const b = createHash('sha256').update(expected).digest();
-  return timingSafeEqual(a, b);
-}
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Log in with the shared admin password → sets the session cookie
+// Email a sign-in link → { sent: true }
 export async function POST(request: NextRequest) {
-  if (!isAuthConfigured()) {
+  const body = (await request.json().catch(() => null)) ?? {};
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  if (!EMAIL.test(email)) return NextResponse.json({ error: 'Enter your email address' }, { status: 400 });
+
+  // Refused here, so Supabase never creates an account for an address that may not sign in
+  if (!canSignIn(email)) {
     return NextResponse.json(
-      { error: 'Auth is not configured (set ADMIN_PASSWORD and AUTH_SECRET)' },
-      { status: 503 }
+      { error: 'Auditely is invite-only for now. Use the email you were invited with.' },
+      { status: 403 }
     );
   }
 
-  const body = await request.json().catch(() => ({}));
-  const password: string = typeof body.password === 'string' ? body.password : '';
-
-  if (!password || !passwordMatches(password, process.env.ADMIN_PASSWORD as string)) {
-    return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
-  }
-
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(SESSION_COOKIE, await createSessionToken(), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  const next = safeCallbackUrl(typeof body.callbackUrl === 'string' ? body.callbackUrl : undefined);
+  const { origin } = new URL(request.url);
+  const db = await userDb();
+  const { error } = await db.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${origin}${ROUTES.AUTH_CALLBACK}?next=${encodeURIComponent(next)}`,
+    },
   });
-  return response;
+  if (error) {
+    console.error('[auth] Failed to send a sign-in link:', error.message);
+    return NextResponse.json({ error: "Couldn't send the link. Try again in a minute." }, { status: 502 });
+  }
+  return NextResponse.json({ sent: true });
 }
 
-// Log out → clears the session cookie
+// Sign out → clears the Supabase session cookies
 export async function DELETE() {
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(SESSION_COOKIE, '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 0,
-  });
-  return response;
+  const db = await userDb();
+  await db.auth.signOut();
+  return NextResponse.json({ success: true });
 }

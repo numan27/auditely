@@ -1,8 +1,8 @@
 // app/_shared/lib/auth/reportLink.ts
 
 // Private links to one audit's PDF report: `${auditId}.${signature}`, signed with
-// AUTH_SECRET. Signing "report:<id>" keeps them from ever matching a session
-// signature. Rotating AUTH_SECRET turns every link off.
+// AUTH_SECRET. Signing "report:<id>" keeps them from ever matching a signature
+// made for anything else. Rotating AUTH_SECRET turns every link off.
 
 import { getSecret, safeEqual, sign } from '@/app/_shared/lib/auth/signing';
 

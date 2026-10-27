@@ -1,69 +1,107 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormik } from 'formik';
-import { adminLoginSchema, type AdminLoginFormValues } from '@/app/_shared/lib/validations/schemas';
+import { emailLinkSchema, type EmailLinkFormValues } from '@/app/_shared/lib/validations/schemas';
 import { Input } from '@/app/_shared/components/ui/input/input';
 import { Button } from '@/app/_shared/components/ui/button/button';
-import { API_ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
+import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
+import { API_ROUTES, ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
+
+// What went wrong on the way back from a sign-in (/auth/callback, /auth/google), by ?error=
+const SIGN_IN_ERRORS: Record<string, string> = {
+  link: 'That sign-in link has expired or was already used. Send yourself a new one.',
+  closed: 'Auditely is invite-only for now. Use the email you were invited with.',
+  google: "Couldn't reach Google. Try again, or use your email.",
+};
+
+// "Continue with Google" looks like the form's button, but it's a link: the browser leaves for Google
+const googleLinkClasses = [
+  buttonStyles.button,
+  buttonStyles['button--outline'],
+  buttonStyles['button--lg'],
+  buttonStyles['button--full-width'],
+].join(' ');
 
 interface LoginFormProps {
   callbackUrl?: string;
+  error?: string;
 }
 
-export function LoginForm({ callbackUrl }: LoginFormProps) {
-  const formik = useFormik<AdminLoginFormValues>({
+export function LoginForm({ callbackUrl, error }: LoginFormProps) {
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const next = safeCallbackUrl(callbackUrl);
+  const signInError = error ? SIGN_IN_ERRORS[error] : undefined;
+
+  const formik = useFormik<EmailLinkFormValues>({
     initialValues: {
-      password: '',
+      email: '',
     },
-    validationSchema: adminLoginSchema,
+    initialErrors: signInError ? { email: signInError } : {},
+    initialTouched: signInError ? { email: true } : {},
+    validationSchema: emailLinkSchema,
     onSubmit: async (values, { setSubmitting, setErrors }) => {
+      const email = values.email.trim();
       try {
         const res = await fetch(API_ROUTES.AUTH, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: values.password }),
+          body: JSON.stringify({ email, callbackUrl: next }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setErrors({ password: data.error ?? 'Invalid password' });
+          setErrors({ email: data.error ?? "Couldn't send the link. Try again in a minute." });
           return;
         }
-        // A full page load, not a client-side navigation: the router may still hold
-        // the home page as prefetched before the login, which leads to the public demo
-        window.location.replace(safeCallbackUrl(callbackUrl));
+        setSentTo(email);
       } catch {
-        setErrors({ password: 'Something went wrong. Please try again.' });
+        setErrors({ email: "Couldn't send the link. Check your connection and try again." });
       } finally {
         setSubmitting(false);
       }
     },
   });
 
-  return (
-    <form onSubmit={formik.handleSubmit} className="space-y-6">
-      <Input
-        id="password"
-        name="password"
-        type="password"
-        label="Password"
-        placeholder="Enter the admin password"
-        autoComplete="current-password"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.password}
-        error={formik.touched.password && formik.errors.password ? formik.errors.password : undefined}
-        required
-      />
+  if (sentTo) {
+    return (
+      <p className="text-sm text-[var(--color-text-primary)]" role="status">
+        Check your inbox: we sent a sign-in link to {sentTo}.
+      </p>
+    );
+  }
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        fullWidth
-        isLoading={formik.isSubmitting}
-      >
-        Sign in
-      </Button>
-    </form>
+  return (
+    <div className="space-y-6">
+      <form onSubmit={formik.handleSubmit} className="space-y-6">
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          label="Email"
+          placeholder="you@company.com"
+          autoComplete="email"
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          value={formik.values.email}
+          error={formik.touched.email && formik.errors.email ? formik.errors.email : undefined}
+          required
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          isLoading={formik.isSubmitting}
+        >
+          Email me a link
+        </Button>
+      </form>
+
+      {/* A full page load, not a client-side navigation: the route sends the browser on to Google */}
+      <a href={`${ROUTES.AUTH_GOOGLE}?next=${encodeURIComponent(next)}`} className={googleLinkClasses}>
+        Continue with Google
+      </a>
+    </div>
   );
 }

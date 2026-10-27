@@ -1,11 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { proxy } from '@/proxy';
-import { createSessionToken, SESSION_COOKIE } from '@/app/_shared/lib/auth/session';
 import { API_ROUTES, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 
-const visit = (path: string, session?: string) =>
-  proxy(new NextRequest(`http://localhost${path}`, session ? { headers: { cookie: `${SESSION_COOKIE}=${session}` } } : undefined));
+// The Supabase session the proxy reads: who is signed in, and a refreshed cookie on
+// the response it hands back, so each test can see whether that cookie survives
+const session = vi.hoisted(() => ({ email: null as string | null }));
+vi.mock('@/app/_shared/lib/supabase/proxySession', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/proxySession')>()),
+  readProxySession: async (request: NextRequest) => {
+    const response = NextResponse.next({ request });
+    response.cookies.set('sb-test-auth-token', 'refreshed', { path: '/' });
+    response.headers.set('cache-control', 'private, no-cache, no-store, must-revalidate, max-age=0');
+    return { response, email: session.email };
+  },
+}));
+
+const visit = (path: string, email?: string) => {
+  session.email = email ?? null;
+  return proxy(new NextRequest(`http://localhost${path}`));
+};
 
 // Where a redirect leads (path and query); null when the request passes
 const sentTo = (res: Response) => {
@@ -15,7 +29,19 @@ const sentTo = (res: Response) => {
   return `${url.pathname}${url.search}`;
 };
 
-beforeEach(() => vi.stubEnv('AUTH_SECRET', 'a'.repeat(40)));
+const keepsSession = (res: Response) =>
+  (res.headers.get('set-cookie') ?? '').includes('sb-test-auth-token=refreshed') &&
+  (res.headers.get('cache-control') ?? '').includes('no-store');
+
+const OWNER = 'owner@example.com';
+const TESTER = 'tester@example.com';
+const STRANGER = 'stranger@example.com';
+
+beforeEach(() => {
+  vi.stubEnv('OWNER_EMAIL', 'Owner@Example.com');
+  vi.stubEnv('ALLOWED_EMAILS', TESTER);
+  vi.stubEnv('SIGNUPS_OPEN', '');
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe('proxy', () => {
@@ -24,9 +50,12 @@ describe('proxy', () => {
     expect(sentTo(await visit('/?load=abc'))).toBe(ROUTES.DEMO);
   });
 
-  it('treats an expired or forged session as logged out', async () => {
-    expect(sentTo(await visit(ROUTES.HOME, '1.not-a-signature'))).toBe(ROUTES.DEMO);
-    expect(sentTo(await visit(ROUTES.HOME, `${Date.now() + 60_000}.forged`))).toBe(ROUTES.DEMO);
+  // Sign-ups are closed: a session for anyone off the list opens nothing
+  it('treats a session for an email that may not sign in as logged out', async () => {
+    expect(sentTo(await visit(ROUTES.HOME, STRANGER))).toBe(ROUTES.DEMO);
+    expect(sentTo(await visit(ROUTES.SEARCHES, STRANGER))).toBe(`${ROUTES.LOGIN}?callbackUrl=%2Fsearches`);
+    expect((await visit(API_ROUTES.SEARCHES, STRANGER)).status).toBe(401);
+    expect(sentTo(await visit(ROUTES.LOGIN, STRANGER))).toBeNull();
   });
 
   it('lets a logged-out visitor open the demo and its reports', async () => {
@@ -36,6 +65,7 @@ describe('proxy', () => {
 
   it('still sends every other private page to the login, remembering where to return', async () => {
     expect(sentTo(await visit(ROUTES.SEARCHES))).toBe(`${ROUTES.LOGIN}?callbackUrl=%2Fsearches`);
+    expect(sentTo(await visit(`${ROUTES.REQUESTS}/r-42`))).toBe(`${ROUTES.LOGIN}?callbackUrl=%2Frequests%2Fr-42`);
   });
 
   it('still answers 401 to a logged-out call of any API route but the login', async () => {
@@ -50,9 +80,36 @@ describe('proxy', () => {
     expect(sentTo(res)).toBeNull();
   });
 
+  // The emailed link and Google land here before there is a session
+  it('lets a logged-out visitor finish signing in', async () => {
+    expect(sentTo(await visit(`${ROUTES.AUTH_CALLBACK}?token_hash=h1&type=email&next=%2F`))).toBeNull();
+    expect(sentTo(await visit(`${ROUTES.AUTH_GOOGLE}?next=%2F`))).toBeNull();
+    expect(sentTo(await visit(API_ROUTES.AUTH))).toBeNull();
+  });
+
   it('gives a logged-in user the real home page, and the demo when asked for', async () => {
-    const session = await createSessionToken();
-    expect(sentTo(await visit(ROUTES.HOME, session))).toBeNull();
-    expect(sentTo(await visit(ROUTES.DEMO, session))).toBeNull();
+    expect(sentTo(await visit(ROUTES.HOME, OWNER))).toBeNull();
+    expect(sentTo(await visit(ROUTES.DEMO, OWNER))).toBeNull();
+    expect(sentTo(await visit(ROUTES.SEARCHES, TESTER))).toBeNull();
+    expect((await visit(API_ROUTES.SEARCHES, TESTER)).status).not.toBe(401);
+  });
+
+  it('sends a logged-in user from the login page home, but lets a callback finish', async () => {
+    expect(sentTo(await visit(ROUTES.LOGIN, OWNER))).toBe(ROUTES.HOME);
+    expect(sentTo(await visit(`${ROUTES.AUTH_CALLBACK}?code=c1&next=%2Fsearches`, OWNER))).toBeNull();
+  });
+
+  // A dropped refresh would sign the user out on the next request; a cached one could
+  // hand their session to someone else
+  it('keeps the refreshed session cookie, uncached, on every answer', async () => {
+    const answers = [
+      await visit(ROUTES.HOME),
+      await visit(ROUTES.SEARCHES),
+      await visit(API_ROUTES.SEARCHES),
+      await visit(ROUTES.LOGIN, OWNER),
+      await visit(ROUTES.HOME, OWNER),
+      await visit(ROUTES.DEMO),
+    ];
+    for (const res of answers) expect(keepsSession(res)).toBe(true);
   });
 });

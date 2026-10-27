@@ -8,11 +8,13 @@ import {
   isHomeAlias,
   isProtectedRoute,
 } from "@/app/_shared/lib/config/routes";
-import { SESSION_COOKIE, verifySessionToken } from "@/app/_shared/lib/auth/session";
+import { canSignIn } from "@/app/_shared/lib/auth/account";
+import { readProxySession, withSessionCookies } from "@/app/_shared/lib/supabase/proxySession";
 
 // This proxy handles authentication and route protection.
-// The whole app is private except the login page, the login API, report links, the demo and
+// The whole app is private except the login page, the sign-in routes, report links, the demo and
 // the route devartventures.com sends audit requests to (it checks its own secret).
+// It also refreshes the Supabase session: every answer carries the refreshed cookies.
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -21,31 +23,31 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`${ROUTES.HOME}${search}`, request.url));
   }
 
-  // Verify the signed session cookie (not just its presence)
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const isLoggedIn = await verifySessionToken(token);
+  // Verify the Supabase session (refreshing it when due); an email that may not sign in counts as logged out
+  const { response, email } = await readProxySession(request);
+  const isLoggedIn = !!email && canSignIn(email);
 
-  // The home page shows a visitor who isn't logged in the public demo, not a password form
+  // The home page shows a visitor who isn't logged in the public demo, not a sign-in form
   if (pathname === ROUTES.HOME && !isLoggedIn) {
-    return NextResponse.redirect(new URL(LOGGED_OUT_HOME, request.url));
+    return withSessionCookies(NextResponse.redirect(new URL(LOGGED_OUT_HOME, request.url)), response);
   }
 
   // Handle protected routes
   if (isProtectedRoute(pathname) && !isLoggedIn) {
     if (isApiRoute(pathname)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withSessionCookies(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), response);
     }
     const loginUrl = new URL(ROUTES.LOGIN, request.url);
     loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
-    return NextResponse.redirect(loginUrl);
+    return withSessionCookies(NextResponse.redirect(loginUrl), response);
   }
 
   // Redirect logged-in users away from auth pages
   if (isAuthRoute(pathname) && isLoggedIn) {
-    return NextResponse.redirect(new URL(ROUTES.HOME, request.url));
+    return withSessionCookies(NextResponse.redirect(new URL(ROUTES.HOME, request.url)), response);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 // Configure which routes the proxy should run on

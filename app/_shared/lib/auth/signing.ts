@@ -1,7 +1,7 @@
 // app/_shared/lib/auth/signing.ts
 
-// HMAC-SHA256 signatures with AUTH_SECRET, for the session cookie and the
-// private report links. Web Crypto only, so it runs in proxy.ts and route handlers.
+// HMAC-SHA256 signatures with AUTH_SECRET, for the private report links.
+// Web Crypto only, so it runs in proxy.ts and route handlers.
 
 const encoder = new TextEncoder();
 

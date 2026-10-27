@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reportToken, verifyReportToken } from '@/app/_shared/lib/auth/reportLink';
-import { createSessionToken } from '@/app/_shared/lib/auth/session';
+import { sign } from '@/app/_shared/lib/auth/signing';
 
 const AUDIT = '3f2b7c1e-8a4d-4f6b-9c2e-1d5a7b9e0c3f';
 const OTHER = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
@@ -26,9 +26,14 @@ describe('report links', () => {
     expect(await verifyReportToken('')).toBeNull();
   });
 
-  it('never accepts a session cookie value as a report link', async () => {
-    vi.stubEnv('AUTH_SECRET', 'a'.repeat(40));
-    expect(await verifyReportToken(await createSessionToken())).toBeNull();
+  // AUTH_SECRET may sign other things; only a signature made for a report opens one
+  it('never accepts a signature made with the same secret for anything else', async () => {
+    const secret = 'a'.repeat(40);
+    vi.stubEnv('AUTH_SECRET', secret);
+    expect(await verifyReportToken(`${AUDIT}.${await sign(AUDIT, secret)}`)).toBeNull();
+    expect(await verifyReportToken(`${AUDIT}.${await sign(`session:${AUDIT}`, secret)}`)).toBeNull();
+    const exp = String(Date.now() + 60_000);
+    expect(await verifyReportToken(`${exp}.${await sign(exp, secret)}`)).toBeNull();
   });
 
   it('stops working when the secret changes, and is off without one', async () => {

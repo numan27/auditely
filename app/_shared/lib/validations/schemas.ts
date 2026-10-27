@@ -17,9 +17,12 @@ export const loginSchema = Yup.object().shape({
   rememberMe: Yup.boolean(),
 });
 
-// Admin login schema (single shared password)
-export const adminLoginSchema = Yup.object().shape({
-  password: Yup.string().required('Password is required'),
+// Sign-in schema (an emailed link)
+export const emailLinkSchema = Yup.object().shape({
+  email: Yup.string()
+    .trim()
+    .matches(emailRegex, 'Enter your email address')
+    .required('Enter your email address'),
 });
 
 // Registration schema
@@ -100,7 +103,7 @@ export const contactSchema = Yup.object().shape({
 
 // Types
 export type LoginFormValues = Yup.InferType<typeof loginSchema>;
-export type AdminLoginFormValues = Yup.InferType<typeof adminLoginSchema>;
+export type EmailLinkFormValues = Yup.InferType<typeof emailLinkSchema>;
 export type RegisterFormValues = Yup.InferType<typeof registerSchema>;
 export type ForgotPasswordFormValues = Yup.InferType<typeof forgotPasswordSchema>;
 export type ResetPasswordFormValues = Yup.InferType<typeof resetPasswordSchema>;
