@@ -105,7 +105,22 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS profiles (
   id          UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT        NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Who the account's reports and emails come from (Settings). All optional; the
+  -- logo is a PNG or JPEG of at most 256 KB, kept as a data URL.
+  display_name  TEXT,
+  company       TEXT,
+  website       TEXT,
+  logo_data_url TEXT,
+  contact_email TEXT,
+  contact_phone TEXT,
+  booking_url   TEXT,
+  updated_at    TIMESTAMPTZ,
+  CONSTRAINT profiles_settings_length CHECK (
+    char_length(display_name) <= 200 AND char_length(company) <= 200 AND char_length(website) <= 200
+    AND char_length(contact_email) <= 200 AND char_length(contact_phone) <= 200 AND char_length(booking_url) <= 200
+    AND char_length(logo_data_url) <= 350000
+  )
 );
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -137,7 +152,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user    ON notifications (user_id, 
 -- business. anon has no policy, so it reads/writes nothing. The service role key
 -- (SUPABASE_SERVICE_ROLE_KEY) bypasses RLS; the server uses it only for the shared
 -- pagespeed_cache (no policy: server only), the devartventures.com inbound route,
--- signed report links, the owner lookup and the usage ledger below.
+-- signed report links, the owner lookup, the brand lookup, the usage ledger and
+-- the saved secrets below.
 ALTER TABLE profiles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE searches   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
@@ -147,6 +163,9 @@ ALTER TABLE pagespeed_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS own_profile ON profiles;
 CREATE POLICY own_profile ON profiles FOR SELECT TO authenticated USING (id = (SELECT auth.uid()));
+DROP POLICY IF EXISTS own_profile_update ON profiles;
+CREATE POLICY own_profile_update ON profiles FOR UPDATE TO authenticated
+  USING (id = (SELECT auth.uid())) WITH CHECK (id = (SELECT auth.uid()));
 DROP POLICY IF EXISTS own_rows ON searches;
 CREATE POLICY own_rows ON searches FOR ALL TO authenticated
   USING (user_id = (SELECT auth.uid())) WITH CHECK (user_id = (SELECT auth.uid()));
@@ -171,7 +190,14 @@ CREATE POLICY own_rows ON ai_reports FOR ALL TO authenticated
 -- Supabase usually grants this already. Nothing is granted to anon.
 GRANT SELECT, INSERT, UPDATE, DELETE ON searches, businesses, audits, ai_reports, notifications TO authenticated;
 GRANT SELECT ON profiles TO authenticated;
--- The server's owner lookup (ownerUserId) reads profiles with the service role key
+-- A signed-in user may change their own profile's Settings fields and nothing else:
+-- the email, which decides who the owner is, and the id stay as sign-up set them.
+-- Supabase grants new tables to anon and authenticated by default, so that goes first.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON profiles FROM anon, authenticated;
+GRANT UPDATE (display_name, company, website, logo_data_url, contact_email, contact_phone, booking_url, updated_at)
+  ON profiles TO authenticated;
+-- The server's owner lookup (ownerUserId) and the brand lookup (brand.ts) read
+-- profiles with the service role key
 GRANT SELECT ON profiles TO service_role;
 
 -- 8. usage_events: one row per search, audit or email lookup an account has used,
@@ -210,3 +236,19 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.claim_usage(UUID, TEXT, INTEGER, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_usage(UUID, TEXT, INTEGER, TIMESTAMPTZ) TO service_role;
+
+-- 9. user_secrets: an account's saved mailbox password and HubSpot token, encrypted
+--    by the server (SECRETS_KEY) before they get here. The label (the mailbox
+--    address) is plain, so Settings can say what's connected without decrypting.
+--    No policies and no grants to signed-in users: only the service role reads it.
+CREATE TABLE IF NOT EXISTS user_secrets (
+  user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  kind        TEXT        NOT NULL CHECK (kind IN ('smtp', 'hubspot')),
+  ciphertext  TEXT        NOT NULL,
+  label       TEXT,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, kind)
+);
+ALTER TABLE user_secrets ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON user_secrets FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_secrets TO service_role;

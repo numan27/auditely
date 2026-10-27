@@ -20,7 +20,7 @@ BEGIN
   FROM pg_policies
   WHERE schemaname = 'public'
     AND tablename IN ('profiles','searches','businesses','audits','ai_reports','notifications','pagespeed_cache')
-    AND policyname NOT IN ('own_rows','own_profile');
+    AND policyname NOT IN ('own_rows','own_profile','own_profile_update');
   IF stray IS NOT NULL THEN
     RAISE EXCEPTION 'Other policies would show one account''s rows to another: %. Drop them (Authentication → Policies), then run this again.', stray;
   END IF;

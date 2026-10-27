@@ -31,6 +31,7 @@ const ROUTES = {
   'verify-email': () => import('@/app/api/verify-email/route'),
   usage: () => import('@/app/api/usage/route'),
   autocomplete: () => import('@/app/api/autocomplete/route'),
+  'settings/profile': () => import('@/app/api/settings/profile/route'),
 };
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 

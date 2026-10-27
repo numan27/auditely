@@ -38,6 +38,10 @@ export const API_ROUTES = {
   AUDIT_REQUESTS: '/api/audit-requests',
   NOTIFICATIONS: '/api/notifications',
   USAGE: '/api/usage',
+  // Settings: the profile reports are signed with, and the mailbox and HubSpot connections
+  SETTINGS_PROFILE: '/api/settings/profile',
+  SETTINGS_MAILBOX: '/api/settings/mailbox',
+  SETTINGS_HUBSPOT: '/api/settings/hubspot',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret

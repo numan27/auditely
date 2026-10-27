@@ -3,7 +3,9 @@
 // The service client bypasses Row Level Security, so only the code doing work no
 // signed-in user owns may import `serviceDb`: the owner lookup in server.ts, the
 // shared PageSpeed cache, the usage ledger (a user may read their own uses but never
-// write one), the devartventures.com webhook and signed report links.
+// write one), the devartventures.com webhook, signed report links, the brand lookup
+// (a report's owner, not the viewer, decides its brand) and saved secrets (a user may
+// never read a ciphertext, even their own).
 // Anywhere else it could hand one user another's data. The `Db` type carries no
 // access, so `import type { Db }` is fine anywhere.
 
@@ -16,6 +18,7 @@ const CLIENT = 'app/_shared/lib/supabase/client';
 
 const ALLOWED = [
   'app/_shared/lib/audit/pageSpeedStore.ts',
+  'app/_shared/lib/brand/brand.ts',
   'app/_shared/lib/supabase/server.ts',
   'app/_shared/lib/usage/usage.ts',
   'app/api/inbound/audit-request/route.ts',
