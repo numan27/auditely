@@ -7,17 +7,17 @@
 // sets; a Checkout session must belong to the account that asks. Server-only.
 
 import type Stripe from 'stripe';
-import { fromLookupKey } from '@/app/_shared/lib/billing/billingRules';
+import { fromPrice } from '@/app/_shared/lib/billing/billingRules';
 import type { SubscriptionRow } from '@/app/_shared/lib/billing/subscription';
 import { saveSubscription, userIdForCustomer } from '@/app/_shared/lib/billing/subscriptionStore';
 
 export type StripeApi = Pick<Stripe, 'subscriptions' | 'checkout'>;
 export type SyncResult = 'saved' | 'kept' | 'unmatched' | 'refused';
 
-/** A subscription whose price isn't one of the four Auditely sells */
+/** A subscription whose price isn't one of the four Auditely sells; reading it again won't change that */
 export class UnknownPrice extends Error {
   constructor(priceId: string) {
-    super(`Price ${priceId} has no Auditely lookup key`);
+    super(`Price ${priceId} isn't one of Auditely's plans`);
     this.name = 'UnknownPrice';
   }
 }
@@ -29,7 +29,7 @@ const customerOf = (sub: Stripe.Subscription) => (typeof sub.customer === 'strin
 /** The subscriptions row for a Stripe subscription; its first item sets the plan and the period */
 export function rowFromStripe(sub: Stripe.Subscription, userId: string): SubscriptionRow {
   const item = sub.items.data[0];
-  const bought = fromLookupKey(item?.price.lookup_key);
+  const bought = item ? fromPrice(item.price) : null;
   if (!item || !bought) throw new UnknownPrice(item?.price.id ?? '(none)');
   return {
     user_id: userId,

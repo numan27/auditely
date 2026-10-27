@@ -19,7 +19,7 @@ const stripeSub = {
   id: 'sub_1', status: 'active', customer: 'cus_1', metadata: { user_id: 'u2' },
   billing_cycle_anchor: 1773480600 /* 2026-03-14T09:30Z */, cancel_at: null, cancel_at_period_end: true,
   items: { data: [{ current_period_start: 1773480600, current_period_end: 1805016600 /* 2027-03-14T09:30Z */,
-    price: { id: 'price_a', lookup_key: 'auditely_agency_yearly' } }] },
+    price: { id: 'price_a', lookup_key: 'auditely_agency_yearly', product: 'auditely_agency', recurring: { interval: 'year' } } }] },
 };
 
 beforeEach(() => {
@@ -44,8 +44,15 @@ describe('rowFromStripe', () => {
     expect(rowFromStripe({ ...stripeSub, cancel_at_period_end: false } as never, 'u2').ends_at).toBeNull();
   });
 
+  it("keeps a subscriber's plan after their price's lookup key moves to a new price", () => {
+    const old = { id: 'price_old', lookup_key: null, product: 'auditely_pro', recurring: { interval: 'month' } };
+    const sub = { ...stripeSub, items: { data: [{ ...stripeSub.items.data[0], price: old }] } };
+    expect(rowFromStripe(sub as never, 'u2')).toMatchObject({ plan: 'pro', billing_interval: 'month' });
+  });
+
   it('refuses a price that is not one of the four plans', () => {
-    const other = { ...stripeSub, items: { data: [{ ...stripeSub.items.data[0], price: { id: 'price_x', lookup_key: null } }] } };
+    const price = { id: 'price_x', lookup_key: null, product: 'prod_other', recurring: { interval: 'month' } };
+    const other = { ...stripeSub, items: { data: [{ ...stripeSub.items.data[0], price }] } };
     expect(() => rowFromStripe(other as never, 'u2')).toThrow(UnknownPrice);
     expect(() => rowFromStripe(other as never, 'u2')).toThrow('price_x');
   });

@@ -74,11 +74,23 @@ export function lookupKey(plan: PaidPlanId, interval: BillingInterval): string {
   return `auditely_${plan}_${INTERVAL_WORD[interval]}`;
 }
 
-export function fromLookupKey(key: string | null | undefined): { plan: PaidPlanId; interval: BillingInterval } | null {
-  for (const plan of PAID_PLANS) {
-    for (const interval of INTERVALS) if (key === lookupKey(plan, interval)) return { plan, interval };
-  }
-  return null;
+/** The Stripe product a paid plan's prices belong to: auditely_pro, auditely_agency (scripts/stripeCatalog.mjs) */
+export function productId(plan: PaidPlanId): string {
+  return `auditely_${plan}`;
+}
+
+/**
+ * What a Stripe price bills: the plan from its product, the interval from its recurrence. Not from its lookup
+ * key: that moves to the new price when a price changes, and subscriptions on the old one keep their plan.
+ */
+export function fromPrice(price: {
+  product: string | { id: string } | null;
+  recurring: { interval: string } | null;
+}): { plan: PaidPlanId; interval: BillingInterval } | null {
+  const product = typeof price.product === 'string' ? price.product : price.product?.id;
+  const plan = PAID_PLANS.find((id) => productId(id) === product);
+  const interval = INTERVALS.find((id) => id === price.recurring?.interval);
+  return plan && interval ? { plan, interval } : null;
 }
 
 /** The Stripe events the webhook handles, and the setup script subscribes it to */

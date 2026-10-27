@@ -5,13 +5,14 @@
 // STRIPE_WEBHOOK_SECRET, is the key. Each event only names a subscription, which
 // syncSubscription reads back from Stripe, so an event that arrives twice or out
 // of order saves Stripe's current copy. A sync that fails answers 500, and Stripe
-// sends the event again.
+// sends the event again; a subscription that isn't Auditely's is logged and
+// acknowledged, since sending it again can't change it.
 
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { WEBHOOK_EVENTS } from '@/app/_shared/lib/billing/billingRules';
 import { BILLING_NOT_SET_UP, stripeClient } from '@/app/_shared/lib/billing/stripe';
-import { syncSubscription } from '@/app/_shared/lib/billing/sync';
+import { UnknownPrice, syncSubscription } from '@/app/_shared/lib/billing/sync';
 
 const SUBSCRIPTION_EVENTS = new Set<string>(WEBHOOK_EVENTS.filter((type) => type.startsWith('customer.subscription.')));
 
@@ -45,7 +46,12 @@ export async function POST(request: NextRequest) {
   try {
     await handle(stripe, event);
   } catch (error) {
-    console.error(`[billing] Failed to sync ${event.type} ${event.id}: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof UnknownPrice) {
+      console.error(`[billing] Ignored ${event.type} ${event.id}: ${message}`);
+      return NextResponse.json({ received: true });
+    }
+    console.error(`[billing] Failed to sync ${event.type} ${event.id}: ${message}`);
     return NextResponse.json({ error: "Couldn't record this event. Stripe will send it again." }, { status: 500 });
   }
   return NextResponse.json({ received: true });

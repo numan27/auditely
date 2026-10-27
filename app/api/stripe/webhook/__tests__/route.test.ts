@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import Stripe from 'stripe';
 
-vi.mock('@/app/_shared/lib/billing/sync', () => ({ syncSubscription: vi.fn(async () => 'saved') }));
+vi.mock('@/app/_shared/lib/billing/sync', () => ({
+  syncSubscription: vi.fn(async () => 'saved'),
+  UnknownPrice: class UnknownPrice extends Error {},
+}));
 
-const { syncSubscription } = await import('@/app/_shared/lib/billing/sync');
+const { UnknownPrice, syncSubscription } = await import('@/app/_shared/lib/billing/sync');
 const { POST } = await import('@/app/api/stripe/webhook/route');
 
 const URL = 'http://localhost/api/stripe/webhook';
@@ -72,6 +75,12 @@ describe('POST /api/stripe/webhook', () => {
     vi.mocked(syncSubscription).mockRejectedValueOnce(new Error('db down'));
     expect((await post(updated)).status).toBe(500);
     expect(String(vi.mocked(console.error).mock.calls[0])).toContain('customer.subscription.updated evt_1: db down');
+  });
+
+  it("acknowledges a subscription that isn't Auditely's, since sending it again can't help", async () => {
+    vi.mocked(syncSubscription).mockRejectedValueOnce(new UnknownPrice('Price price_x is not an Auditely plan'));
+    expect((await post(updated)).status).toBe(200);
+    expect(String(vi.mocked(console.error).mock.calls[0])).toContain('Ignored customer.subscription.updated evt_1');
   });
 
   it('answers 503 until billing is set up, naming what is missing', async () => {

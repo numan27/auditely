@@ -8,12 +8,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { CATALOG, WEBHOOK_EVENTS_FOR_SETUP } from '../../scripts/stripeCatalog.mjs';
-import { PAID_PLANS, WEBHOOK_EVENTS, lookupKey, type PaidPlanId } from '@/app/_shared/lib/billing/billingRules';
+import { PAID_PLANS, WEBHOOK_EVENTS, lookupKey, productId, type PaidPlanId } from '@/app/_shared/lib/billing/billingRules';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 
 describe('Stripe catalog', () => {
   it("charges what the plans page shows, under the app's lookup keys", () => {
     expect(CATALOG.map((p) => p.plan)).toEqual(PAID_PLANS);
+    // The products are how a subscription's plan is read back, whatever its price's lookup key
+    expect(CATALOG.map((p) => p.productId)).toEqual(PAID_PLANS.map(productId));
     for (const { plan, prices } of CATALOG) {
       // The .mjs catalog's plan infers as string under tsc
       const id = plan as PaidPlanId;

@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   INTERVALS,
   PAID_PLANS,
-  fromLookupKey,
+  fromPrice,
   isLive,
   isLiveStatus,
   lookupKey,
   monthlyWindow,
+  productId,
 } from '@/app/_shared/lib/billing/billingRules';
 
 const iso = (d: { start: Date; end: Date }) => [d.start.toISOString(), d.end.toISOString()];
@@ -70,12 +71,22 @@ describe('isLive', () => {
   });
 });
 
-describe('lookup keys', () => {
-  it('round-trips every plan and interval, and rejects others', () => {
+describe('prices and products', () => {
+  it('names the price Checkout buys by plan and interval', () => {
     expect(lookupKey('agency', 'year')).toBe('auditely_agency_yearly');
+  });
+
+  it("reads the plan a price bills from its product and interval, whatever its lookup key", () => {
     for (const plan of PAID_PLANS) {
-      for (const interval of INTERVALS) expect(fromLookupKey(lookupKey(plan, interval))).toEqual({ plan, interval });
+      for (const interval of INTERVALS) expect(fromPrice({ product: productId(plan), recurring: { interval } })).toEqual({ plan, interval });
     }
-    expect([fromLookupKey('auditely_owner_monthly'), fromLookupKey('other'), fromLookupKey(null)]).toEqual([null, null, null]);
+    // An older price whose lookup key moved to a new one keeps its product; Stripe may expand it
+    expect(fromPrice({ product: { id: 'auditely_pro' }, recurring: { interval: 'month' } })).toEqual({ plan: 'pro', interval: 'month' });
+    expect([
+      fromPrice({ product: 'auditely_owner', recurring: { interval: 'month' } }),
+      fromPrice({ product: 'prod_other', recurring: { interval: 'month' } }),
+      fromPrice({ product: 'auditely_pro', recurring: { interval: 'week' } }),
+      fromPrice({ product: 'auditely_pro', recurring: null }),
+    ]).toEqual([null, null, null, null]);
   });
 });
