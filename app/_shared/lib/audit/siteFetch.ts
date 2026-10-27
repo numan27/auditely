@@ -3,10 +3,12 @@
 // Fetches a business homepage once (plus robots.txt) for the HTML analyzers
 // and the email finder.
 
+import { AUDITELY_URL } from '@/app/_shared/lib/config/site';
+
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const MAX_ROBOTS_BYTES = 256 * 1024;
-export const USER_AGENT = 'Mozilla/5.0 (compatible; Auditely/1.0; +https://devartventures.com)';
+export const USER_AGENT = `Mozilla/5.0 (compatible; Auditely/1.0; +${AUDITELY_URL})`;
 
 export interface RobotsFetch {
   status: number | null;

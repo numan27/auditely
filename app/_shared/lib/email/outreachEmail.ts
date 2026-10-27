@@ -10,6 +10,7 @@
 import { rankedProblems, type Problem } from '@/app/_shared/lib/audit/impact';
 import { measuredSeoAndSsl, scoreTone, type AuditLike, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { escapeHtml } from '@/app/_shared/lib/utils/html';
+import { shortUrl } from '@/app/_shared/lib/utils/shortUrl';
 import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 export interface OutreachEmail {
@@ -73,7 +74,6 @@ function scoreTiles(audit: AuditLike): Tile[] {
 }
 
 const bookingLink = (contact: PdfContact) => contact.bookingUrl ?? `mailto:${contact.email}`;
-const shortUrl = (website: string) => website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 const contactDetails = (contact: PdfContact) => [contact.name, contact.phone, contact.email].filter((v): v is string => !!v);
 
 function tileRows(tiles: Tile[]): string {
