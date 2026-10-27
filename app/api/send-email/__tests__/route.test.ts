@@ -23,7 +23,7 @@ const db = vi.hoisted(() => {
   };
   return { state, from };
 });
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
 vi.mock('@/app/_shared/lib/email/brandLogo', () => ({ LOGO_CID: 'devartventures-logo', brandLogo: vi.fn() }));
 // The mailer (mailbox or Resend) has its own tests
@@ -89,7 +89,7 @@ describe('POST /api/send-email', () => {
     expect(html).toContain('<img src="cid:devartventures-logo"');
     expect(html).toContain('Smile Dental');
     expect(html).toContain('Book your free call');
-    expect(renderAuditPdf).toHaveBeenCalledWith('a1');
+    expect(renderAuditPdf).toHaveBeenCalledWith(expect.anything(), 'a1');
     expect(db.state.updates).toEqual([{ emailed_at: json.emailed_at }]);
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
   });
@@ -200,7 +200,7 @@ describe('POST /api/send-email', () => {
   it('checks the stored address', async () => {
     db.state.business = businessRow({ email_check: { verdict: 'Deliverable' } });
     await post({ ...draft, email: 'someone@else.com' });
-    expect(checkLeadEmail).toHaveBeenCalledWith({ id: 'b1', email: 'office@smiledental.com', email_check: { verdict: 'Deliverable' } });
+    expect(checkLeadEmail).toHaveBeenCalledWith(expect.anything(), { id: 'b1', email: 'office@smiledental.com', email_check: { verdict: 'Deliverable' } });
   });
 
   it.each([

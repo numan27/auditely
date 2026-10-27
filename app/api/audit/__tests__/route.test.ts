@@ -55,7 +55,7 @@ const db = vi.hoisted(() => {
   return { state, from, reset, ops };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 vi.mock('@/app/_shared/lib/audit/runAudit', () => ({
   AuditUnavailableError: class AuditUnavailableError extends Error {},
   runAudit: vi.fn(),

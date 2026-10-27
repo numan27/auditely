@@ -1,6 +1,7 @@
 // app/api/pdf/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import type { PdfVariant } from '@/app/_shared/lib/types/auditely';
 
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'audit_id is required' }, { status: 400 });
   }
 
-  const result = await renderAuditPdf(auditId, variant);
+  const result = await renderAuditPdf(serviceDb, auditId, variant);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

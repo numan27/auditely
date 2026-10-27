@@ -5,7 +5,7 @@
 // the same site if it was added before); DELETE removes the ones named.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { DIRECT_AUDIT_SEARCH } from '@/app/_shared/lib/config/directAudits';
 import { normalizeWebsiteUrl, websiteKey } from '@/app/_shared/lib/utils/websiteUrl';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
@@ -15,7 +15,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_REMOVED = 500;
 
 async function findDirectSearchId(): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await serviceDb
     .from('searches')
     .select('id')
     .eq('niche', DIRECT_AUDIT_SEARCH.niche)
@@ -27,7 +27,7 @@ async function findDirectSearchId(): Promise<string | null> {
 }
 
 async function loadBusiness(id: string) {
-  const { data } = await supabase.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', id).single();
+  const { data } = await serviceDb.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', id).single();
   return data ? withAuditData(data as BusinessRow) : null;
 }
 
@@ -35,7 +35,7 @@ export async function GET() {
   const searchId = await findDirectSearchId();
   if (!searchId) return NextResponse.json({ businesses: [] });
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .select(BUSINESS_WITH_AUDIT)
     .eq('search_id', searchId)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   let searchId = await findDirectSearchId();
   if (!searchId) {
-    const { data, error } = await supabase.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
+    const { data, error } = await serviceDb.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
     if (error || !data) {
       console.error('[audit-url] Failed to create search:', error?.message);
       return NextResponse.json({ error: 'Failed to save the website' }, { status: 500 });
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Added before → return it with its audit, so it isn't audited twice
-  const { data: sites } = await supabase.from('businesses').select('id, website').eq('search_id', searchId);
+  const { data: sites } = await serviceDb.from('businesses').select('id, website').eq('search_id', searchId);
   const key = websiteKey(parsed.url);
   const match = sites?.find((b) => b.website && websiteKey(b.website) === key);
   if (match) {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (business) return NextResponse.json({ business, existing: true });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .insert({ search_id: searchId, name: parsed.host, address: '', website: parsed.url })
     .select()
@@ -99,7 +99,7 @@ export async function DELETE(request: NextRequest) {
   const searchId = await findDirectSearchId();
   if (!searchId) return NextResponse.json({ removed: [] });
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .delete()
     .eq('search_id', searchId)

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyReportToken } from '@/app/_shared/lib/auth/reportLink';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 
 const notFound = () => new NextResponse('Report not found', { status: 404 });
@@ -14,7 +15,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const auditId = await verifyReportToken(token);
   if (!auditId) return notFound();
 
-  const result = await renderAuditPdf(auditId);
+  const result = await renderAuditPdf(serviceDb, auditId);
   if (!result.ok) return result.status === 404 ? notFound() : new NextResponse('Report unavailable', { status: 500 });
 
   return new Response(new Uint8Array(result.pdf), {

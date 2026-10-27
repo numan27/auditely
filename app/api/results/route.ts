@@ -1,7 +1,7 @@
 // app/api/results/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'search_id query parameter is required' }, { status: 400 });
   }
 
-  const searchQuery = supabase.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
-  const businessQuery = supabase
+  const searchQuery = serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const businessQuery = serviceDb
     .from('businesses')
     .select(`
       *,
@@ -57,13 +57,13 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the businesses to remove' }, { status: 400 });
 
-  const { data: search } = await supabase.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const { data: search } = await serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
   if (!search) return NextResponse.json({ removed: [] });
   if (isUrlOnlySearch(search)) {
     return NextResponse.json({ error: 'Remove these from their own tab' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .delete()
     .eq('search_id', searchId)

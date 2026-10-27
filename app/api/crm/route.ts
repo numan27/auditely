@@ -5,7 +5,7 @@
 // failure updates that company instead of creating another.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 import { reportToken } from '@/app/_shared/lib/auth/reportLink';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
@@ -18,7 +18,7 @@ const MIGRATION = 'docs/migrations/2026-10-01-hubspot.sql';
 class StoreError extends Error {}
 
 async function saveBusiness(businessId: string, update: Record<string, string>): Promise<void> {
-  const { error } = await supabase.from('businesses').update(update).eq('id', businessId);
+  const { error } = await serviceDb.from('businesses').update(update).eq('id', businessId);
   if (error) {
     console.error('[crm] business update failed:', error.message);
     throw new StoreError(error.message);
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   const token = process.env.HUBSPOT_TOKEN;
   if (!token) return NextResponse.json({ error: "HubSpot isn't connected — add HUBSPOT_TOKEN in Vercel." }, { status: 503 });
 
-  const { data } = await supabase.from('businesses').select(`${BUSINESS_WITH_AUDIT}, searches (niche)`).eq('id', businessId).single();
+  const { data } = await serviceDb.from('businesses').select(`${BUSINESS_WITH_AUDIT}, searches (niche)`).eq('id', businessId).single();
   if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   const row = data as BusinessRow & { searches?: { niche: string } | null };
   const business = withAuditData(row);

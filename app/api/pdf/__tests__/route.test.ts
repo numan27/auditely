@@ -4,6 +4,7 @@ import { POST } from '@/app/api/pdf/route';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
 
 const post = (body: unknown) => POST(new NextRequest('http://localhost/api/pdf', { method: 'POST', body: JSON.stringify(body) }));
 
@@ -28,7 +29,7 @@ describe('POST /api/pdf', () => {
     await post({ audit_id: 'a1', variant: 'upwork' });
     // Anything it does not know is the full report, never an error
     await post({ audit_id: 'a1', variant: 'print' });
-    expect(vi.mocked(renderAuditPdf).mock.calls.slice(-3)).toEqual([['a1', 'full'], ['a1', 'upwork'], ['a1', 'full']]);
+    expect(vi.mocked(renderAuditPdf).mock.calls.slice(-3)).toEqual([[{}, 'a1', 'full'], [{}, 'a1', 'upwork'], [{}, 'a1', 'full']]);
   });
 
   it('asks for an audit id', async () => {

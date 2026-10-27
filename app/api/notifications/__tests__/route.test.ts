@@ -36,7 +36,8 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
 
 const { GET, PATCH, POST } = await import('@/app/api/notifications/route');
 

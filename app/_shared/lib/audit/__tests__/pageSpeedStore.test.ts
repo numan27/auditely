@@ -30,7 +30,7 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 
 const entry: CachedPageSpeed = {
   summary: { categories: { performance: { score: 0.4, title: 'Performance' } }, keyAudits: {} },

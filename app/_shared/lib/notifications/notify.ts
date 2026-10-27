@@ -3,7 +3,7 @@
 // Stores notifications for the header bell. Server-only. A notification is
 // never worth failing the work it reports on: errors are logged, not thrown.
 
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import type { Db } from '@/app/_shared/lib/supabase/client';
 import type { NewNotification } from '@/app/_shared/lib/notifications/messages';
 import { NOTIFICATIONS_MIGRATION } from '@/app/_shared/lib/notifications/notificationTypes';
 
@@ -14,12 +14,15 @@ export const isMissingTable = (error: { code?: string } | null | undefined) =>
   error?.code === 'PGRST205' || error?.code === '42P01';
 
 /** Adds notifications; one whose dedupe key is already stored is skipped. Returns whether it worked. */
-export async function notify(...notifications: NewNotification[]): Promise<boolean> {
+export async function notify(db: Db, userId: string, ...notifications: NewNotification[]): Promise<boolean> {
   if (notifications.length === 0) return true;
   try {
-    const { error } = await supabase
+    const { error } = await db
       .from('notifications')
-      .upsert(notifications, { onConflict: 'dedupe_key', ignoreDuplicates: true });
+      .upsert(
+        notifications.map((n) => ({ ...n, user_id: userId })),
+        { onConflict: 'dedupe_key', ignoreDuplicates: true }
+      );
     if (!error) return true;
     console.error(
       '[notifications] Failed to store:',

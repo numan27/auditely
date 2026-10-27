@@ -1,11 +1,11 @@
 // app/api/searches/route.ts
 
 import { NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('searches')
     .select('*, businesses(count)')
     .order('created_at', { ascending: false });

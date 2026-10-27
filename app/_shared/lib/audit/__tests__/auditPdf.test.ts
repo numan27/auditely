@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
+import type { Db } from '@/app/_shared/lib/supabase/client';
 
 // Fake Supabase: one audit with its business, and its newest AI report
 const db = vi.hoisted(() => {
@@ -18,8 +19,7 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
-
+const fakeDb = { from: db.from } as unknown as Db;
 const AUDIT = '3f2b7c1e-8a4d-4f6b-9c2e-1d5a7b9e0c3f';
 
 beforeEach(() => {
@@ -33,14 +33,14 @@ beforeEach(() => {
 
 describe('renderAuditPdf', () => {
   it('draws the full report, with its links, unless asked otherwise', async () => {
-    const result = await renderAuditPdf(AUDIT);
+    const result = await renderAuditPdf(fakeDb, AUDIT);
     if (!result.ok) throw new Error(result.error);
     expect(result.filename).toBe('audit-smile-dental.pdf');
     expect(result.pdf.includes('/URI')).toBe(true);
   }, 30_000);
 
   it('draws the Upwork version without a link, under its own file name', async () => {
-    const result = await renderAuditPdf(AUDIT, 'upwork');
+    const result = await renderAuditPdf(fakeDb, AUDIT, 'upwork');
     if (!result.ok) throw new Error(result.error);
     expect(result.filename).toBe('audit-smile-dental-upwork.pdf');
     expect(result.pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -49,6 +49,6 @@ describe('renderAuditPdf', () => {
 
   it('has no Upwork version either before the AI report is written', async () => {
     db.state.report = null;
-    expect(await renderAuditPdf(AUDIT, 'upwork')).toEqual({ ok: false, status: 404, error: 'AI report not found — generate the report first' });
+    expect(await renderAuditPdf(fakeDb, AUDIT, 'upwork')).toEqual({ ok: false, status: 404, error: 'AI report not found — generate the report first' });
   });
 });

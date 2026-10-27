@@ -5,7 +5,7 @@
 // it is fresh, otherwise asks Verifalia (email/leadEmailCheck.ts).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 
 // Verifalia gets 20 seconds (email/verifalia.ts); the rest is the database
@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
 
   // The address always comes from the stored business, never from the request.
   // `*` rather than the column's name: it must also work before the migration is run.
-  const { data } = await supabase.from('businesses').select('*').eq('id', businessId).single();
+  const { data } = await serviceDb.from('businesses').select('*').eq('id', businessId).single();
   if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   if (!data.email) return NextResponse.json({ error: 'This business has no email address.' }, { status: 400 });
 
-  return NextResponse.json(await checkLeadEmail({ id: data.id, email: data.email, email_check: data.email_check }));
+  return NextResponse.json(await checkLeadEmail(serviceDb, { id: data.id, email: data.email, email_check: data.email_check }));
 }

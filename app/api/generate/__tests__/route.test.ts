@@ -32,7 +32,7 @@ const db = vi.hoisted(() => {
 });
 const groq = vi.hoisted(() => ({ create: vi.fn() }));
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 vi.mock('groq-sdk', () => ({
   default: class {
     chat = { completions: { create: groq.create } };

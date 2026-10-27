@@ -1,8 +1,10 @@
 // app/_shared/lib/supabase/client.ts
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// Server-only client. Prefer the service-role key so Row Level Security can stay
+// Server-only service client, for work no signed-in user owns (the shared PageSpeed
+// cache, the inbound webhook, looking up the owner). User-scoped routes use userDb()
+// from server.ts instead. Prefer the service-role key so Row Level Security can stay
 // enabled with no public policies; the anon key fallback only works while RLS is off.
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,6 +21,9 @@ if (!serviceRoleKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+/** A database client: the service client, or one acting as a signed-in user */
+export type Db = SupabaseClient;
+
+export const serviceDb: Db = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });

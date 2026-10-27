@@ -5,7 +5,8 @@
 // arrive through /api/inbound/audit-request.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { ownerUserId } from '@/app/_shared/lib/supabase/server';
 import { requestSearchIds } from '@/app/_shared/lib/requests/requestSearch';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 
@@ -14,10 +15,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_REMOVED = 500;
 
 export async function GET() {
-  const searchIds = await requestSearchIds();
+  const ownerId = await ownerUserId();
+  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+
+  const searchIds = await requestSearchIds(serviceDb, ownerId);
   if (searchIds.length === 0) return NextResponse.json({ businesses: [] });
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .select(BUSINESS_WITH_AUDIT)
     .in('search_id', searchIds)
@@ -42,10 +46,13 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the requests to remove' }, { status: 400 });
 
-  const searchIds = await requestSearchIds();
+  const ownerId = await ownerUserId();
+  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+
+  const searchIds = await requestSearchIds(serviceDb, ownerId);
   if (searchIds.length === 0) return NextResponse.json({ removed: [] });
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .delete()
     .in('search_id', searchIds)

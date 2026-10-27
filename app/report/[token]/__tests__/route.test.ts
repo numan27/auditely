@@ -5,6 +5,7 @@ import { reportToken } from '@/app/_shared/lib/auth/reportLink';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
 
 const AUDIT = '3f2b7c1e-8a4d-4f6b-9c2e-1d5a7b9e0c3f';
 const open = (token: string) => GET(new NextRequest(`http://localhost/report/${token}`), { params: Promise.resolve({ token }) });
@@ -21,7 +22,7 @@ describe('GET /report/[token]', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/pdf');
     expect(res.headers.get('content-disposition')).toBe('inline; filename="audit-smile-dental.pdf"');
-    expect(renderAuditPdf).toHaveBeenCalledWith(AUDIT);
+    expect(renderAuditPdf).toHaveBeenCalledWith({}, AUDIT);
   });
 
   it('answers 404 for a changed link without touching the audit', async () => {

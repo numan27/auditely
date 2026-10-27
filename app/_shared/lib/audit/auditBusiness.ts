@@ -5,7 +5,7 @@
 // (api/audit) and by free audits requested on devartventures.com, which are
 // audited as soon as they arrive (api/inbound/audit-request). Server-only.
 
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import type { Db } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
 import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
@@ -24,8 +24,8 @@ interface BusinessRecord {
 
 // Newest audit for this business. Ordered + limited so it still works if
 // duplicate rows exist (maybeSingle() errors on more than one row).
-async function findLatestAudit(businessId: string) {
-  const { data } = await supabase
+async function findLatestAudit(db: Db, businessId: string) {
+  const { data } = await db
     .from('audits')
     .select('*')
     .eq('business_id', businessId)
@@ -35,21 +35,21 @@ async function findLatestAudit(businessId: string) {
   return data;
 }
 
-async function insertAudit(businessId: string, row: AuditRow) {
-  const { data, error } = await supabase
+async function insertAudit(db: Db, businessId: string, row: AuditRow) {
+  const { data, error } = await db
     .from('audits')
     .insert({ business_id: businessId, ...row })
     .select()
     .single();
   // Unique violation → a concurrent request stored this business's audit first
-  if (error?.code === '23505') return findLatestAudit(businessId);
+  if (error?.code === '23505') return findLatestAudit(db, businessId);
   if (error) console.error('[audit] insert failed:', error.message);
   return data;
 }
 
 // Re-audit: overwrite the same row (stable id) and drop its now-stale AI report
-async function replaceAudit(auditId: string, row: AuditRow) {
-  const { data, error } = await supabase
+async function replaceAudit(db: Db, auditId: string, row: AuditRow) {
+  const { data, error } = await db
     .from('audits')
     .update({ ...row, created_at: new Date().toISOString() })
     .eq('id', auditId)
@@ -59,7 +59,7 @@ async function replaceAudit(auditId: string, row: AuditRow) {
     console.error('[audit] update failed:', error?.message);
     return null;
   }
-  const { error: deleteError } = await supabase.from('ai_reports').delete().eq('audit_id', auditId);
+  const { error: deleteError } = await db.from('ai_reports').delete().eq('audit_id', auditId);
   if (deleteError) {
     console.error('[audit] stale AI report delete failed:', deleteError.message);
     return null;
@@ -71,8 +71,8 @@ export type AuditBusinessResult =
   | { ok: true; audit: Audit; email: string | null }
   | { ok: false; status: number; error: string };
 
-export async function auditBusiness(businessId: string, force = false): Promise<AuditBusinessResult> {
-  const { data, error: businessError } = await supabase
+export async function auditBusiness(db: Db, businessId: string, force = false): Promise<AuditBusinessResult> {
+  const { data, error: businessError } = await db
     .from('businesses')
     .select('name, address, phone, website, email, searches(niche, location)')
     .eq('id', businessId)
@@ -95,12 +95,12 @@ export async function auditBusiness(businessId: string, force = false): Promise<
     if (!business.website) return null;
     const found = await findEmail(business.website, { homepageHtml, pages });
     if (found) {
-      await supabase.from('businesses').update({ email: found }).eq('id', businessId);
+      await db.from('businesses').update({ email: found }).eq('id', businessId);
     }
     return found;
   };
 
-  const existing = await findLatestAudit(businessId);
+  const existing = await findLatestAudit(db, businessId);
 
   // Current-engine audit under 30 days old and no Re-audit requested → serve the cached audit
   if (existing && !force && !isOutdatedAudit(existing.engine_version) && !isStaleAudit(existing)) {
@@ -146,8 +146,8 @@ export async function auditBusiness(businessId: string, force = false): Promise<
   }
 
   const saved = existing
-    ? await replaceAudit(existing.id, outcome.row)
-    : await insertAudit(businessId, outcome.row);
+    ? await replaceAudit(db, existing.id, outcome.row)
+    : await insertAudit(db, businessId, outcome.row);
 
   if (!saved) {
     return { ok: false, status: 500, error: 'Failed to store audit' };

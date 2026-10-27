@@ -1,7 +1,7 @@
 // app/api/find-emails/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { contactsUpdate, discoverContacts, emailLookupUpdate } from '@/app/_shared/lib/utils/contactDiscovery';
 import { lookupEmailViaApis } from '@/app/_shared/lib/utils/emailApis';
 import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
@@ -35,7 +35,7 @@ const toResult = (b: BusinessRow): FindResult => ({
 
 async function save(b: BusinessRow, update: Partial<BusinessRow>): Promise<FindResult> {
   if (Object.keys(update).length === 0) return toResult(b);
-  const { error } = await supabase.from('businesses').update(update).eq('id', b.id);
+  const { error } = await serviceDb.from('businesses').update(update).eq('id', b.id);
   if (error) {
     console.error('[find-emails] update failed:', error.message);
     return toResult(b);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ results: [] });
   }
 
-  const { data: businesses } = await supabase
+  const { data: businesses } = await serviceDb
     .from('businesses')
     .select('id, website, email, phone, contact_page, socials, contacts_checked_at, email_lookup_at')
     .in('id', businessIds);

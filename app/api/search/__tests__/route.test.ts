@@ -50,7 +50,7 @@ const db = vi.hoisted(() => {
   return { inserts, state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 vi.mock('@/app/_shared/lib/places/searchPlaces', () => ({ searchPlaces: vi.fn() }));
 
 async function post(body: Record<string, unknown>) {

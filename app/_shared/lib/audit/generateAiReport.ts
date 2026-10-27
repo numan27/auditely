@@ -6,7 +6,7 @@
 // (api/inbound/audit-request). Server-only.
 
 import Groq from 'groq-sdk';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import type { Db } from '@/app/_shared/lib/supabase/client';
 import { rankedProblems } from '@/app/_shared/lib/audit/impact';
 import { InvalidReplyError, reportFixes, writeReport, type WrittenReport } from '@/app/_shared/lib/audit/aiReport';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
@@ -14,11 +14,11 @@ import type { AiReport } from '@/app/_shared/lib/types/auditely';
 
 export type AiReportResult = { ok: true; ai_report: AiReport } | { ok: false; status: number; error: string };
 
-export async function generateAiReport(auditId: string): Promise<AiReportResult> {
+export async function generateAiReport(db: Db, auditId: string): Promise<AiReportResult> {
   // Newest report for this audit. Ordered + limited so it still works if
   // duplicate rows exist (maybeSingle() errors on more than one row).
   const findLatestReport = async () => {
-    const { data } = await supabase
+    const { data } = await db
       .from('ai_reports')
       .select('*')
       .eq('audit_id', auditId)
@@ -36,7 +36,7 @@ export async function generateAiReport(auditId: string): Promise<AiReportResult>
   }
 
   // Fetch audit + business name/website via join
-  const { data: audit } = await supabase
+  const { data: audit } = await db
     .from('audits')
     .select('*, businesses(name, website)')
     .eq('id', auditId)
@@ -92,7 +92,7 @@ export async function generateAiReport(auditId: string): Promise<AiReportResult>
     return { ok: false, status: 503, error: 'AI service unavailable' };
   }
 
-  const { data: aiReport, error } = await supabase
+  const { data: aiReport, error } = await db
     .from('ai_reports')
     .insert({
       audit_id: auditId,

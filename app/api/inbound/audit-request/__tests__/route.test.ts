@@ -38,7 +38,8 @@ const db = vi.hoisted(() => {
 const background = vi.hoisted(() => ({ tasks: [] as (() => Promise<unknown> | unknown)[] }));
 const audits = vi.hoisted(() => ({ auditBusiness: vi.fn(), generateAiReport: vi.fn() }));
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
 vi.mock('next/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/server')>()),
   after: (task: () => unknown) => background.tasks.push(task),
@@ -121,7 +122,7 @@ describe('POST /api/inbound/audit-request', () => {
     const { status, json } = await send(request());
     expect(status).toBe(201);
     expect(json).toEqual({ id: 'b1', existing: false });
-    expect(inserts('searches')[0].payload).toEqual({ niche: 'audit requests', location: 'devartventures.com' });
+    expect(inserts('searches')[0].payload).toEqual({ niche: 'audit requests', location: 'devartventures.com', user_id: 'owner-1' });
     expect(inserts('businesses')[0].payload).toEqual({
       search_id: 'requests',
       name: 'smiledental.com',
@@ -141,8 +142,8 @@ describe('POST /api/inbound/audit-request', () => {
     expect(audits.auditBusiness).not.toHaveBeenCalled();
     expect(background.tasks).toHaveLength(1);
     await background.tasks[0]();
-    expect(audits.auditBusiness).toHaveBeenCalledWith('b1');
-    expect(audits.generateAiReport).toHaveBeenCalledWith('a1');
+    expect(audits.auditBusiness).toHaveBeenCalledWith(expect.anything(), 'b1');
+    expect(audits.generateAiReport).toHaveBeenCalledWith(expect.anything(), 'a1');
     // The bell hears of the request, then of its finished report
     expect(notified()).toEqual([
       expect.objectContaining({ kind: 'request_new', title: 'New audit request from Sarah Jones', business_id: 'b1' }),
@@ -175,7 +176,7 @@ describe('POST /api/inbound/audit-request', () => {
     audits.generateAiReport.mockResolvedValue({ ok: true, ai_report: { id: 'r1' } });
     await send(request());
     await background.tasks[0]();
-    expect(audits.generateAiReport).toHaveBeenCalledWith('a1');
+    expect(audits.generateAiReport).toHaveBeenCalledWith(expect.anything(), 'a1');
     expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('2026-10-27-notifications.sql'));
   });
 

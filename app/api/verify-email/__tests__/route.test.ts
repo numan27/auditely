@@ -20,7 +20,7 @@ const db = vi.hoisted(() => {
   };
   return { state, from };
 });
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 // The check itself has its own tests
 vi.mock('@/app/_shared/lib/email/leadEmailCheck', () => ({ checkLeadEmail: vi.fn() }));
 
@@ -56,7 +56,7 @@ describe('POST /api/verify-email', () => {
 
   it('checks the stored address, never one from the request', async () => {
     await post({ business_id: 'b1', email: 'someone@else.com', email_check: { verdict: 'Deliverable' } });
-    expect(checkLeadEmail).toHaveBeenCalledWith({ id: 'b1', email: 'office@smiledental.com', email_check: SAVED });
+    expect(checkLeadEmail).toHaveBeenCalledWith(expect.anything(), { id: 'b1', email: 'office@smiledental.com', email_check: SAVED });
   });
 
   // Naming the new column would fail before the migration is run

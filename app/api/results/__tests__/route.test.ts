@@ -31,7 +31,7 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
 
 const ok = (data: unknown): Result => ({ data, error: null });
 const deletes = () => db.state.calls.filter((c) => c.op === 'delete');

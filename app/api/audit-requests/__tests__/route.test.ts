@@ -31,7 +31,8 @@ const db = vi.hoisted(() => {
   return { state, from };
 });
 
-vi.mock('@/app/_shared/lib/supabase/client', () => ({ supabase: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: { from: db.from } }));
+vi.mock('@/app/_shared/lib/supabase/server', () => ({ ownerUserId: async () => 'owner-1' }));
 
 const ok = (data: unknown): Result => ({ data, error: null });
 const ID = '0b6f7c1e-3f2a-4c55-9a0e-2b8d5f6a7c10';

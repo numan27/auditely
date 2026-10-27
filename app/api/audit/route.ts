@@ -1,6 +1,7 @@
 // app/api/audit/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { auditBusiness } from '@/app/_shared/lib/audit/auditBusiness';
 
 // PageSpeed can be slow; runAudit keeps PageSpeed inside a 240 s budget.
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'business_id is required' }, { status: 400 });
   }
 
-  const result = await auditBusiness(businessId, force);
+  const result = await auditBusiness(serviceDb, businessId, force);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ audit: result.audit, email: result.email });
 }

@@ -5,13 +5,13 @@
 // time. Used by the "Send email" dialog (api/verify-email) and by the send
 // itself (api/send-email), so both go by the same answer.
 
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import type { Db } from '@/app/_shared/lib/supabase/client';
 import { freshCheck, type EmailCheckResult } from '@/app/_shared/lib/email/emailCheck';
 import { verifaliaConfigured, verifyAddress } from '@/app/_shared/lib/email/verifalia';
 
 const MIGRATION = 'docs/migrations/2026-10-05-email-check.sql';
 
-export async function checkLeadEmail(lead: { id: string; email: string; email_check?: unknown }): Promise<EmailCheckResult> {
+export async function checkLeadEmail(db: Db, lead: { id: string; email: string; email_check?: unknown }): Promise<EmailCheckResult> {
   // A fresh result stands even with Verifalia switched off: an undeliverable address stays blocked
   const saved = freshCheck(lead.email_check, lead.email);
   if (saved) return { state: 'checked', check: saved };
@@ -20,7 +20,7 @@ export async function checkLeadEmail(lead: { id: string; email: string; email_ch
   const outcome = await verifyAddress(lead.email);
   if (!outcome.ok) return { state: 'unchecked', reason: outcome.reason };
 
-  const { error } = await supabase.from('businesses').update({ email_check: outcome.check }).eq('id', lead.id);
+  const { error } = await db.from('businesses').update({ email_check: outcome.check }).eq('id', lead.id);
   if (!error) return { state: 'checked', check: outcome.check };
 
   console.error('[email-check] could not save the result:', error.message);

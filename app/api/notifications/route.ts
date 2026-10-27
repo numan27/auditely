@@ -6,7 +6,8 @@
 // run that finished: the run happens in the browser, so the server can't tell.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { ownerUserId } from '@/app/_shared/lib/supabase/server';
 import { bulkDone } from '@/app/_shared/lib/notifications/messages';
 import { isMissingTable, notify, NOTIFICATIONS_MIGRATION } from '@/app/_shared/lib/notifications/notify';
 import { syncRequestReminders } from '@/app/_shared/lib/notifications/requestReminders';
@@ -26,11 +27,13 @@ const SETUP_NEEDED: NotificationsResponse = { notifications: [], unread: 0, setu
 
 export async function GET(request: NextRequest) {
   const timeZone = knownTimeZone(new URL(request.url).searchParams.get('tz'));
-  await syncRequestReminders(new Date(), timeZone);
+  const ownerId = await ownerUserId();
+  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+  await syncRequestReminders(serviceDb, ownerId, new Date(), timeZone);
 
   const [listed, counted] = await Promise.all([
-    supabase.from('notifications').select(COLUMNS).order('created_at', { ascending: false }).limit(LIST_LIMIT),
-    supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+    serviceDb.from('notifications').select(COLUMNS).order('created_at', { ascending: false }).limit(LIST_LIMIT),
+    serviceDb.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
   ]);
   const error = listed.error ?? counted.error;
   if (isMissingTable(error)) return NextResponse.json(SETUP_NEEDED);
@@ -51,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     (Array.isArray(ids) && ids.length > 0 && ids.length <= MAX_IDS && ids.every((id) => typeof id === 'string' && UUID.test(id)));
   if (!valid) return NextResponse.json({ error: 'Choose the notifications to mark as read' }, { status: 400 });
 
-  const update = supabase.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
+  const update = serviceDb.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
   const { error } = await (all ? update : update.in('id', ids as string[]));
   if (error) {
     console.error(
@@ -72,9 +75,12 @@ export async function POST(request: NextRequest) {
     kind === 'bulk_done' && typeof searchId === 'string' && UUID.test(searchId) && isCount(audited) && isCount(failed) && audited + failed > 0;
   if (!valid) return NextResponse.json({ error: 'Not a finished "Audit all" run' }, { status: 400 });
 
-  const { data: search } = await supabase.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const ownerId = await ownerUserId();
+  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+
+  const { data: search } = await serviceDb.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
   if (!search) return NextResponse.json({ error: 'Search not found' }, { status: 404 });
 
-  const stored = await notify(bulkDone({ searchId, search, audited, failed }));
+  const stored = await notify(serviceDb, ownerId, bulkDone({ searchId, search, audited, failed }));
   return stored ? NextResponse.json({ ok: true }, { status: 201 }) : NextResponse.json({ error: "Couldn't store the notification" }, { status: 500 });
 }

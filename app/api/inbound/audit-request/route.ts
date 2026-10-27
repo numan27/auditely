@@ -8,7 +8,8 @@
 // audit is done (or failed).
 
 import { after, NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
+import { ownerUserId } from '@/app/_shared/lib/supabase/server';
 import { auditBusiness } from '@/app/_shared/lib/audit/auditBusiness';
 import { generateAiReport } from '@/app/_shared/lib/audit/generateAiReport';
 import { requestAudited, requestAuditFailed, requestNew, type RequestRef } from '@/app/_shared/lib/notifications/messages';
@@ -22,7 +23,7 @@ export const maxDuration = 300;
 const MIGRATION = 'docs/migrations/2026-10-27-audit-requests.sql';
 
 async function storedRequest(searchId: string, sourceId: string): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await serviceDb
     .from('businesses')
     .select('id')
     .eq('search_id', searchId)
@@ -33,20 +34,20 @@ async function storedRequest(searchId: string, sourceId: string): Promise<string
 }
 
 // The audit, then the AI summary. A failure is logged and goes to the bell: the card offers "Run audit".
-async function prepareReport(request: RequestRef) {
-  const audited = await auditBusiness(request.id);
+async function prepareReport(ownerId: string, request: RequestRef) {
+  const audited = await auditBusiness(serviceDb, request.id);
   if (!audited.ok) {
     console.error(`[inbound] audit of request ${request.id} failed: ${audited.error}`);
-    await notify(requestAuditFailed(request, 'audit'));
+    await notify(serviceDb, ownerId, requestAuditFailed(request, 'audit'));
     return;
   }
-  const report = await generateAiReport(audited.audit.id);
+  const report = await generateAiReport(serviceDb, audited.audit.id);
   if (!report.ok) {
     console.error(`[inbound] AI summary of request ${request.id} failed: ${report.error}`);
-    await notify(requestAuditFailed(request, 'summary'));
+    await notify(serviceDb, ownerId, requestAuditFailed(request, 'summary'));
     return;
   }
-  await notify(requestAudited(request));
+  await notify(serviceDb, ownerId, requestAudited(request));
 }
 
 export async function POST(request: NextRequest) {
@@ -63,13 +64,16 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const { website, host, email, request: details } = parsed.value;
 
-  const searchId = await ensureRequestSearchId();
+  const ownerId = await ownerUserId();
+  if (!ownerId) return NextResponse.json({ error: 'Audit requests are not set up' }, { status: 503 });
+
+  const searchId = await ensureRequestSearchId(serviceDb, ownerId);
   if (!searchId) return NextResponse.json({ error: 'Failed to save the request' }, { status: 500 });
 
   const existing = await storedRequest(searchId, details.source_id);
   if (existing) return NextResponse.json({ id: existing, existing: true });
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceDb
     .from('businesses')
     .insert({ search_id: searchId, name: host, address: '', website, email, request: details })
     .select('id')
@@ -88,8 +92,8 @@ export async function POST(request: NextRequest) {
   const id = data.id as string;
   const ref: RequestRef = { id, host, name: details.name };
   after(async () => {
-    await notify(requestNew(ref));
-    await prepareReport(ref);
+    await notify(serviceDb, ownerId, requestNew(ref));
+    await prepareReport(ownerId, ref);
   });
   return NextResponse.json({ id, existing: false }, { status: 201 });
 }

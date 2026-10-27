@@ -1,7 +1,7 @@
 // app/api/search/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/app/_shared/lib/supabase/client';
+import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { searchPlaces } from '@/app/_shared/lib/places/searchPlaces';
 
 export async function POST(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Cache check: same niche+location ever searched before
-  const { data: existingSearch } = await supabase
+  const { data: existingSearch } = await serviceDb
     .from('searches')
     .select('id')
     .eq('niche', niche)
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (existingSearch) {
-    const { data: businesses } = await supabase
+    const { data: businesses } = await serviceDb
       .from('businesses')
       .select('*')
       .eq('search_id', existingSearch.id)
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const allPlaces = result.places;
 
   // Create search record
-  const { data: newSearch, error: searchInsertError } = await supabase
+  const { data: newSearch, error: searchInsertError } = await serviceDb
     .from('searches')
     .insert({ niche, location })
     .select('id')
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   let businesses: unknown[] = [];
   if (allPlaces.length > 0) {
     const insertedAt = Date.now();
-    const { data, error: businessInsertError } = await supabase
+    const { data, error: businessInsertError } = await serviceDb
       .from('businesses')
       .insert(
         allPlaces.map((place, i) => ({
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (businessInsertError) {
       console.error('[search] Failed to store businesses:', businessInsertError.message);
       // Drop the empty search, or the next identical search would reuse it and find nothing
-      const { error: cleanupError } = await supabase.from('searches').delete().eq('id', newSearch.id);
+      const { error: cleanupError } = await serviceDb.from('searches').delete().eq('id', newSearch.id);
       if (cleanupError) console.error('[search] Failed to remove the empty search:', cleanupError.message);
       return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
     }
