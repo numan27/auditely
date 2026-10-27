@@ -5,11 +5,12 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ToastProvider } from '@/app/_shared/components/ui/toast/toast';
+import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/connectedRow';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
 import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
-import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import type { Connections } from '@/app/_shared/lib/hooks/useConnections';
 import { PLANS, planHas, type Feature, type PlanId } from '@/app/_shared/lib/usage/plans';
 import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
@@ -61,6 +62,19 @@ function PlanNote({ feature }: { feature: Feature }) {
   );
 }
 
+/**
+ * A password or token saved on a paid plan, which the account's plan no longer
+ * uses: the account can still delete it
+ */
+function StillSaved({ text, note, url, disconnected }: { text: string; note: string; url: string; disconnected: string }) {
+  return (
+    <div className="mt-4 space-y-2">
+      <ConnectedRow text={text} url={url} disconnected={disconnected} />
+      <p className="text-sm text-[var(--color-text-secondary)]">{note}</p>
+    </div>
+  );
+}
+
 /** The account's profile and branding, its mailbox and HubSpot, and its plan */
 export function SettingsView({ profile, connections, plan, email }: SettingsViewProps) {
   return (
@@ -101,11 +115,39 @@ export function SettingsView({ profile, connections, plan, email }: SettingsView
         title="Mailbox"
         lead={<p>Send outreach from your own address. It goes through your mail provider, so it lands in your Sent folder.</p>}
       >
-        {planHas(plan, 'mailbox') ? <MailboxForm mailbox={connections.mailbox} /> : <PlanNote feature="mailbox" />}
+        {planHas(plan, 'mailbox') ? (
+          <MailboxForm mailbox={connections.mailbox} />
+        ) : (
+          <>
+            <PlanNote feature="mailbox" />
+            {connections.mailbox?.source === 'saved' && (
+              <StillSaved
+                text={`${connections.mailbox.address} is still saved`}
+                note={`The ${PLANS[plan].name} plan doesn't send from it. Disconnect it to delete its password.`}
+                url={API_ROUTES.SETTINGS_MAILBOX}
+                disconnected="Mailbox disconnected"
+              />
+            )}
+          </>
+        )}
       </Section>
 
       <Section id="hubspot" title="HubSpot" lead={<p>Send leads, their audit and a private report link to your HubSpot.</p>}>
-        {planHas(plan, 'hubspot') ? <HubSpotForm hubspot={connections.hubspot} /> : <PlanNote feature="hubspot" />}
+        {planHas(plan, 'hubspot') ? (
+          <HubSpotForm hubspot={connections.hubspot} />
+        ) : (
+          <>
+            <PlanNote feature="hubspot" />
+            {connections.hubspot?.source === 'saved' && (
+              <StillSaved
+                text="A HubSpot token is still saved"
+                note={`The ${PLANS[plan].name} plan doesn't send leads to HubSpot. Disconnect it to delete the token.`}
+                url={API_ROUTES.SETTINGS_HUBSPOT}
+                disconnected="HubSpot disconnected"
+              />
+            )}
+          </>
+        )}
       </Section>
 
       <Section

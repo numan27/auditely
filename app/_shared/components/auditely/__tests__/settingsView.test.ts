@@ -55,6 +55,21 @@ describe('SettingsView', () => {
     expect(html).toContain('Save profile');
   });
 
+  it('lets a Free account delete the mailbox password and HubSpot token it saved on a paid plan', () => {
+    const html = view({ plan: 'free', connections: { mailbox: { address: 'sam@acme.studio', source: 'saved' }, hubspot: { source: 'saved' } } });
+    expect(html.match(/>Disconnect<\/button>/g)).toHaveLength(2);
+    expect(html).toContain('sam@acme.studio is still saved');
+    expect(html).toContain('The Free plan doesn&#x27;t send from it. Disconnect it to delete its password.');
+    expect(html).toContain('A HubSpot token is still saved');
+    expect(html).toContain('The Free plan doesn&#x27;t send leads to HubSpot. Disconnect it to delete the token.');
+    expect(html).toContain('Sending from your own mailbox comes with the Pro and Agency plans.');
+    expect(passwordInputs(html)).toEqual([]);
+  });
+
+  it('shows a Free account nothing to disconnect when it saved nothing', () => {
+    expect(view({ plan: 'free' })).not.toContain('Disconnect');
+  });
+
   it('tells a Free account its reports carry Auditely’s name, with a link to the plans', () => {
     const html = view({ plan: 'free' });
     expect(html).toContain('On the Free plan, reports and emails carry Auditely&#x27;s name instead.');

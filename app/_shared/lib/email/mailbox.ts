@@ -62,7 +62,9 @@ export async function resolveMailHost(
   if (addresses.some(({ address }) => isPrivateAddress(address))) {
     return { ok: false, error: `${host} doesn't point to a public mail server.` };
   }
-  return { ok: true, address: addresses[0].address };
+  // IPv4 first, as nodemailer's own lookup chose: a host without IPv6 can't reach the rest
+  const chosen = addresses.find(({ address }) => isIP(address) === 4) ?? addresses[0];
+  return { ok: true, address: chosen.address };
 }
 
 /** A connection to the checked address, as the mailbox's own server name */

@@ -54,6 +54,16 @@ describe('resolveMailHost', () => {
     expect(await resolveMailHost('smtp.nope.com', lookup)).toEqual({ ok: false, error: "smtp.nope.com wasn't found. Check the server name." });
   });
 
+  it('connects over IPv4 when the name has both, as nodemailer did, so an IPv4-only host still reaches it', async () => {
+    const both = async () => [
+      { address: '2607:f8b0:4023:c06::6c', family: 6 },
+      { address: '142.250.1.108', family: 4 },
+    ];
+    expect(await resolveMailHost('smtp.gmail.com', both)).toEqual({ ok: true, address: '142.250.1.108' });
+    const ipv6Only = async () => [{ address: '2607:f8b0:4023:c06::6c', family: 6 }];
+    expect(await resolveMailHost('smtp.gmail.com', ipv6Only)).toEqual({ ok: true, address: '2607:f8b0:4023:c06::6c' });
+  });
+
   it('returns the checked public address, which the transport then connects to', async () => {
     expect(await resolveMailHost('smtp.gmail.com', PUBLIC)).toEqual({ ok: true, address: '142.250.1.108' });
     const t = mailTransport(GMAIL, '142.250.1.108');
