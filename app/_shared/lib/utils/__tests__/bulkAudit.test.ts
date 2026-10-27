@@ -87,6 +87,30 @@ describe('auditBusiness', () => {
     expect(onUpdate.mock.calls).toEqual([['b1', { audit: AUDIT }]]);
     expect(stages.at(-1)).toEqual({ stage: 'failed', error: "Couldn't write the AI summary." });
   });
+
+  it('stops short of the summary when the plan limit is reached, without failing the business', async () => {
+    const limit = { kind: 'audit', plan: 'free', limit: 5, resetsAt: '2026-11-01T00:00:00.000Z' };
+    const post = vi.fn<Post>(async () => ({
+      ok: false,
+      data: { error: "You've used your 5 audits this month. They reset on Nov 1.", limit },
+    }));
+    const onStage = vi.fn();
+    const onLimit = vi.fn();
+    await auditBusiness(business(), { post, onUpdate: vi.fn(), onStage, onLimit });
+    expect(onLimit).toHaveBeenCalledWith(limit);
+    expect(onStage).toHaveBeenLastCalledWith('b1', { stage: 'queued' });
+    // No summary request
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('still fails a business on any other error', async () => {
+    const onLimit = vi.fn();
+    const stages: BulkState[] = [];
+    const post: Post = async () => ({ ok: false, data: { error: 'Audit failed' } });
+    await auditBusiness(business(), { post, onUpdate: vi.fn(), onStage: (_id, state) => stages.push(state), onLimit });
+    expect(stages.at(-1)).toEqual({ stage: 'failed', error: 'Audit failed' });
+    expect(onLimit).not.toHaveBeenCalled();
+  });
 });
 
 describe('shownStatus', () => {

@@ -5,6 +5,7 @@
 
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import type { AiReport, Audit, AuditStatus, BusinessUpdate, BusinessWithData, ReportStatus } from '@/app/_shared/lib/types/auditely';
+import { readLimit, type LimitReached } from '@/app/_shared/lib/usage/plans';
 
 // An audit runs PageSpeed twice and a summary calls the AI: three at a time
 // keeps well inside both services' rate limits
@@ -26,6 +27,8 @@ interface BulkDeps {
   /** Each result goes to the results list as it arrives; the cards read it from there */
   onUpdate: (businessId: string, update: BusinessUpdate) => void;
   onStage: (businessId: string, state: BulkState) => void;
+  /** The plan's audits ran out: the business goes back to waiting, not failed */
+  onLimit?: (limit: LimitReached) => void;
 }
 
 /** A business "Audit all" works on: it has a website and no audit, or no AI summary yet */
@@ -34,7 +37,7 @@ export function needsAudit(business: Pick<BusinessWithData, 'website' | 'audit' 
 }
 
 /** Audits one business (unless it already has an audit), then writes its summary */
-export async function auditBusiness(business: BusinessWithData, { post, onUpdate, onStage }: BulkDeps): Promise<void> {
+export async function auditBusiness(business: BusinessWithData, { post, onUpdate, onStage, onLimit }: BulkDeps): Promise<void> {
   const { id } = business;
   let audit = business.audit;
 
@@ -42,7 +45,12 @@ export async function auditBusiness(business: BusinessWithData, { post, onUpdate
     onStage(id, { stage: 'auditing' });
     const res = await post(API_ROUTES.AUDIT, { business_id: id, force: false });
     const data = res.data as { audit?: Audit; email?: string | null; error?: string } | null;
-    if (!res.ok || !data?.audit) return onStage(id, { stage: 'failed', error: data?.error || 'Audit failed' });
+    if (!res.ok || !data?.audit) {
+      const limit = readLimit(res.data);
+      if (!limit) return onStage(id, { stage: 'failed', error: data?.error || 'Audit failed' });
+      onStage(id, { stage: 'queued' });
+      return onLimit?.(limit);
+    }
     audit = data.audit;
     onUpdate(id, { audit, ...(data.email && { email: data.email }) });
   }

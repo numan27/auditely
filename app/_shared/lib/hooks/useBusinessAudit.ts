@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_ROUTES, demoReportPath } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { readLimit } from '@/app/_shared/lib/usage/plans';
 import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
 import { shownStatus, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
 import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, PdfVariant, ReportStatus } from '@/app/_shared/lib/types/auditely';
@@ -52,6 +54,7 @@ export function useBusinessAudit(
   { initialAudit, initialReport, onUpdate, autoRun = false, bulk }: BusinessAuditOptions = {}
 ) {
   const demo = useDemo();
+  const usage = useUsage();
   const request = demo?.replay ?? send;
   const [audit, setAudit] = useState<Audit | undefined>(initialAudit);
   const [report, setReport] = useState<AiReport | undefined>(initialReport);
@@ -120,7 +123,16 @@ export function useBusinessAudit(
       try {
         const { ok, data } = await request(API_ROUTES.AUDIT, { business_id: business.id, force });
         const result = data as { audit: Audit; email?: string | null; error?: string };
-        if (!ok) return fail(result.error || 'Audit failed');
+        if (!ok) {
+          // Past the plan's audits: the dialog explains it, and the card goes back to how it was
+          const limit = readLimit(data);
+          if (limit && usage) {
+            usage.promptUpgrade({ limit });
+            return setAuditStatus(audit ? 'done' : 'idle');
+          }
+          return fail(result.error || 'Audit failed');
+        }
+        usage?.refresh();
         setAudit(result.audit);
         if (result.email) setEmail(result.email);
         if (force) setReport(undefined);
@@ -135,7 +147,7 @@ export function useBusinessAudit(
         fail('Audit failed');
       }
     },
-    [audit, business.id, generateReport, onUpdate, request]
+    [audit, business.id, generateReport, onUpdate, request, usage]
   );
 
   // Sites added from the URL form audit straight away. The ref stops Strict

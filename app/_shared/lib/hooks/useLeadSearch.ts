@@ -8,6 +8,8 @@ import { startingLeads } from '@/app/_shared/lib/demo/demoSamples';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { readLimit } from '@/app/_shared/lib/usage/plans';
 import type { UrlAuditRemoval } from '@/app/_shared/lib/hooks/useUrlAudits';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
 import { withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
@@ -26,6 +28,7 @@ export interface SearchQuery {
  */
 export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) => void } = {}) {
   const demo = useDemo();
+  const usage = useUsage();
   // The public demo opens on its sample search
   const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(() =>
     demo ? websiteFirst(startingLeads(demo.data)) : []
@@ -73,7 +76,16 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
           body: JSON.stringify({ niche, location }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? 'Search failed');
+        usage?.refresh();
+        if (!res.ok) {
+          // Past the plan's searches: the dialog explains it, and the form stays as it was
+          const limit = readLimit(data);
+          if (limit && usage) {
+            if (run === latest.current) usage.promptUpgrade({ limit });
+            return;
+          }
+          throw new Error(data.error ?? 'Search failed');
+        }
         if (run !== latest.current) return;
         show(data.businesses ?? [], { niche, location });
         if (typeof data.search_id === 'string') {
@@ -86,7 +98,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
         if (run === latest.current) setIsSearching(false);
       }
     },
-    [demo, start, show, onSearched]
+    [demo, start, show, onSearched, usage]
   );
 
   const openSaved = useCallback(
