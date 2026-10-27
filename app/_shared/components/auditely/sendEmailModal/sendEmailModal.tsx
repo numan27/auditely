@@ -89,8 +89,8 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
                 disabled={sending || previewing}
               />
               <p className="text-sm text-[var(--color-text-tertiary)]">
-                Sent in the DevArtVentures design: your message, a snapshot of the audit and a “Book your free call” button, with
-                the PDF report attached.
+                Sent with your branding: your message, a snapshot of the audit and a “Book your free call” button, with the PDF
+                report attached.
               </p>
             </>
           ) : (

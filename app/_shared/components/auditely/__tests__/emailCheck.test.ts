@@ -38,6 +38,12 @@ const button = (html: string, label: string) => html.split('<button').find((part
 const sendDisabled = (html: string) => button(html, 'Send email').includes('disabled=""');
 
 describe('SendEmailModal and the address check', () => {
+  it('describes the email in the account’s own branding, never as DevArtVentures', () => {
+    const html = dialog();
+    expect(html).toContain('Sent with your branding: your message, a snapshot of the audit and a “Book your free call” button, with the PDF report attached.');
+    expect(html.toLowerCase()).not.toContain('devart');
+  });
+
   it('works as before when nothing was checked (Verifalia off)', () => {
     const html = dialog();
     expect(button(html, 'Send email')).not.toBe('');

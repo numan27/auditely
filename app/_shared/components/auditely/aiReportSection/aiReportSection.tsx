@@ -7,6 +7,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import { CheckIcon, CopyIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
+import { useConnections } from '@/app/_shared/lib/hooks/useConnections';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
 import type { AiReport, AuditRequest } from '@/app/_shared/lib/types/auditely';
 
@@ -54,7 +55,7 @@ function EmailDraft({ title, hint, draft }: { title: string; hint?: string; draf
 }
 
 export function AiReportSection({ report, businessName, audit, emailedAt, request, onRewrite, rewriting, rewriteError }: AiReportSectionProps) {
-  const drafts = leadDrafts(report.cold_email, businessName, audit, request);
+  const drafts = leadDrafts(report.cold_email, businessName, audit, request, useConnections()?.sender);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">

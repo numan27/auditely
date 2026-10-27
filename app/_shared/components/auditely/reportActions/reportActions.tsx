@@ -2,18 +2,24 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
-import { DownloadIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
+import { DownloadIcon, ExternalLinkIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
+import { outreachOptions, type OutreachAction } from '@/app/_shared/components/auditely/reportActions/outreachOptions';
 import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal/sendEmailModal';
+import { composeLinks } from '@/app/_shared/lib/email/composeLinks';
 import { leadDrafts } from '@/app/_shared/lib/email/followUp';
 import { freshCheck } from '@/app/_shared/lib/email/emailCheck';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
+import { useConnections } from '@/app/_shared/lib/hooks/useConnections';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import type { AuditRequest } from '@/app/_shared/lib/types/auditely';
 import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 
@@ -22,27 +28,46 @@ interface ReportActionsProps {
   state: ReturnType<typeof useBusinessAudit>;
   crm: ReturnType<typeof useCrmSend>;
   mail: ReturnType<typeof useEmailSend>;
-  /** Also offers the report without contact details or links, to attach on Upwork */
+  /** Also offers the owner the report without contact details or links, to attach on Upwork */
   upworkPdf?: boolean;
   /** Set for an audit requested on devartventures.com: the first email replies to it */
   request?: AuditRequest | null;
 }
 
+const NO_EMAIL = 'No email address found for this business';
+
+const setupLinkClasses = [buttonStyles.button, buttonStyles['button--outline'], buttonStyles['button--sm']].join(' ');
+
+/** What a paid account still has to connect, as a link to it in Settings */
+function SetupLink({ action }: { action: Extract<OutreachAction, { kind: 'setup' }> }) {
+  return (
+    <Link href={action.href} className={setupLinkClasses}>
+      {action.label}
+    </Link>
+  );
+}
+
 /** Once the AI report exists: email the lead, send it to HubSpot, or download its PDF */
 export function ReportActions({ businessName, state, crm, mail, upworkPdf, request }: ReportActionsProps) {
   const demo = useDemo();
-  // Sending and HubSpot are the owner's; the demo handles them itself
-  const account = useAccount();
-  const canSend = !!demo || !!account?.isOwner;
+  const connections = useConnections();
+  const usage = useUsage();
+  const options = outreachOptions({ demo: !!demo, account: useAccount(), connections, upworkPdf: !!upworkPdf });
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
+  const drafts = () => report && audit && leadDrafts(report.cold_email, businessName, audit, request, connections?.sender);
 
   const openComposer = () => {
     if (demo) return demo.restrict('sendEmail');
     mail.clearError();
     setComposing(true);
     // Is the address deliverable? A fresh saved answer is reused, so this often asks nothing
-    void mail.verify();
+    if (options.verifyOnOpen) void mail.verify();
+  };
+  // A Free account sends from its own mail, with the PDF attached by hand
+  const openDraft = (app: 'gmail' | 'outlook') => {
+    const first = drafts()?.first;
+    if (email && first) window.open(composeLinks(email, first)[app], '_blank', 'noopener,noreferrer');
   };
   const sendEmail = async (draft: OutreachDraft) => {
     if (await mail.send(draft)) setComposing(false);
@@ -58,31 +83,54 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
           <span className="text-red-600 dark:text-red-400">{problem}</span>
         ) : done.length ? (
           done.join(' · ')
+        ) : options.mail.kind === 'compose' ? (
+          'Download the PDF and attach it before you send.'
         ) : (
           'A branded PDF of this audit, ready to send.'
         )}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        {canSend && (
-          <>
+        {options.mail.kind === 'send' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openComposer}
+            // In the demo the button always answers, with the notice
+            disabled={!email && !demo}
+            title={email || demo ? undefined : NO_EMAIL}
+            leftIcon={<MailIcon size={14} />}
+          >
+            {mail.sentAt ? 'Send follow-up' : 'Send email'}
+          </Button>
+        )}
+        {options.mail.kind === 'compose' &&
+          (['gmail', 'outlook'] as const).map((app) => (
             <Button
+              key={app}
               variant="outline"
               size="sm"
-              onClick={openComposer}
-              // In the demo the button always answers, with the notice
-              disabled={!email && !demo}
-              title={email || demo ? undefined : 'No email address found for this business'}
-              leftIcon={<MailIcon size={14} />}
+              onClick={() => openDraft(app)}
+              disabled={!email}
+              title={email ? undefined : NO_EMAIL}
+              leftIcon={<ExternalLinkIcon size={14} />}
             >
-              {mail.sentAt ? 'Send follow-up' : 'Send email'}
+              {app === 'gmail' ? 'Open in Gmail' : 'Open in Outlook'}
             </Button>
-            <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
-              {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
-            </Button>
-          </>
+          ))}
+        {options.mail.kind === 'setup' && <SetupLink action={options.mail} />}
+        {options.hubspot.kind === 'send' && (
+          <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
+            {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
+          </Button>
         )}
-        {/* The demo's reports are built ahead, in one version */}
-        {upworkPdf && !demo && (
+        {options.hubspot.kind === 'upgrade' && (
+          <Button variant="outline" size="sm" onClick={() => usage?.promptUpgrade({ feature: 'hubspot' })}>
+            Send to HubSpot
+          </Button>
+        )}
+        {options.hubspot.kind === 'setup' && <SetupLink action={options.hubspot} />}
+        {/* The owner's alone; the demo's reports are built ahead, in one version */}
+        {options.upworkPdf && (
           <Button
             variant="outline"
             size="sm"
@@ -112,7 +160,7 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
           businessName={businessName}
           to={email}
           // Once the first email has gone, the next one is the follow-up
-          draft={leadDrafts(report.cold_email, businessName, audit, request)[mail.sentAt ? 'followUp' : 'first']}
+          draft={leadDrafts(report.cold_email, businessName, audit, request, connections?.sender)[mail.sentAt ? 'followUp' : 'first']}
           sentAt={mail.sentAt}
           sending={mail.sending}
           error={mail.error}

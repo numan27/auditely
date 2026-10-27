@@ -15,6 +15,7 @@ import { ModeTabs } from '@/app/_shared/components/auditely/modeTabs/modeTabs';
 import { Workspace } from '@/app/_shared/components/auditely/workspace/workspace';
 import type { Account } from '@/app/_shared/lib/auth/account';
 import { AccountContext } from '@/app/_shared/lib/hooks/useAccount';
+import { ConnectionsContext, type Connections } from '@/app/_shared/lib/hooks/useConnections';
 import type { AiReport, Audit, Business } from '@/app/_shared/lib/types/auditely';
 
 const owner: Account = { id: 'u1', email: 'owner@example.com', isOwner: true };
@@ -94,8 +95,23 @@ describe('Workspace', () => {
 });
 
 describe('ReportActions', () => {
-  const card = (account: Account) =>
-    as(account, createElement(BusinessCard, { business, initialAudit: audit, initialReport: report, defaultOpen: true }));
+  const pro: Connections = {
+    plan: 'pro',
+    branded: true,
+    sender: { name: 'Acme Studio', signOff: 'Sam Lee, Acme Studio' },
+    mailbox: { address: 'sam@acme.studio', source: 'saved' },
+    hubspot: { source: 'saved' },
+  };
+  const free: Connections = { plan: 'free', branded: false, sender: { name: 'Auditely', signOff: '[Your name]' }, mailbox: null, hubspot: null };
+  const card = (account: Account, connections: Connections | null = null, lead: Business = business) =>
+    as(
+      account,
+      createElement(
+        ConnectionsContext.Provider,
+        { value: connections },
+        createElement(BusinessCard, { business: lead, initialAudit: audit, initialReport: report, defaultOpen: true })
+      )
+    );
 
   it('offers sending and HubSpot to the owner', () => {
     const html = card(owner);
@@ -103,12 +119,41 @@ describe('ReportActions', () => {
     expect(html).toContain('Send to HubSpot');
   });
 
-  it('offers neither to anyone else, but still the PDF', () => {
-    const html = card(tester);
+  it('offers a Free account Gmail and Outlook drafts and the HubSpot upgrade, and the PDF', () => {
+    for (const connections of [free, null]) {
+      const html = card(tester, connections);
+      expect(html).toContain('Open in Gmail');
+      expect(html).toContain('Open in Outlook');
+      expect(html).not.toContain('Send email');
+      expect(html).toContain('Send to HubSpot');
+      expect(html).toContain('Download the PDF and attach it before you send.');
+      expect(html).toContain('Download PDF report');
+    }
+  });
+
+  it('can’t open a draft for a lead without an email address', () => {
+    const html = card(tester, free, { ...business, email: null });
+    const gmail = html.split('<button').find((part) => part.includes('Open in Gmail</button>')) ?? '';
+    expect(gmail).toContain('disabled');
+    expect(gmail).toContain('title="No email address found for this business"');
+  });
+
+  it('offers a connected paid account sending and HubSpot', () => {
+    const html = card(tester, pro);
+    expect(html).toContain('Send email');
+    expect(html).toContain('Send to HubSpot');
+    expect(html).not.toContain('Open in Gmail');
+    expect(html).not.toContain('attach it before you send');
+  });
+
+  it('sends a paid account to Settings for what it hasn’t set up', () => {
+    const html = card(tester, { ...pro, branded: false, hubspot: null });
+    expect(html).toContain('href="/settings#profile"');
+    expect(html).toContain('Add your name');
+    expect(html).toContain('href="/settings#hubspot"');
+    expect(html).toContain('Connect HubSpot');
     expect(html).not.toContain('Send email');
-    expect(html).not.toContain('Send follow-up');
-    expect(html).not.toContain('HubSpot');
-    expect(html).toContain('Download PDF report');
+    expect(card(tester, { ...pro, mailbox: null })).toContain('href="/settings#mailbox"');
   });
 });
 

@@ -4,6 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
 import { demoLinks } from '@/app/_shared/lib/demo/demoLinks';
 import type { DemoData } from '@/app/_shared/lib/demo/demoSamples';
+import { AccountContext } from '@/app/_shared/lib/hooks/useAccount';
+import { ConnectionsContext, type Connections } from '@/app/_shared/lib/hooks/useConnections';
 import { DemoContext, type Demo } from '@/app/_shared/lib/hooks/useDemo';
 import type { AiReport, Audit, Business } from '@/app/_shared/lib/types/auditely';
 
@@ -62,18 +64,35 @@ const inDemo = (element: ReactElement) => {
   };
   return createElement(DemoContext.Provider, { value: demo }, element);
 };
+const owner = { id: 'u1', email: 'owner@example.com', isOwner: true };
+const tester = { id: 'u2', email: 'sam@acme.studio', isOwner: false };
+const pro: Connections = {
+  plan: 'pro',
+  branded: true,
+  sender: { name: 'Acme Studio', signOff: 'Sam Lee, Acme Studio' },
+  mailbox: { address: 'sam@acme.studio', source: 'saved' },
+  hubspot: { source: 'saved' },
+};
+const as = (account: typeof owner, element: ReactElement, connections: Connections | null = null) =>
+  createElement(AccountContext.Provider, { value: account }, createElement(ConnectionsContext.Provider, { value: connections }, element));
 // A button's opening tag and content, found by its label
 const button = (html: string, label: string) => html.split('<button').find((part) => part.includes(`${label}</button>`)) ?? '';
 
 describe('the Upwork PDF button', () => {
-  it('sits beside the full report on a card that asks for it (Audit a website)', () => {
-    const html = renderToStaticMarkup(card(true));
+  it('sits beside the full report on the owner’s card that asks for it (Audit a website)', () => {
+    const html = renderToStaticMarkup(as(owner, card(true)));
     expect(button(html, 'Upwork PDF')).not.toBe('');
     expect(button(html, 'Download PDF report')).not.toBe('');
   });
 
   it('is not offered on any other card (Find leads)', () => {
-    const html = renderToStaticMarkup(card());
+    const html = renderToStaticMarkup(as(owner, card()));
+    expect(html).not.toContain('Upwork PDF');
+    expect(button(html, 'Download PDF report')).not.toBe('');
+  });
+
+  it('is not offered to a paid account, even on the Audit a website tab', () => {
+    const html = renderToStaticMarkup(as(tester, card(true), pro));
     expect(html).not.toContain('Upwork PDF');
     expect(button(html, 'Download PDF report')).not.toBe('');
   });
