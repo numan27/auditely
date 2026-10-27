@@ -20,6 +20,12 @@ const FEATURE_NAMES: Record<Feature, string> = {
 const METER_ORDER: readonly UsageKind[] = ['audit', 'search', 'email_lookup'];
 
 const count = (n: number) => n.toLocaleString('en-US');
+
+/** "1 search", "25 searches", "1,000 audits" */
+export function countOf(kind: UsageKind, n: number): string {
+  const [one, many] = NOUNS[kind];
+  return `${count(n)} ${n === 1 ? one : many}`;
+}
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 function joinNames(names: string[]): string {
