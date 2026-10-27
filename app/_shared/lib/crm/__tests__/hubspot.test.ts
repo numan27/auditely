@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { describeHubSpotError, HubSpotError, sendLead } from '@/app/_shared/lib/crm/hubspot';
+import { checkHubSpotToken, describeHubSpotError, HubSpotError, sendLead } from '@/app/_shared/lib/crm/hubspot';
 import type { LeadPayload } from '@/app/_shared/lib/crm/leadPayload';
 
 type Call = { method: string; path: string; body: Record<string, unknown> | null };
@@ -181,5 +181,32 @@ describe('describeHubSpotError', () => {
     await expect(send().result).rejects.toMatchObject({ kind: 'auth', status: 401 });
     answer = () => ({ status: 429, body: { message: 'You have reached your secondly limit.' } });
     await expect(send().result).rejects.toMatchObject({ kind: 'rateLimit' });
+  });
+});
+
+describe('checkHubSpotToken', () => {
+  it('checks a token against the companies list', async () => {
+    fetchMock.mockClear();
+    answer = () => ({ status: 200, body: { results: [] } });
+    expect(await checkHubSpotToken('pat-na1-secret')).toEqual({ ok: true });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`https://api.hubapi.com${V}/companies?limit=1`);
+    expect(init.method).toBe('GET');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer pat-na1-secret' });
+  });
+
+  it.each([401, 403])('says HubSpot refused the token on a %i', async (status) => {
+    answer = () => ({ status, body: { message: 'This app hasn\'t been granted all required scopes' } });
+    expect(await checkHubSpotToken('pat-1')).toEqual({
+      ok: false,
+      error: 'HubSpot refused the token. Check it has read and write access to companies and contacts.',
+    });
+  });
+
+  it('passes on anything else as the send would', async () => {
+    answer = () => ({ status: 429 });
+    expect(await checkHubSpotToken('pat-1')).toEqual({ ok: false, error: 'HubSpot is busy — try again in a minute.' });
+    fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
+    expect(await checkHubSpotToken('pat-1')).toEqual({ ok: false, error: "HubSpot couldn't be reached — try again." });
   });
 });

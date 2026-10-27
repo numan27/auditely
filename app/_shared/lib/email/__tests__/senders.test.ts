@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
 vi.mock('@/app/_shared/lib/secrets/userSecrets', async (importOriginal) => ({
@@ -6,7 +6,7 @@ vi.mock('@/app/_shared/lib/secrets/userSecrets', async (importOriginal) => ({
   readSecret: vi.fn(),
 }));
 
-const { mailboxFor } = await import('@/app/_shared/lib/email/senders');
+const { hubspotTokenFor, mailboxFor } = await import('@/app/_shared/lib/email/senders');
 const { readSecret, SettingsNotMigrated } = await import('@/app/_shared/lib/secrets/userSecrets');
 const { SecretUnreadable, SecretsKeyMissing } = await import('@/app/_shared/lib/secrets/secrets');
 
@@ -16,6 +16,10 @@ const SAVED = { host: 'smtp.gmail.com', port: 465, user: 'sam@acme.studio', pass
 
 beforeEach(() => {
   vi.mocked(readSecret).mockReset().mockResolvedValue(null);
+  vi.stubEnv('HUBSPOT_TOKEN', 'env-token');
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('mailboxFor', () => {
@@ -45,5 +49,39 @@ describe('mailboxFor', () => {
     vi.mocked(readSecret).mockRejectedValue(new SettingsNotMigrated());
     expect(await mailboxFor(OWNER)).toEqual({ ok: true, mailbox: 'env' });
     expect(await mailboxFor(SAM)).toEqual({ ok: false, status: 503, error: "Settings can't be saved right now. Try again later." });
+  });
+});
+
+describe('hubspotTokenFor', () => {
+  it('uses the saved token, the owner’s included', async () => {
+    vi.mocked(readSecret).mockResolvedValue({ token: 'pat-na1-secret' });
+    expect(await hubspotTokenFor(SAM)).toEqual({ ok: true, token: 'pat-na1-secret' });
+    expect(readSecret).toHaveBeenCalledWith('u2', 'hubspot');
+    expect(await hubspotTokenFor(OWNER)).toEqual({ ok: true, token: 'pat-na1-secret' });
+  });
+
+  it('uses HUBSPOT_TOKEN for the owner when nothing is saved, and only for the owner', async () => {
+    expect(await hubspotTokenFor(OWNER)).toEqual({ ok: true, token: 'env-token' });
+    const connect = { ok: false, status: 400, error: 'Connect HubSpot in Settings to send leads.' };
+    expect(await hubspotTokenFor(SAM)).toEqual(connect);
+    vi.stubEnv('HUBSPOT_TOKEN', '');
+    expect(await hubspotTokenFor(OWNER)).toEqual(connect);
+  });
+
+  it('says what to do when the saved token can’t be used', async () => {
+    vi.mocked(readSecret).mockRejectedValue(new SecretUnreadable());
+    expect(await hubspotTokenFor(SAM)).toEqual({
+      ok: false,
+      status: 400,
+      error: "Your saved HubSpot token can't be read any more. Connect it again in Settings.",
+    });
+    vi.mocked(readSecret).mockRejectedValue(new SecretsKeyMissing());
+    expect(await hubspotTokenFor(SAM)).toEqual({ ok: false, status: 503, error: "Saving connections isn't set up: add SECRETS_KEY in Vercel." });
+  });
+
+  it('keeps the owner on HUBSPOT_TOKEN before the settings migration', async () => {
+    vi.mocked(readSecret).mockRejectedValue(new SettingsNotMigrated());
+    expect(await hubspotTokenFor(OWNER)).toEqual({ ok: true, token: 'env-token' });
+    expect(await hubspotTokenFor(SAM)).toEqual({ ok: false, status: 503, error: "Settings can't be saved right now. Try again later." });
   });
 });

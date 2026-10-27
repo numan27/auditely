@@ -1,7 +1,8 @@
 // app/_shared/lib/crm/hubspot.ts
 
 // Sends a lead to HubSpot: the company (saved id, else found by website domain,
-// else new), the contact (by email), their link, and a note on both.
+// else new), the contact (by email), their link, and a note on both. Also checks
+// a token an account pastes into Settings before it's saved.
 // Server-only: the token never reaches the browser.
 
 import type { LeadPayload } from '@/app/_shared/lib/crm/leadPayload';
@@ -132,6 +133,19 @@ export async function sendLead(
     associations: [noteLink(companyId, NOTE_TO_COMPANY), ...(contactId ? [noteLink(contactId, NOTE_TO_CONTACT)] : [])],
   });
   return { companyId, contactId };
+}
+
+/** Asks HubSpot for one company: proof the token works and can read companies */
+export async function checkHubSpotToken(token: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await caller(token)('GET', `${OBJECTS}/companies?limit=1`);
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof HubSpotError && err.kind === 'auth') {
+      return { ok: false, error: 'HubSpot refused the token. Check it has read and write access to companies and contacts.' };
+    }
+    return { ok: false, error: describeHubSpotError(err).error };
+  }
 }
 
 /** The status and message for the "Send to HubSpot" button */

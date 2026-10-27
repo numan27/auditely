@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/crm/route';
 import { HubSpotError, sendLead } from '@/app/_shared/lib/crm/hubspot';
+import { readSecret } from '@/app/_shared/lib/secrets/userSecrets';
+import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
 
 // Fake Supabase: the business (with its audit, report and search) and every update
 const db = vi.hoisted(() => {
@@ -35,8 +37,13 @@ vi.mock('@/app/_shared/lib/crm/hubspot', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/_shared/lib/crm/hubspot')>()),
   sendLead: vi.fn(),
 }));
+// Saved tokens (encryption and the table are userSecrets.test.ts's)
+vi.mock('@/app/_shared/lib/secrets/userSecrets', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/secrets/userSecrets')>()),
+  readSecret: vi.fn(),
+}));
 
-// Signed in, but not as the owner; the client records any query it is asked for
+// Signed in on the Free plan; the client records any query it is asked for
 function signInAsMember() {
   const from = vi.fn(db.from);
   session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
@@ -66,6 +73,7 @@ beforeEach(() => {
   db.state.business = businessRow();
   db.state.updates = [];
   db.state.updateErrors = [];
+  vi.mocked(readSecret).mockReset().mockResolvedValue(null);
   // args[2] is sendLead's options: the route's onCompanySaved
   vi.mocked(sendLead).mockReset().mockImplementation(async (...args) => {
     await args[2].onCompanySaved('c-old');
@@ -131,18 +139,48 @@ describe('POST /api/crm', () => {
   it('explains when HubSpot is not connected', async () => {
     vi.stubEnv('HUBSPOT_TOKEN', '');
     const res = await post({ business_id: 'b1' });
-    expect(res.status).toBe(503);
-    expect((await res.json()).error).toBe("HubSpot isn't connected — add HUBSPOT_TOKEN in Vercel.");
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Connect HubSpot in Settings to send leads.');
+    expect(sendLead).not.toHaveBeenCalled();
+  });
+
+  it('still uses HUBSPOT_TOKEN for the owner when nothing is saved', async () => {
+    expect((await post({ business_id: 'b1' })).status).toBe(200);
+    expect(readSecret).toHaveBeenCalledWith('owner-1', 'hubspot');
+    expect(vi.mocked(sendLead).mock.calls[0][0]).toBe('token-1');
   });
 });
 
-describe('/api/crm for an account that is not the owner', () => {
-  it('answers 403, before reading the lead or calling HubSpot', async () => {
+describe('/api/crm for other accounts', () => {
+  // A tester on Pro (PLAN_OVERRIDES)
+  const signInPaid = () => {
+    vi.stubEnv('PLAN_OVERRIDES', 'tester@example.com:pro');
+    session.current = { db: { from: db.from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+  };
+
+  it('sends a paid account’s lead with its own token', async () => {
+    signInPaid();
+    vi.mocked(readSecret).mockResolvedValue({ token: 'pat-na1-secret' });
+    expect((await post({ business_id: 'b1' })).status).toBe(200);
+    expect(readSecret).toHaveBeenCalledWith('user-2', 'hubspot');
+    expect(vi.mocked(sendLead).mock.calls[0][0]).toBe('pat-na1-secret');
+    // The account's own business keeps its own HubSpot company
+    expect(vi.mocked(sendLead).mock.calls[0][2].savedCompanyId).toBe('c-old');
+  });
+
+  it('asks a paid account without a token to connect one, never lending it the owner’s', async () => {
+    signInPaid();
+    expect(await (await post({ business_id: 'b1' })).json()).toEqual({ error: 'Connect HubSpot in Settings to send leads.' });
+    expect(sendLead).not.toHaveBeenCalled();
+  });
+
+  it('keeps HubSpot from Free accounts, before reading the lead or calling HubSpot', async () => {
     const from = signInAsMember();
     const res = await post({ business_id: 'b1' });
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "This isn't available on your account yet." });
+    expect(await res.json()).toEqual({ error: featureMessage('hubspot') });
     expect(from).not.toHaveBeenCalled();
+    expect(readSecret).not.toHaveBeenCalled();
     expect(sendLead).not.toHaveBeenCalled();
   });
 });

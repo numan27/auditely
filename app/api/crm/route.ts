@@ -1,17 +1,21 @@
 // app/api/crm/route.ts
 
-// "Send to HubSpot": the lead, its audit and a private PDF link go to HubSpot.
-// The company id is saved as soon as HubSpot has it, so a retry after a later
-// failure updates that company instead of creating another.
+// "Send to HubSpot": the lead, its audit and a private PDF link go to the
+// account's HubSpot (Pro and Agency; the owner's falls back to HUBSPOT_TOKEN).
+// The company id is saved on the account's own business as soon as HubSpot has
+// it, so a retry after a later failure updates that company instead of creating another.
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { Db } from '@/app/_shared/lib/supabase/client';
-import { getSession, ownerOnly, unauthorized } from '@/app/_shared/lib/supabase/server';
+import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 import { reportToken } from '@/app/_shared/lib/auth/reportLink';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { buildLeadPayload } from '@/app/_shared/lib/crm/leadPayload';
 import { describeHubSpotError, sendLead } from '@/app/_shared/lib/crm/hubspot';
+import { hubspotTokenFor } from '@/app/_shared/lib/email/senders';
+import { planFor, planHas } from '@/app/_shared/lib/usage/plans';
+import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
 
 const MIGRATION = 'docs/migrations/2026-10-01-hubspot.sql';
 
@@ -29,15 +33,16 @@ async function saveBusiness(db: Db, businessId: string, update: Record<string, s
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
-  if (!session.account.isOwner) return ownerOnly();
-  const { db } = session;
+  const { db, account } = session;
+  if (!planHas(planFor(account).id, 'hubspot')) return NextResponse.json({ error: featureMessage('hubspot') }, { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const businessId: string = typeof body.business_id === 'string' ? body.business_id : '';
   if (!businessId) return NextResponse.json({ error: 'business_id is required' }, { status: 400 });
 
-  const token = process.env.HUBSPOT_TOKEN;
-  if (!token) return NextResponse.json({ error: "HubSpot isn't connected — add HUBSPOT_TOKEN in Vercel." }, { status: 503 });
+  const hubspot = await hubspotTokenFor(account);
+  if (!hubspot.ok) return NextResponse.json({ error: hubspot.error }, { status: hubspot.status });
+  const { token } = hubspot;
 
   const { data } = await db.from('businesses').select(`${BUSINESS_WITH_AUDIT}, searches (niche)`).eq('id', businessId).single();
   if (!data) return NextResponse.json({ error: 'Business not found' }, { status: 404 });

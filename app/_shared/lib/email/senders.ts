@@ -1,8 +1,9 @@
 // app/_shared/lib/email/senders.ts
 
-// Which mailbox an account's outreach goes out through: the one it connected
-// in Settings, or, for the owner with none, the Vercel one (FROM_EMAIL and
-// SMTP_* or Resend). Server-only.
+// Which mailbox an account's outreach goes out through, and which HubSpot its
+// leads go to: the ones it connected in Settings, or, for the owner with none,
+// the Vercel ones (FROM_EMAIL and SMTP_* or Resend; HUBSPOT_TOKEN). Nobody else
+// ever borrows the owner's. Server-only.
 
 import type { Account } from '@/app/_shared/lib/auth/account';
 import { settingsUnavailable } from '@/app/_shared/lib/brand/brand';
@@ -35,4 +36,21 @@ export async function mailboxFor(account: Account): Promise<{ ok: true; mailbox:
     if (problem) return problem;
     throw err;
   }
+}
+
+export async function hubspotTokenFor(account: Account): Promise<{ ok: true; token: string } | SenderProblem> {
+  try {
+    const saved = await readSecret<{ token: string }>(account.id, 'hubspot');
+    if (saved?.token) return { ok: true, token: saved.token };
+  } catch (err) {
+    // Before the migration nothing can have been saved: the owner falls through to HUBSPOT_TOKEN
+    if (!(err instanceof SettingsNotMigrated && account.isOwner)) {
+      const problem = connectionProblem(err, "Your saved HubSpot token can't be read any more. Connect it again in Settings.", false);
+      if (problem) return problem;
+      throw err;
+    }
+  }
+  const envToken = account.isOwner ? process.env.HUBSPOT_TOKEN : undefined;
+  if (envToken) return { ok: true, token: envToken };
+  return { ok: false, status: 400, error: 'Connect HubSpot in Settings to send leads.' };
 }
