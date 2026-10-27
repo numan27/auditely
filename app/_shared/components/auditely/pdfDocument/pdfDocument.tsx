@@ -1,8 +1,10 @@
 // app/_shared/components/auditely/pdfDocument/pdfDocument.tsx
 
-import { Document, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
 import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
+import { shortUrl } from '@/app/_shared/lib/utils/shortUrl';
 import {
+  InviteSection,
   LeadCaptureSection,
   NextStepSection,
   ProblemsSection,
@@ -67,6 +69,18 @@ export interface PdfContact {
   bookingUrl: string | null;
 }
 
+/** Whose report it is: the account's brand (reportData.ts pdfBrand) */
+export interface PdfBrand {
+  name: string;
+  website: string | null;
+  /** A PNG or JPEG data URL, shown beside the title */
+  logo: string | null;
+  /** Auditely's own brand (Free accounts): the report invites the reader to try Auditely instead of offering a call */
+  invite: boolean;
+  /** The call the "next step" box offers, as in "on a free call" */
+  call: string;
+}
+
 export interface PdfDocumentProps {
   businessName: string;
   website: string;
@@ -86,13 +100,12 @@ export interface PdfDocumentProps {
   leadFindings: PdfFinding[];
   summary: string;
   improvements: string[];
+  brand: PdfBrand;
   /** null leaves out the "next step" box and the footer's contact */
   contact: PdfContact | null;
-  /** false names DevArtVentures without linking to its website (the Upwork version) */
-  brandLink?: boolean;
+  /** false leaves nothing to click: the brand is named, not linked (the Upwork version) */
+  links?: boolean;
 }
-
-const BRAND_URL = 'https://devartventures.com';
 
 export function PdfDocument({
   businessName,
@@ -113,18 +126,31 @@ export function PdfDocument({
   leadFindings,
   summary,
   improvements,
+  brand,
   contact,
-  brandLink = true,
+  links = true,
 }: PdfDocumentProps) {
+  const brandUrl = links ? brand.website : null;
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Website Audit Report</Text>
-          <Text style={styles.headerSubtitle}>
-            Prepared by {brandLink ? <Link src={BRAND_URL} style={styles.link}>DevArtVentures</Link> : 'DevArtVentures'} · {auditDate}
-          </Text>
+        <View style={[styles.header, styles.headerRow]}>
+          {/* A logo is an image, not a link: it stays in the Upwork version */}
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- a PDF image has no alt text */}
+          {brand.logo ? <Image src={brand.logo} style={styles.headerLogo} /> : null}
+          <View>
+            <Text style={styles.headerTitle}>Website Audit Report</Text>
+            <Text style={styles.headerSubtitle}>
+              {brand.invite ? (
+                `Prepared with ${brand.name} · ${auditDate}`
+              ) : (
+                <>
+                  Prepared by {brandUrl ? <Link src={brandUrl} style={styles.link}>{brand.name}</Link> : brand.name} · {auditDate}
+                </>
+              )}
+            </Text>
+          </View>
         </View>
 
         {/* Business Info */}
@@ -203,14 +229,15 @@ export function PdfDocument({
           </View>
         )}
 
-        {contact && <NextStepSection contact={contact} />}
+        {contact && !brand.invite && <NextStepSection contact={contact} call={brand.call} />}
+        {brand.invite && links && <InviteSection />}
 
         {/* Footer */}
         <View style={styles.footer} fixed>
           {/* Without the link it is the name: a PDF reader makes a bare domain clickable */}
           <Text style={styles.footerText}>
             Powered by{' '}
-            {brandLink ? <Link src={BRAND_URL} style={styles.link}>devartventures.com</Link> : 'DevArtVentures'}
+            {brandUrl ? <Link src={brandUrl} style={styles.link}>{shortUrl(brandUrl)}</Link> : brand.name}
           </Text>
           {contact && (
             <Text style={styles.footerText}>

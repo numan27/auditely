@@ -3,7 +3,8 @@ import { NextRequest } from 'next/server';
 import { POST, maxDuration } from '@/app/api/send-email/route';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
-import { brandLogo } from '@/app/_shared/lib/email/brandLogo';
+import { BRAND_UNAVAILABLE, BrandUnavailable, brandFor, emailLogo } from '@/app/_shared/lib/brand/brand';
+import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 
 // Fake Supabase: the business (with its audit and report) and every update
@@ -32,7 +33,12 @@ vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
   ownerUserId: async () => 'owner-1',
 }));
 vi.mock('@/app/_shared/lib/audit/auditPdf', () => ({ renderAuditPdf: vi.fn() }));
-vi.mock('@/app/_shared/lib/email/brandLogo', () => ({ LOGO_CID: 'devartventures-logo', brandLogo: vi.fn() }));
+// The sender's brand and its logo; brand.test.ts reads profiles for real
+vi.mock('@/app/_shared/lib/brand/brand', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/_shared/lib/brand/brand')>()),
+  brandFor: vi.fn(),
+  emailLogo: vi.fn(),
+}));
 // The mailer (mailbox or Resend) has its own tests
 vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
 // The address check (Verifalia) has its own tests
@@ -49,6 +55,15 @@ function signInAsMember() {
 
 const PDF = Buffer.from('%PDF-1.7');
 const LOGO = Buffer.from('logo-png');
+const ownerBrand = resolveBrand({ profile: null, isOwner: true, plan: 'owner' });
+const acmeBrand = resolveBrand({
+  profile: {
+    email: 'owner@example.com', display_name: 'Sam', company: 'Acme', website: 'https://acme.studio', logo_data_url: null,
+    contact_email: null, contact_phone: null, booking_url: 'https://cal.com/acme',
+  },
+  isOwner: true,
+  plan: 'owner',
+});
 const businessRow = (over: Record<string, unknown> = {}) => ({
   id: 'b1', name: 'Smile Dental', address: '1 Main St', website: 'https://smiledental.com', phone: null, email: 'office@smiledental.com',
   audits: {
@@ -76,7 +91,8 @@ beforeEach(() => {
   vi.mocked(emailSetupProblem).mockReset().mockReturnValue(null);
   vi.mocked(checkLeadEmail).mockReset().mockResolvedValue({ state: 'off' });
   vi.mocked(sendEmail).mockReset().mockResolvedValue({ ok: true });
-  vi.mocked(brandLogo).mockReset().mockResolvedValue(LOGO);
+  vi.mocked(brandFor).mockReset().mockResolvedValue(ownerBrand);
+  vi.mocked(emailLogo).mockReset().mockResolvedValue({ content: LOGO, contentType: 'image/png', filename: 'brand-logo.png' });
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
 });
 afterEach(() => {
@@ -99,11 +115,14 @@ describe('POST /api/send-email', () => {
       html: expect.stringContaining('Hi there,<br>Your site is slow.'),
       attachments: [
         { filename: 'audit-smile-dental.pdf', content: PDF },
-        { filename: 'devartventures-logo.png', content: LOGO, cid: 'devartventures-logo' },
+        { filename: 'brand-logo.png', content: LOGO, cid: 'brand-logo' },
       ],
     });
     const { html } = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(html).toContain('<img src="cid:devartventures-logo"');
+    expect(html).toContain('<img src="cid:brand-logo"');
+    expect(html).toContain('DevArtVentures');
+    expect(brandFor).toHaveBeenCalledWith('owner-1');
+    expect(emailLogo).toHaveBeenCalledWith(ownerBrand);
     expect(html).toContain('Smile Dental');
     expect(html).toContain('Book your free call');
     expect(renderAuditPdf).toHaveBeenCalledWith(userDb, 'a1');
@@ -127,7 +146,7 @@ describe('POST /api/send-email', () => {
   });
 
   it('still sends, without the logo, when the logo file can not be read', async () => {
-    vi.mocked(brandLogo).mockResolvedValue(null);
+    vi.mocked(emailLogo).mockResolvedValue(null);
     expect((await post(draft)).status).toBe(200);
     const sent = vi.mocked(sendEmail).mock.calls[0][0];
     expect(sent.attachments).toEqual([{ filename: 'audit-smile-dental.pdf', content: PDF }]);
@@ -142,6 +161,25 @@ describe('POST /api/send-email', () => {
     // A browser can't load the email's attached logo, so the preview carries the image itself
     expect(json.html).toContain(`<img src="data:image/png;base64,${LOGO.toString('base64')}"`);
     expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(db.state.updates).toEqual([]);
+  });
+
+  it('sends in the brand the owner’s profile gives, with its own logo type', async () => {
+    vi.mocked(brandFor).mockResolvedValue(acmeBrand);
+    vi.mocked(emailLogo).mockResolvedValue({ content: LOGO, contentType: 'image/jpeg', filename: 'brand-logo.jpg' });
+    expect((await post(draft)).status).toBe(200);
+    const sent = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(sent.html).toContain('>Acme</a>');
+    expect(sent.html).toMatch(/<a href="https:\/\/cal\.com\/acme"[^>]*>Book your free call<\/a>/);
+    expect(sent.attachments).toContainEqual({ filename: 'brand-logo.jpg', content: LOGO, cid: 'brand-logo' });
+    const preview = await post({ ...draft, preview: true });
+    expect(preview.json.html).toContain(`<img src="data:image/jpeg;base64,${LOGO.toString('base64')}"`);
+  });
+
+  it('sends nothing when the branding can’t be read', async () => {
+    vi.mocked(brandFor).mockRejectedValue(new BrandUnavailable('timeout'));
+    expect(await post(draft)).toEqual({ status: 503, json: { error: BRAND_UNAVAILABLE } });
     expect(sendEmail).not.toHaveBeenCalled();
     expect(db.state.updates).toEqual([]);
   });

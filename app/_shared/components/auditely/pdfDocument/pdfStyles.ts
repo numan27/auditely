@@ -22,6 +22,16 @@ export const styles = StyleSheet.create({
     borderBottomColor: '#6366f1',
     borderBottomStyle: 'solid',
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    height: 32,
+    maxWidth: 120,
+    objectFit: 'contain',
+    marginRight: 14,
+  },
   headerTitle: {
     fontSize: 22,
     fontFamily: 'Helvetica-Bold',

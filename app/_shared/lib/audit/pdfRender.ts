@@ -6,8 +6,9 @@
 
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
-import { PdfDocument, type PdfContact, type PdfDocumentProps } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { PdfDocument, type PdfDocumentProps } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 import { buildPdfProps, buildUpworkPdfProps, type AuditLike } from '@/app/_shared/lib/audit/reportData';
+import type { Brand } from '@/app/_shared/lib/brand/brandRules';
 import type { PdfVariant } from '@/app/_shared/lib/types/auditely';
 
 export interface PdfBusiness {
@@ -27,12 +28,12 @@ export const pdfFileName = (businessName: string, variant: PdfVariant = 'full'):
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const draw = (props: PdfDocumentProps): Promise<Buffer> => renderToBuffer(createElement(PdfDocument, props) as any);
 
-/** @param contact null leaves out the "next step" box */
-export function renderPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport, contact: PdfContact | null): Promise<Buffer> {
-  return draw(buildPdfProps(audit, business, report, contact));
+/** In the account's brand; a brand without a contact leaves out the "next step" box */
+export function renderPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport, brand: Brand): Promise<Buffer> {
+  return draw(buildPdfProps(audit, business, report, brand));
 }
 
 /** The report to attach on Upwork: no contact details and nothing to click */
-export function renderUpworkPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport): Promise<Buffer> {
-  return draw(buildUpworkPdfProps(audit, business, report));
+export function renderUpworkPdf(audit: AuditLike, business: PdfBusiness, report: PdfReport, brand: Brand): Promise<Buffer> {
+  return draw(buildUpworkPdfProps(audit, business, report, brand));
 }

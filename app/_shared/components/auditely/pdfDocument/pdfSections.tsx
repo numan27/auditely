@@ -5,6 +5,7 @@
 import { Link, Text, View } from '@react-pdf/renderer';
 import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
 import type { PdfContact, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { AUDITELY_URL } from '@/app/_shared/lib/config/site';
 
 const SCORE_DEFINITIONS: [string, string][] = [
   ['Performance', 'page speed on desktop'],
@@ -99,13 +100,13 @@ export function LeadCaptureSection({ score, findings }: { score: number | null; 
   );
 }
 
-export function NextStepSection({ contact }: { contact: PdfContact }) {
+export function NextStepSection({ contact, call }: { contact: PdfContact; call: string }) {
   const details = [contact.name, contact.phone, contact.email].filter(Boolean).join('  ·  ');
   return (
     <View style={styles.ctaBox} wrap={false}>
       <Text style={styles.ctaTitle}>Want help fixing these?</Text>
       <Text style={styles.ctaText}>
-        We can walk you through every issue in this report on a free 30-minute call, with no obligation.
+        We can walk you through every issue in this report on {call}, with no obligation.
       </Text>
       <Text style={styles.ctaContact}>{details}</Text>
       {/* Calendly when set, otherwise email; "Contact us" only alongside Calendly */}
@@ -118,6 +119,23 @@ export function NextStepSection({ contact }: { contact: PdfContact }) {
             Contact us
           </Link>
         ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** A Free account's report, in place of the "next step" box: the reader is invited to try Auditely */
+export function InviteSection() {
+  return (
+    <View style={styles.ctaBox} wrap={false}>
+      <Text style={styles.ctaTitle}>Audited with Auditely</Text>
+      <Text style={styles.ctaText}>
+        Auditely finds local businesses and checks their websites for what&apos;s costing them customers. Try it free.
+      </Text>
+      <View style={styles.ctaButtons}>
+        <Link src={AUDITELY_URL} style={styles.ctaButton}>
+          Try Auditely free
+        </Link>
       </View>
     </View>
   );

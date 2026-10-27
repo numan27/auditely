@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { outreachHtml, outreachText, type OutreachEmail } from '@/app/_shared/lib/email/outreachEmail';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
+import { resolveBrand, type Profile } from '@/app/_shared/lib/brand/brandRules';
+import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 const finding = (id: string, status: 'fail' | 'warn' = 'fail') => ({ id, status, label: id });
 const audit = (over: Partial<AuditLike> = {}): AuditLike => ({
@@ -19,12 +21,28 @@ const audit = (over: Partial<AuditLike> = {}): AuditLike => ({
   } as AuditLike['checks'],
   ...over,
 });
+const CONTACT: PdfContact = { name: 'Numan', phone: '+1 555 0100', email: 'contact@devartventures.com', bookingUrl: 'https://calendly.com/devart/15min' };
+// The owner with a blank profile: today's DevArtVentures email
+const ownerBrand = resolveBrand({ profile: null, isOwner: true, plan: 'owner' }, CONTACT);
+const owner = (contact: PdfContact = CONTACT) => ({ ...ownerBrand, contact });
+const acmeProfile: Profile = {
+  email: 'sam@acme.studio',
+  display_name: 'Sam Lee',
+  company: 'Acme Studio',
+  website: 'https://acme.studio',
+  logo_data_url: null,
+  contact_email: 'hi@acme.studio',
+  contact_phone: null,
+  booking_url: 'https://cal.com/acme',
+};
+const acmeBrand = resolveBrand({ profile: acmeProfile, isOwner: false, plan: 'pro' });
+const acme = { ...acmeBrand, contact: acmeBrand.contact! };
 const email = (over: Partial<OutreachEmail> = {}): OutreachEmail => ({
   body: 'Hi,\n\nYour site is slow.\nIt loses visitors.\n\nNuman, DevArtVentures',
   business: { name: 'Smile Dental', website: 'https://www.smiledental.com/' },
   audit: audit(),
-  contact: { name: 'Numan', phone: '+1 555 0100', email: 'contact@devartventures.com', bookingUrl: 'https://calendly.com/devart/15min' },
-  logoSrc: 'cid:devartventures-logo',
+  brand: owner(),
+  logoSrc: 'cid:brand-logo',
   ...over,
 });
 
@@ -56,7 +74,7 @@ describe('outreachHtml', () => {
       email({
         body: 'Hi <script>alert(1)</script> & "you"',
         business: { name: 'Smile <b>Dental</b>', website: 'https://x.com/"onmouseover="alert(1)' },
-        contact: { name: '<i>N</i>', phone: null, email: 'a@b.com', bookingUrl: 'https://cal.com/x?a=1&b="2"' },
+        brand: { ...owner({ name: '<i>N</i>', phone: null, email: 'a@b.com', bookingUrl: 'https://cal.com/x?a=1&b="2"' }), name: 'Acme <b>Studio</b>', website: 'https://acme.studio/"onclick="x' },
       })
     );
     expect(html).not.toContain('<script>');
@@ -65,10 +83,12 @@ describe('outreachHtml', () => {
     expect(html).not.toContain('"onmouseover="');
     expect(html).toContain('href="https://cal.com/x?a=1&amp;b=&quot;2&quot;"');
     expect(html).toContain('&lt;i&gt;N&lt;/i&gt;');
+    expect(html).toContain('Acme &lt;b&gt;Studio&lt;/b&gt;');
+    expect(html).not.toContain('"onclick="');
   });
 
   it('carries the DevArtVentures header with the logo, or without it when the logo is missing', () => {
-    expect(outreachHtml(email())).toContain('<img src="cid:devartventures-logo"');
+    expect(outreachHtml(email())).toContain('<img src="cid:brand-logo"');
     const bare = outreachHtml(email({ logoSrc: null }));
     expect(bare).not.toContain('<img');
     expect(bare).toContain('DevArtVentures');
@@ -115,7 +135,7 @@ describe('outreachHtml', () => {
 
   it('links the button to the booking page, or to an email when there is none', () => {
     expect(outreachHtml(email())).toMatch(/<a href="https:\/\/calendly\.com\/devart\/15min"[^>]*>Book your free call<\/a>/);
-    const noBooking = outreachHtml(email({ contact: { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null } }));
+    const noBooking = outreachHtml(email({ brand: owner({ name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null }) }));
     expect(noBooking).toMatch(/<a href="mailto:contact@devartventures\.com"[^>]*>Book your free call<\/a>/);
   });
 
@@ -152,6 +172,34 @@ describe('outreachHtml', () => {
   });
 });
 
+describe('outreachHtml for other accounts', () => {
+  it('keeps the owner’s email as today', () => {
+    const html = outreachHtml(email());
+    for (const s of ['DevArtVentures', 'Web engineering for growing businesses', '#2fbf7d', 'free 30-minute call']) expect(html).toContain(s);
+    expect(html).toContain('href="https://devartventures.com" style="color:#15172a;text-decoration:none;">DevArtVentures</a>');
+  });
+
+  it('sends a paid account’s email in its own name, with no stripe or tagline of DevArtVentures', () => {
+    const html = outreachHtml(email({ brand: acme, body: 'Hi,\n\nYour site is slow.\n\nSam Lee, Acme Studio' }));
+    expect(html).toContain('href="https://acme.studio" style="color:#15172a;text-decoration:none;">Acme Studio</a>');
+    expect(html).toContain('<strong style="font-size:14px;color:#15172a;">Acme Studio</strong>');
+    expect(html).toContain('>acme.studio</a>');
+    expect(html).toContain('on a free call, with no obligation.');
+    expect(html).toMatch(/<a href="https:\/\/cal\.com\/acme"[^>]*>Book your free call<\/a>/);
+    expect(html).toContain('href="mailto:hi@acme.studio"');
+    expect(html.toLowerCase()).not.toContain('devart');
+    expect(html).not.toContain('#2fbf7d');
+    expect(html).not.toContain('Web engineering for growing businesses');
+  });
+
+  it('names an account without a website, and links nothing for it', () => {
+    const html = outreachHtml(email({ brand: { ...acme, website: null } }));
+    expect(html).toMatch(/color:#15172a;[^"]*">Acme Studio<\/td>/);
+    expect(html).not.toContain('href="https://acme.studio');
+    expect(outreachText(email({ brand: { ...acme, website: null } }))).toContain('\nAcme Studio\n');
+  });
+});
+
 describe('outreachText', () => {
   it('gives mail clients without HTML the message, the snapshot, the booking link and the company', () => {
     const text = outreachText(email());
@@ -160,10 +208,12 @@ describe('outreachText', () => {
     expect(text).toContain('Secure (https): yes');
     expect(text).toContain('- We found no contact form or email link on your site.');
     expect(text).toContain('Book your free call: https://calendly.com/devart/15min');
-    const noBooking = outreachText(email({ contact: { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null } }));
+    const noBooking = outreachText(email({ brand: owner({ name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null }) }));
     expect(noBooking).toContain('Book your free call: reply to this email');
     expect(noBooking).not.toContain('mailto:');
     expect(text).toContain('DevArtVentures · https://devartventures.com');
+    expect(outreachText(email({ brand: acme }))).toContain('Acme Studio · https://acme.studio');
+    expect(outreachText(email({ brand: acme, body: 'Hi,\n\nYour site is slow.\n\nSam Lee, Acme Studio' })).toLowerCase()).not.toContain('devart');
     expect(text).toContain("we won't email again");
     expect(text).toContain('free 30-minute call');
   });

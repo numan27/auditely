@@ -10,6 +10,8 @@ import {
   type AuditLike,
 } from '@/app/_shared/lib/audit/reportData';
 import type { AuditChecks, Finding } from '@/app/_shared/lib/audit/types';
+import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
+import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 import { STATS } from '@/app/_shared/lib/audit/impactLibrary';
 import { impactFor } from '@/app/_shared/lib/audit/impact';
 
@@ -89,8 +91,14 @@ describe('siteReasonText', () => {
   });
 });
 
+// The owner's brand with a given contact: what the PDF had before profiles
+const ownerBrand = (contact: PdfContact | null) => ({
+  ...resolveBrand({ profile: null, isOwner: true, plan: 'owner' }, contact ?? undefined),
+  contact,
+});
+
 describe('buildPdfProps', () => {
-  const contact = { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null };
+  const contact = ownerBrand({ name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null });
   const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
   const noReport = { summary: '', improvements: [] };
 
@@ -221,18 +229,18 @@ describe('buildPdfProps', () => {
   });
 
   it('passes the report contact through', () => {
-    const withBooking = { ...contact, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
-    expect(buildPdfProps(audit, business, noReport, withBooking).contact).toEqual(withBooking);
+    const withBooking = { ...contact.contact!, name: 'Numan', bookingUrl: 'https://cal.com/numan' };
+    expect(buildPdfProps(audit, business, noReport, ownerBrand(withBooking)).contact).toEqual(withBooking);
   });
 
   it('builds a report without a contact, for the public demo', () => {
-    expect(buildPdfProps(audit, business, noReport, null).contact).toBeNull();
+    expect(buildPdfProps(audit, business, noReport, ownerBrand(null)).contact).toBeNull();
   });
 });
 
 describe('lead capture in the report', () => {
   // Same PDF arguments as the buildPdfProps tests (declared inside that block)
-  const contact = { name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null };
+  const contact = ownerBrand({ name: null, phone: null, email: 'contact@devartventures.com', bookingUrl: null });
   const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
   const noReport = { summary: '', improvements: [] };
   const leadChecks: Partial<AuditChecks> = {

@@ -2,7 +2,7 @@
 
 // "Send email": one lead's outreach email, as edited in the dialog, sent from
 // FROM_EMAIL (through the mailbox, or Resend — see email/mailer.ts) in the
-// DevArtVentures design (email/outreachEmail.ts) with the PDF report attached.
+// account's brand (email/outreachEmail.ts) with the PDF report attached.
 // The send date is saved so the lead isn't emailed twice by accident.
 // An address Verifalia calls undeliverable is refused (email/leadEmailCheck.ts).
 // With `preview: true` nothing is sent: the answer is the email's HTML.
@@ -10,12 +10,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, ownerOnly, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
-import { brandLogo, LOGO_CID } from '@/app/_shared/lib/email/brandLogo';
+import { BRAND_UNAVAILABLE, BrandUnavailable, brandFor, emailLogo } from '@/app/_shared/lib/brand/brand';
+import type { Brand } from '@/app/_shared/lib/brand/brandRules';
 import { blocksSending, checkReason } from '@/app/_shared/lib/email/emailCheck';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { outreachHtml, outreachText } from '@/app/_shared/lib/email/outreachEmail';
-import { reportContact } from '@/app/_shared/lib/config/reportContact';
 import { outreachProblem } from '@/app/_shared/lib/email/outreach';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 
@@ -23,6 +23,8 @@ import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_sha
 export const maxDuration = 60;
 
 const MIGRATION = 'docs/migrations/2026-10-02-emailed-at.sql';
+// The header logo's content id in the sent email
+const LOGO_CID = 'brand-logo';
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -54,12 +56,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Run the audit and AI summary first.' }, { status: 400 });
   }
 
-  const logo = await brandLogo();
+  // Never sent under the wrong name: a profile that can't be read stops here
+  let brand: Brand;
+  try {
+    brand = await brandFor(session.account.id);
+  } catch (err) {
+    if (!(err instanceof BrandUnavailable)) throw err;
+    console.error('[send-email]', err.message);
+    return NextResponse.json({ error: BRAND_UNAVAILABLE }, { status: 503 });
+  }
+  // Only Auditely's own brand has no contact, and only the owner sends for now
+  const { contact } = brand;
+  if (!contact) return ownerOnly();
+
+  const logo = await emailLogo(brand);
   // A request from devartventures.com asked for this email: no opt-out line
-  const email = { body: text, business, audit: business.audit, contact: reportContact(), requested: Boolean(business.request) };
+  const email = { body: text, business, audit: business.audit, brand: { ...brand, contact }, requested: Boolean(business.request) };
   if (preview) {
     // A browser can't load the email's attached logo, so the preview carries the image itself
-    const logoSrc = logo && `data:image/png;base64,${logo.toString('base64')}`;
+    const logoSrc = logo && `data:${logo.contentType};base64,${logo.content.toString('base64')}`;
     return NextResponse.json({ html: outreachHtml({ ...email, logoSrc }) });
   }
 
@@ -79,7 +94,7 @@ export async function POST(request: NextRequest) {
     html: outreachHtml({ ...email, logoSrc: logo && `cid:${LOGO_CID}` }),
     attachments: [
       { filename: report.filename, content: report.pdf },
-      ...(logo ? [{ filename: `${LOGO_CID}.png`, content: logo, cid: LOGO_CID }] : []),
+      ...(logo ? [{ filename: logo.filename, content: logo.content, cid: LOGO_CID }] : []),
     ],
   });
   if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: sent.status });

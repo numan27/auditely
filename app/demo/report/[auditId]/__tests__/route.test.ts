@@ -30,7 +30,8 @@ describe('GET /demo/report/[auditId]', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/pdf');
     expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="audit-[a-z0-9-]+\.pdf"$/);
-    expect(vi.mocked(renderPdf).mock.calls[0][3]).toBeNull();
+    // The owner's report as before profiles, minus the contact
+    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'owner', name: 'DevArtVentures', contact: null });
   });
 
   it('keeps the reports out of search engines', async () => {
@@ -40,7 +41,7 @@ describe('GET /demo/report/[auditId]', () => {
   it('adds the contact box when DEMO_PDF_CONTACT is switched on', async () => {
     vi.stubEnv('DEMO_PDF_CONTACT', '1');
     await open(first.audit!.id);
-    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ email: expect.any(String) });
+    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'owner', contact: { email: expect.any(String) } });
   });
 
   it('answers 404 for anything that is not a sample audit, without drawing a PDF', async () => {

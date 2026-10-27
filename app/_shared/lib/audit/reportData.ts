@@ -5,7 +5,8 @@
 
 import { isOutdatedAudit, type AuditChecks, type Finding, type KeyAudit } from '@/app/_shared/lib/audit/types';
 import { impactFor, plainLabel, rankedProblems } from '@/app/_shared/lib/audit/impact';
-import type { PdfContact, PdfDocumentProps, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import type { Brand } from '@/app/_shared/lib/brand/brandRules';
+import type { PdfBrand, PdfDocumentProps, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
 export interface IssueSummary {
   title: string;
@@ -104,15 +105,28 @@ function pdfFindings(findings: Finding[] | undefined): PdfFinding[] {
 }
 
 type ReportBusiness = { name: string; website: string | null; address: string; phone: string | null };
+
+/** What the PDF says about whose report it is */
+export function pdfBrand(brand: Brand): PdfBrand {
+  return {
+    name: pdfText(brand.name),
+    website: brand.website,
+    logo: brand.logo?.dataUrl ?? null,
+    invite: brand.kind === 'auditely',
+    call: brand.call,
+  };
+}
+
 type ReportText = { summary: string; improvements: unknown };
 
 export function buildPdfProps(
   audit: AuditLike,
   business: ReportBusiness,
   report: ReportText,
-  // null: no "next step" box (the public demo)
-  contact: PdfContact | null
+  // The account's brand; its contact null leaves out the "next step" box (the public demo)
+  brand: Brand
 ): PdfDocumentProps {
+  const { contact } = brand;
   const problems = rankedProblems(audit).slice(0, PDF_PROBLEMS_LIMIT);
   const { seo, ssl } = measuredSeoAndSsl(audit);
   const improvements = Array.isArray(report.improvements)
@@ -151,7 +165,12 @@ export function buildPdfProps(
     leadFindings: pdfFindings(audit.checks?.lead?.findings),
     summary: pdfText(report.summary),
     improvements,
-    contact,
+    brand: pdfBrand(brand),
+    contact: contact && {
+      ...contact,
+      name: contact.name && pdfText(contact.name),
+      phone: contact.phone && pdfText(contact.phone),
+    },
   };
 }
 
@@ -159,6 +178,6 @@ export function buildPdfProps(
  * The report to attach on Upwork, which removes a file that carries a way to
  * reach someone outside it: no "next step" box, no links and no phone number.
  */
-export function buildUpworkPdfProps(audit: AuditLike, business: ReportBusiness, report: ReportText): PdfDocumentProps {
-  return { ...buildPdfProps(audit, { ...business, phone: null }, report, null), brandLink: false };
+export function buildUpworkPdfProps(audit: AuditLike, business: ReportBusiness, report: ReportText, brand: Brand): PdfDocumentProps {
+  return { ...buildPdfProps(audit, { ...business, phone: null }, report, { ...brand, contact: null }), links: false };
 }

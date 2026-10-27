@@ -1,15 +1,12 @@
 // app/_shared/lib/email/brandLogo.ts
 
-// The DevArtVentures logo for the outreach email's header. It travels inside
-// the email (an inline attachment), so it shows without the lead's mail client
-// loading anything from the web. Server-only.
+// The DevArtVentures logo for the owner's outreach email header (brand.ts
+// emailLogo). It travels inside the email (an inline attachment), so it shows
+// without the lead's mail client loading anything from the web. Server-only.
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { images } from '@/app/_shared/assets/images';
-
-/** The id the email's <img> uses to point at the attached logo */
-export const LOGO_CID = 'devartventures-logo';
 
 /** null when the file can't be read: the email then goes out without the logo */
 export async function brandLogo(): Promise<Buffer | null> {
