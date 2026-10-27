@@ -11,6 +11,7 @@ import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { parseWorkspacePath } from '@/app/_shared/lib/utils/workspacePath';
 import { NotificationBell } from '@/app/_shared/components/auditely/notificationBell/notificationBell';
+import { UsageMeter } from '@/app/_shared/components/auditely/usageMeter/usageMeter';
 
 const NAV = [
   { href: ROUTES.HOME, label: 'Search', short: 'Search' },
@@ -61,7 +62,8 @@ export function AppHeader() {
         )}
 
         <div className="ml-auto flex items-center gap-1">
-          {/* The demo has no requests or saved runs to hear about */}
+          {/* The demo has no allowances, requests or saved runs to hear about */}
+          {!demo && <UsageMeter />}
           {!demo && <NotificationBell />}
           <ThemeToggle />
           {demo ? (

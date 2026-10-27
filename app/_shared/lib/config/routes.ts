@@ -10,6 +10,8 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  // The plans and this month's allowances
+  PLANS: '/plans',
   // Private PDF report links (/report/{signed token}) — public, the token is the key
   REPORT: '/report',
   // The public demo: the workspace on a saved sample, with nothing live behind it
