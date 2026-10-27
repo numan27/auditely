@@ -2,12 +2,15 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { ContactLine } from '@/app/_shared/components/auditely/contactLine/contactLine';
 import { CheckIcon, CopyIcon, MailIcon } from '@/app/_shared/components/ui/icons/icons';
-import { API_ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import { checkMark, type CheckMark, type EmailCheck } from '@/app/_shared/lib/email/emailCheck';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { exhausted, readLimit } from '@/app/_shared/lib/usage/plans';
 
 interface BusinessEmailProps {
   email: string | null;
@@ -28,14 +31,17 @@ const MARK_TONES: Record<CheckMark['tone'], string> = {
  * Email row for a business card. Controlled: the parent owns the canonical
  * email value. When no email is known yet, offers an on-demand "Find email"
  * action that runs the full discovery cascade (including Hunter) for this one
- * business — the only path allowed to spend API quota.
+ * business — the only path allowed to spend API quota. Once the plan's email
+ * lookups have run out it asks first, and can search the website alone.
  * Beside a known email: what Verifalia said about it, once it was checked.
  */
 export function BusinessEmail({ email, website, businessId, check, onFound }: BusinessEmailProps) {
   const demo = useDemo();
+  const usage = useUsage();
   const [copied, setCopied] = useState(false);
   const [finding, setFinding] = useState(false);
-  const [notFound, setNotFound] = useState(false);
+  // After a search with no email: whether the plan kept it to the website
+  const [notFound, setNotFound] = useState<{ limited: boolean } | null>(null);
   const mark = check ? checkMark(check) : null;
 
   const copyEmail = async () => {
@@ -45,25 +51,34 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleFind = async () => {
-    if (demo) return demo.restrict('findEmail');
+  const search = async (apiFallback: boolean) => {
     setFinding(true);
-    setNotFound(false);
+    setNotFound(null);
     try {
       const res = await fetch(API_ROUTES.FIND_EMAILS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_ids: [businessId], apiFallback: true }),
+        body: JSON.stringify({ business_ids: [businessId], apiFallback }),
       });
       const data = await res.json();
       const found: string | null = data.results?.[0]?.email ?? null;
       if (found) onFound(found);
-      else setNotFound(true);
+      else setNotFound({ limited: readLimit(data) !== null });
     } catch {
-      setNotFound(true);
+      setNotFound({ limited: false });
     } finally {
       setFinding(false);
+      usage?.refresh();
     }
+  };
+
+  const handleFind = () => {
+    if (demo) return demo.restrict('findEmail');
+    const limit = usage?.summary ? exhausted(usage.summary, 'email_lookup') : null;
+    if (limit && usage) {
+      return usage.promptUpgrade({ limit, continueLabel: 'Search the website only', onContinue: () => void search(false) });
+    }
+    void search(true);
   };
 
   // The demo's emails are masked: nothing to write to or copy
@@ -105,6 +120,20 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
 
   // No email yet — offer discovery only if there's a domain to search.
   if (!website) return null;
+
+  // The website had none, and the plan doesn't search the email databases (or they ran out)
+  if (notFound?.limited) {
+    return (
+      <ContactLine icon={<MailIcon size={14} />}>
+        <span className="inline-flex items-center gap-1.5">
+          <span>No email on its website</span>
+          <Link href={ROUTES.PLANS} className="font-medium text-[var(--color-primary-600)] hover:underline">
+            See plans
+          </Link>
+        </span>
+      </ContactLine>
+    );
+  }
 
   return (
     <ContactLine icon={<MailIcon size={14} />}>

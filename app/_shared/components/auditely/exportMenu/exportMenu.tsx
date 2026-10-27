@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Dropdown, DropdownItem } from '@/app/_shared/components/ui/dropdown/dropdown';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { planHas } from '@/app/_shared/lib/usage/plans';
 import { leadTable, toDelimited, toHtmlTable } from '@/app/_shared/lib/utils/leadExport';
 import { copyToClipboard, downloadBlob } from '@/app/_shared/lib/utils/browserExport';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
@@ -39,6 +41,7 @@ type Status = { kind: 'copied'; rows: number } | { kind: 'error' };
 /** Export button: CSV download, or a copy that pastes into Google Sheets as cells */
 export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
   const demo = useDemo();
+  const usage = useUsage();
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -47,9 +50,17 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
     return () => clearTimeout(timer);
   }, [status]);
 
+  // Export comes with the paid plans: true when the dialog said so instead
+  const promptedForPlan = () => {
+    if (!usage?.summary || planHas(usage.summary.plan, 'export')) return false;
+    usage.promptUpgrade({ feature: 'export' });
+    return true;
+  };
+
   const downloadCsv = () => {
     // The demo doesn't hand out its list
     if (demo) return demo.restrict('export');
+    if (promptedForPlan()) return;
     setStatus(null);
     // The BOM makes Excel read the file as UTF-8
     const csv = `﻿${toDelimited(leadTable(getLeads()), ',')}`;
@@ -59,6 +70,7 @@ export function ExportMenu({ getLeads, fileName }: ExportMenuProps) {
   const copyForSheets = async () => {
     // The demo doesn't hand out its list
     if (demo) return demo.restrict('export');
+    if (promptedForPlan()) return;
     const leads = getLeads();
     const table = leadTable(leads);
     try {

@@ -4,6 +4,8 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 import type { Socials } from '@/app/_shared/lib/utils/contactChannels';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { readLimit } from '@/app/_shared/lib/usage/plans';
 
 const CHUNK_SIZE = 8;
 
@@ -59,6 +61,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
  *   2. For those still without an email, the paid email APIs — once per
  *      business ever (email_lookup_at), and in 'auto' mode: Hunter then Snov,
  *      each spending a credit only when its free count says it has an email.
+ *      It stops at the plan's limit: Free has no lookups, and paid plans run out.
  * Businesses are processed in sequential chunks so each request stays well
  * under serverless time limits, and discovered contacts are merged into the
  * list as each chunk returns.
@@ -92,6 +95,8 @@ export function useEmailDiscovery(
   const onFound = useEffectEvent(onContactsFound);
   const getPendingIds = useEffectEvent(() => pendingIds(businesses));
   const getLookupIds = useEffectEvent((foundEmail: Set<string>) => emailLookupCandidates(businesses, foundEmail));
+  const usage = useUsage();
+  const refreshUsage = useEffectEvent(() => usage?.refresh());
 
   useEffect(() => {
     if (!enabled) return;
@@ -103,8 +108,9 @@ export function useEmailDiscovery(
     const controller = new AbortController();
     const foundEmail = new Set<string>();
 
-    // One chunk to /api/find-emails; false once the run was cancelled
-    const post = async (ids: string[], extra: Record<string, unknown>): Promise<boolean> => {
+    // One chunk to /api/find-emails: its answer ({} when the chunk failed), or null once the run was cancelled
+    const post = async (ids: string[], extra: Record<string, unknown>): Promise<FindEmailsDto | null> => {
+      let data: FindEmailsDto = {};
       try {
         const res = await fetch(API_ROUTES.FIND_EMAILS, {
           method: 'POST',
@@ -112,15 +118,15 @@ export function useEmailDiscovery(
           body: JSON.stringify({ business_ids: ids, ...extra }),
           signal: controller.signal,
         });
-        const data = await res.json();
-        if (cancelled) return false;
+        data = await res.json();
+        if (cancelled) return null;
         const found = contactsFromResponse(data);
         found.forEach((f) => f.email && foundEmail.add(f.id));
         if (found.length) onFound(found);
       } catch {
         /* chunk failed (e.g. aborted) — continue with the rest */
       }
-      return !cancelled;
+      return cancelled ? null : data;
     };
 
     (async () => {
@@ -139,8 +145,12 @@ export function useEmailDiscovery(
       total = done + lookup.length;
       setProgress({ runKey, done, total });
       for (const ids of chunk(lookup, CHUNK_SIZE)) {
-        if (!(await post(ids, { apiLookup: 'auto' }))) return;
+        const data = await post(ids, { apiLookup: 'auto' });
+        if (!data) return;
         done += ids.length;
+        refreshUsage();
+        // The plan's lookups are used up (or it has none): the rest stay unlooked-up
+        if (readLimit(data)) return setProgress({ runKey, done, total: done });
         setProgress({ runKey, done, total });
       }
     })();
@@ -154,6 +164,11 @@ export function useEmailDiscovery(
   }, [runKey, enabled]);
 
   return { done: progress.done, total: progress.total };
+}
+
+interface FindEmailsDto {
+  results?: FindResultDto[];
+  limit?: unknown;
 }
 
 interface FindResultDto {

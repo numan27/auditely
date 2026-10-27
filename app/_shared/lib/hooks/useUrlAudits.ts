@@ -7,7 +7,9 @@ import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { contactsFromResponse, type ContactsFound } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import { exhausted, readLimit, type LimitReached } from '@/app/_shared/lib/usage/plans';
 import { emailFinderNotice } from '@/app/_shared/lib/utils/emailFinderNotice';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -37,6 +39,7 @@ const formatDate = (iso: string) =>
  */
 export function useUrlAudits() {
   const demo = useDemo();
+  const usage = useUsage();
   // The public demo lists its sample website and loads nothing
   const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(demo?.data.sites);
   const [isLoading, setIsLoading] = useState(!demo);
@@ -54,19 +57,25 @@ export function useUrlAudits() {
       .finally(() => setIsLoading(false));
   }, [demo, setBusinesses]);
 
-  // One business to /api/find-emails; returns what's now known about it
+  // One business to /api/find-emails; returns what's now known about it, and
+  // the plan's limit when that kept the search to the website
   const findContacts = useCallback(
-    async (id: string, extra: Record<string, unknown> = {}): Promise<ContactsFound | undefined> => {
+    async (
+      id: string,
+      extra: Record<string, unknown> = {}
+    ): Promise<{ found: ContactsFound | undefined; limit: LimitReached | null }> => {
       const res = await fetch(API_ROUTES.FIND_EMAILS, {
         method: 'POST',
         headers: JSON_HEADERS,
         body: JSON.stringify({ business_ids: [id], ...extra }),
       });
-      const found = contactsFromResponse(await res.json());
+      const data = await res.json();
+      usage?.refresh();
+      const found = contactsFromResponse(data);
       mergeContacts(found);
-      return found.find((f) => f.id === id);
+      return { found: found.find((f) => f.id === id), limit: readLimit(data) };
     },
-    [mergeContacts]
+    [mergeContacts, usage]
   );
 
   // A new site's contacts: scrape its pages, then — once, like the search tab —
@@ -74,7 +83,7 @@ export function useUrlAudits() {
   const discoverContacts = useCallback(
     async (business: BusinessWithData) => {
       try {
-        const scraped = business.contacts_checked_at ? undefined : await findContacts(business.id);
+        const scraped = business.contacts_checked_at ? undefined : (await findContacts(business.id)).found;
         if (!(scraped?.email ?? business.email) && !business.email_lookup_at) {
           await findContacts(business.id, { apiLookup: 'auto' });
         }
@@ -134,9 +143,20 @@ export function useUrlAudits() {
     [addSite, demo, discoverContacts]
   );
 
+  // The email search for one site, and the note on what it found
+  const searchEmail = useCallback(
+    async (business: BusinessWithData, apiFallback: boolean) => {
+      const { found, limit } = await findContacts(business.id, { apiFallback });
+      setNotice({ tone: 'info', text: emailFinderNotice(business.name, found, limit) });
+    },
+    [findContacts]
+  );
+
   /**
    * "Find email": adds the website without auditing it, then runs the full
    * email search — the site (incl. the deeper crawl), then Hunter and Snov.
+   * Once the plan's email lookups have run out, it asks before searching the
+   * website alone.
    */
   const findEmail = useCallback(
     async (url: string): Promise<boolean> => {
@@ -149,8 +169,18 @@ export function useUrlAudits() {
       try {
         const added = await addSite(url);
         if (!added) return false;
-        const found = await findContacts(added.business.id, { apiFallback: true });
-        setNotice({ tone: 'info', text: emailFinderNotice(added.business.name, found) });
+        const limit = usage?.summary ? exhausted(usage.summary, 'email_lookup') : null;
+        if (limit && usage) {
+          const websiteOnly = () => {
+            setBusy('email');
+            searchEmail(added.business, false)
+              .catch(() => setNotice({ tone: 'error', text: "Couldn't reach Auditely. Check your connection and try again." }))
+              .finally(() => setBusy(null));
+          };
+          usage.promptUpgrade({ limit, continueLabel: 'Search the website only', onContinue: websiteOnly });
+          return true;
+        }
+        await searchEmail(added.business, true);
         return true;
       } catch {
         setNotice({ tone: 'error', text: "Couldn't reach Auditely. Check your connection and try again." });
@@ -159,7 +189,7 @@ export function useUrlAudits() {
         setBusy(null);
       }
     },
-    [addSite, demo, findContacts]
+    [addSite, demo, searchEmail, usage]
   );
 
   /** The cross on a card, or "Clear all": opens the "remove?" dialog for these sites */

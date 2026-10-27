@@ -34,4 +34,23 @@ describe('emailFinderNotice', () => {
       'No email found for smiledental.com, and no other contact details on its website.'
     );
   });
+
+  const freeLimit = { kind: 'email_lookup', plan: 'free', limit: 0, resetsAt: '2026-11-01T00:00:00.000Z' } as const;
+  const usedUp = { kind: 'email_lookup', plan: 'pro', limit: 100, resetsAt: '2026-11-14T00:00:00.000Z' } as const;
+
+  it('mentions paid plans when Free only scanned the website', () => {
+    expect(emailFinderNotice('Acme', contacts(), freeLimit)).toBe(
+      'No email found for Acme, and no other contact details on its website. Paid plans also search email databases.'
+    );
+  });
+
+  it('says the lookups ran out', () => {
+    expect(emailFinderNotice('Acme', undefined, usedUp)).toBe(
+      "No email found for Acme, and no other contact details on its website. You've used your 100 email lookups this month. They reset on Nov 14."
+    );
+  });
+
+  it('says nothing about plans when an email was found', () => {
+    expect(emailFinderNotice('Acme', contacts({ email: 'hi@acme.com' }), freeLimit)).toBe('Found hi@acme.com for Acme.');
+  });
 });
