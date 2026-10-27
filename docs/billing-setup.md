@@ -3,7 +3,8 @@
 Accounts can now buy Pro or Agency themselves, monthly or yearly, through Stripe Checkout. Stripe Tax adds
 US sales tax from the billing address. Each account manages its plan in Stripe's billing portal, opened
 from Settings or the plans page. There it can switch plans, cancel, change its card and download
-invoices.
+invoices. An upgrade, or a switch from monthly to yearly, takes effect at once and is charged then. A
+downgrade, or a switch from yearly to monthly, waits for the end of the period already paid for.
 
 Stripe tells Auditely about every new, changed or cancelled subscription through a webhook, and that is
 what sets an account's plan. `PLAN_OVERRIDES` still gives testers a plan without paying, but a paid

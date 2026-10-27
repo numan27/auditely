@@ -16,7 +16,7 @@
 
 import { existsSync, writeFileSync } from 'node:fs';
 import Stripe from 'stripe';
-import { CATALOG, WEBHOOK_EVENTS_FOR_SETUP } from './stripeCatalog.mjs';
+import { CATALOG, WEBHOOK_EVENTS_FOR_SETUP, portalFeatures } from './stripeCatalog.mjs';
 
 const USAGE = 'Usage: node --env-file=.env.local scripts/stripeSetup.mjs [--webhook <https url> --secret-out <file>]';
 
@@ -75,18 +75,7 @@ async function ensurePrice(stripe, productId, { interval, unitAmount, lookupKey 
 }
 
 async function ensurePortal(stripe, products) {
-  const features = {
-    invoice_history: { enabled: true },
-    payment_method_update: { enabled: true },
-    customer_update: { enabled: true, allowed_updates: ['email', 'address', 'name'] },
-    subscription_cancel: { enabled: true, mode: 'at_period_end' },
-    subscription_update: {
-      enabled: true,
-      default_allowed_updates: ['price'],
-      proration_behavior: 'create_prorations',
-      products,
-    },
-  };
+  const features = portalFeatures(products);
   const existing = process.env.STRIPE_PORTAL_CONFIGURATION;
   const configuration = existing
     ? await stripe.billingPortal.configurations.update(existing, { features })
