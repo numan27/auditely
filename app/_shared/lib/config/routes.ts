@@ -35,6 +35,7 @@ export const API_ROUTES = {
   VERIFY_EMAIL: '/api/verify-email',
   AUDIT_REQUESTS: '/api/audit-requests',
   NOTIFICATIONS: '/api/notifications',
+  USAGE: '/api/usage',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret

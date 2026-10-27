@@ -137,7 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user    ON notifications (user_id, 
 -- business. anon has no policy, so it reads/writes nothing. The service role key
 -- (SUPABASE_SERVICE_ROLE_KEY) bypasses RLS; the server uses it only for the shared
 -- pagespeed_cache (no policy: server only), the devartventures.com inbound route,
--- signed report links and the owner lookup.
+-- signed report links, the owner lookup and the usage ledger below.
 ALTER TABLE profiles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE searches   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
@@ -173,3 +173,40 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON searches, businesses, audits, ai_reports
 GRANT SELECT ON profiles TO authenticated;
 -- The server's owner lookup (ownerUserId) reads profiles with the service role key
 GRANT SELECT ON profiles TO service_role;
+
+-- 8. usage_events: one row per search, audit or email lookup an account has used,
+--    counted against its plan's monthly allowance. A user may read their own rows
+--    (the meter) and never write one: only the server's service role writes, through
+--    claim_usage.
+CREATE TABLE IF NOT EXISTS usage_events (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  kind        TEXT        NOT NULL CHECK (kind IN ('search', 'audit', 'email_lookup')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_usage_events_user ON usage_events (user_id, kind, created_at DESC);
+ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own_rows ON usage_events;
+CREATE POLICY own_rows ON usage_events FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
+-- Supabase grants new tables to anon and authenticated by default
+REVOKE ALL ON usage_events FROM anon, authenticated;
+GRANT SELECT ON usage_events TO authenticated;
+GRANT SELECT, INSERT, DELETE ON usage_events TO service_role;
+
+-- One use of `kind`, recorded only while the account is under its limit for the period.
+-- The lock makes count-then-insert atomic per account and kind, so ten requests at
+-- once can't all see room for one. Returns the new row's id, or NULL at the limit.
+CREATE OR REPLACE FUNCTION public.claim_usage(p_user_id UUID, p_kind TEXT, p_limit INTEGER, p_since TIMESTAMPTZ)
+  RETURNS UUID LANGUAGE plpgsql SET search_path = '' AS $$
+DECLARE claimed UUID;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text), hashtext(p_kind));
+  IF (SELECT count(*) FROM public.usage_events
+      WHERE user_id = p_user_id AND kind = p_kind AND created_at >= p_since) >= p_limit THEN
+    RETURN NULL;
+  END IF;
+  INSERT INTO public.usage_events (user_id, kind) VALUES (p_user_id, p_kind) RETURNING id INTO claimed;
+  RETURN claimed;
+END $$;
+REVOKE ALL ON FUNCTION public.claim_usage(UUID, TEXT, INTEGER, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_usage(UUID, TEXT, INTEGER, TIMESTAMPTZ) TO service_role;

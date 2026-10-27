@@ -29,6 +29,7 @@ const ROUTES = {
   'send-email': () => import('@/app/api/send-email/route'),
   crm: () => import('@/app/api/crm/route'),
   'verify-email': () => import('@/app/api/verify-email/route'),
+  usage: () => import('@/app/api/usage/route'),
 };
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 
