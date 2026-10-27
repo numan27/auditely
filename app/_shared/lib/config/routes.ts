@@ -10,8 +10,9 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
-  // The plans and this month's allowances
+  // The plans and this month's allowances; Checkout comes back to /plans/done
   PLANS: '/plans',
+  PLANS_DONE: '/plans/done',
   // Private PDF report links (/report/{signed token}) — public, the token is the key
   REPORT: '/report',
   // The public demo: the workspace on a saved sample, with nothing live behind it
@@ -42,6 +43,9 @@ export const API_ROUTES = {
   SETTINGS_PROFILE: '/api/settings/profile',
   SETTINGS_MAILBOX: '/api/settings/mailbox',
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
+  // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
+  BILLING_CHECKOUT: '/api/billing/checkout',
+  BILLING_PORTAL: '/api/billing/portal',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret

@@ -44,6 +44,12 @@ describe('route access', () => {
     expect(isProtectedRoute('/api/inbound/other')).toBe(true);
   });
 
+  it('keeps buying, managing billing and the return from Checkout behind a sign-in', () => {
+    expect(isProtectedRoute(ROUTES.PLANS_DONE)).toBe(true);
+    expect(isProtectedRoute(API_ROUTES.BILLING_CHECKOUT)).toBe(true);
+    expect(isProtectedRoute(API_ROUTES.BILLING_PORTAL)).toBe(true);
+  });
+
   // Stripe has no session either: the route checks Stripe's signature itself
   it("lets Stripe's webhook through without a session, and nothing else under /api/stripe", () => {
     expect(isPublicRoute(INBOUND_ROUTES.STRIPE_WEBHOOK)).toBe(true);
