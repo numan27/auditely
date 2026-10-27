@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLANS, type LimitReached, type PlanId, type UsageSummary } from '@/app/_shared/lib/usage/plans';
-import { formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel } from '@/app/_shared/lib/usage/usageCopy';
+import { formatBillingDate, formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel } from '@/app/_shared/lib/usage/usageCopy';
 
 const reached = (over: Partial<LimitReached> = {}): LimitReached =>
   ({ kind: 'search', plan: 'pro', limit: 25, resetsAt: '2026-11-14T00:00:00.000Z', ...over });
@@ -20,6 +20,8 @@ describe('limitMessage', () => {
 
 describe('formatResetDate', () => {
   it('uses the UTC date, not the local one', () => expect(formatResetDate('2026-11-01T00:00:00.000Z')).toBe('Nov 1'));
+  it('formats a billing date with its year', () => expect(formatBillingDate('2027-03-14T09:30:00.000Z')).toBe('Mar 14, 2027'));
+  it('keeps a billing date in UTC', () => expect(formatBillingDate('2026-11-01T00:30:00.000Z')).toBe('Nov 1, 2026'));
 });
 
 describe('upgradeHint', () => {

@@ -1,12 +1,14 @@
 // app/(app)/settings/page.tsx
 
-// The account's profile and branding, its own mailbox and HubSpot, and its plan.
-// The profile is read as the user; only its fields go to the browser, and what is
-// connected goes as labels, never a password or token.
+// The account's profile and branding, its own mailbox and HubSpot, and its plan
+// with Manage billing. The profile is read as the user; only its fields go to the
+// browser, and what is connected goes as labels, never a password or token. The
+// subscription goes as its plan and dates, never a Stripe id.
 
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
+import { billingReady } from '@/app/_shared/lib/billing/stripe';
 import { SettingsView } from '@/app/_shared/components/auditely/settingsView/settingsView';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
@@ -45,7 +47,14 @@ export default async function SettingsPage() {
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16">
-        <SettingsView profile={profile} connections={connections} plan={connections.plan} email={account.email} />
+        <SettingsView
+          profile={profile}
+          connections={connections}
+          plan={connections.plan}
+          email={account.email}
+          subscription={account.subscription ?? null}
+          billingReady={billingReady()}
+        />
       </main>
     </div>
   );

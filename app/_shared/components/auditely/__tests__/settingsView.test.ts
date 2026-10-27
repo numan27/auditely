@@ -12,6 +12,7 @@ import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader
 import { SettingsView } from '@/app/_shared/components/auditely/settingsView/settingsView';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import type { Connections } from '@/app/_shared/lib/hooks/useConnections';
+import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
 import type { PlanId } from '@/app/_shared/lib/usage/plans';
 
 const BLANK: ProfileFields = {
@@ -24,7 +25,17 @@ const BLANK: ProfileFields = {
   booking_url: null,
 };
 
-const view = (over: { plan: PlanId; connections?: Partial<Connections>; profile?: ProfileFields | null }) => {
+const yearly = {
+  plan: 'pro', interval: 'year', status: 'active', anchor: '2026-03-14T09:30:00.000Z', periodEnd: '2027-03-14T09:30:00.000Z', endsAt: null,
+} as const;
+
+const view = (over: {
+  plan: PlanId;
+  connections?: Partial<Connections>;
+  profile?: ProfileFields | null;
+  subscription?: Subscription | null;
+  billingReady?: boolean;
+}) => {
   const connections: Connections = {
     plan: over.plan,
     branded: false,
@@ -39,6 +50,8 @@ const view = (over: { plan: PlanId; connections?: Partial<Connections>; profile?
       connections,
       plan: over.plan,
       email: 'sam@acme.studio',
+      subscription: over.subscription ?? null,
+      billingReady: over.billingReady ?? false,
     })
   );
 };
@@ -148,6 +161,27 @@ describe('SettingsView', () => {
     const none = view({ plan: 'pro' });
     expect(none).toContain('Private app access token');
     expect(none).toContain('Settings › Integrations › Private apps');
+  });
+});
+
+describe('SettingsView plan', () => {
+  it("shows a subscriber's renewal date and Manage billing", () => {
+    const html = view({ plan: 'pro', subscription: yearly, billingReady: true });
+    expect(html).toContain('It renews on Mar 14, 2027.');
+    expect(html).toContain('Manage billing');
+  });
+
+  it('shows a Free account only its plan and the plans link', () => {
+    const html = view({ plan: 'free', subscription: null, billingReady: true });
+    expect(html).toContain('You&#x27;re on the Free plan.');
+    expect(html).not.toContain('Manage billing');
+  });
+
+  it('offers no Manage billing while billing is off, and tells the owner there are no limits', () => {
+    expect(view({ plan: 'pro', subscription: yearly, billingReady: false })).not.toContain('Manage billing');
+    const owner = view({ plan: 'owner', subscription: null, billingReady: true });
+    expect(owner).toContain('Your account has no limits.');
+    expect(owner).not.toContain('Manage billing');
   });
 });
 

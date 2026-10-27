@@ -5,10 +5,13 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ToastProvider } from '@/app/_shared/components/ui/toast/toast';
+import { BillingButton } from '@/app/_shared/components/auditely/billing/billingButton';
 import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/connectedRow';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
 import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
+import { subscriptionNote } from '@/app/_shared/lib/billing/billingCopy';
+import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import type { Connections } from '@/app/_shared/lib/hooks/useConnections';
@@ -22,6 +25,10 @@ export interface SettingsViewProps {
   plan: PlanId;
   /** The account's sign-in email, which reports use when the contact email is blank */
   email: string;
+  /** The live Stripe subscription: its renewal date and Manage billing */
+  subscription: Subscription | null;
+  /** STRIPE_SECRET_KEY is set, so the billing portal can open */
+  billingReady: boolean;
 }
 
 const PLANS_LINK = 'font-medium text-[var(--color-primary-600)] hover:underline';
@@ -76,7 +83,8 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
 }
 
 /** The account's profile and branding, its mailbox and HubSpot, and its plan */
-export function SettingsView({ profile, connections, plan, email }: SettingsViewProps) {
+export function SettingsView({ profile, connections, plan, email, subscription, billingReady }: SettingsViewProps) {
+  const paying = plan !== 'owner' && subscription;
   return (
     <ToastProvider position="bottom-right">
       <h1 className="font-display text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">Settings</h1>
@@ -155,10 +163,19 @@ export function SettingsView({ profile, connections, plan, email }: SettingsView
         title="Plan"
         lead={
           <p>
-            {plan === 'owner' ? 'Your account has no limits.' : `You're on the ${PLANS[plan].name} plan.`} <SeePlans />
+            {plan === 'owner'
+              ? 'Your account has no limits.'
+              : subscription
+                ? subscriptionNote(subscription)
+                : `You're on the ${PLANS[plan].name} plan.`}{' '}
+            <SeePlans />
           </p>
         }
-      />
+      >
+        {paying && billingReady ? (
+          <BillingButton label="Manage billing" url={API_ROUTES.BILLING_PORTAL} body={{ returnTo: 'settings' }} variant="outline" />
+        ) : null}
+      </Section>
     </ToastProvider>
   );
 }
