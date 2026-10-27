@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { LeadResults } from '@/app/_shared/components/auditely/leadResults/leadResults';
 import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
 import { demoLinks } from '@/app/_shared/lib/demo/demoLinks';
@@ -27,7 +28,7 @@ const site = (name: string, extra: Partial<BusinessWithData> = {}): BusinessWith
   ...extra,
 });
 
-const modal = (sites: BusinessWithData[], extra: { removing?: boolean; error?: string | null } = {}) =>
+const modal = (sites: BusinessWithData[], extra: { removing?: boolean; error?: string | null; fromSearch?: boolean } = {}) =>
   renderToStaticMarkup(
     createElement(RemoveSitesModal, { sites, removing: false, error: null, onConfirm: () => {}, onClose: () => {}, ...extra })
   );
@@ -61,6 +62,13 @@ describe('RemoveSitesModal', () => {
     expect(modal([site('a.com', { crm_sent_at: '2026-10-02T00:00:00Z' })])).toContain('HubSpot');
   });
 
+  it("says a lead won't come back when its search is run again", () => {
+    const html = modal([site('washdent.com')], { fromSearch: true });
+    expect(html).toContain('Remove washdent.com?');
+    expect(html).toMatch(/running the same search again won(&#x27;|')t bring it back/);
+    expect(html).not.toContain('audit again');
+  });
+
   it('shows why removing failed', () => {
     expect(modal([site('a.com')], { error: 'Failed to remove the website' })).toMatch(/role="alert"[^>]*>Failed to remove the website/);
   });
@@ -79,8 +87,31 @@ describe('BusinessCard', () => {
     expect(card(() => {})).toMatch(/<button type="button"[^>]*aria-label="Remove washdent.com"/);
   });
 
-  it('has no remove button otherwise (leads)', () => {
+  it('has no remove button otherwise', () => {
     expect(card()).not.toContain('aria-label="Remove');
+  });
+});
+
+describe('LeadResults', () => {
+  const results = (onRemove?: (business: BusinessWithData) => void) =>
+    renderToStaticMarkup(
+      createElement(LeadResults, {
+        businesses: [site('a.com', { search_id: 'search' }), site('b.com', { search_id: 'search' })],
+        query: { niche: 'dentists', location: 'Austin, TX' },
+        discovery: { done: 2, total: 2 },
+        onUpdate: () => {},
+        onRemove,
+      })
+    );
+
+  it('offers to remove each lead', () => {
+    const html = results(() => {});
+    expect(html).toContain('aria-label="Remove a.com"');
+    expect(html).toContain('aria-label="Remove b.com"');
+  });
+
+  it('has no remove buttons in the public demo', () => {
+    expect(results()).not.toContain('aria-label="Remove');
   });
 });
 

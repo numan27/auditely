@@ -13,7 +13,7 @@ import { useLeadView } from '@/app/_shared/lib/hooks/useLeadView';
 import type { DiscoveryProgress } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import type { SearchQuery } from '@/app/_shared/lib/hooks/useLeadSearch';
 import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/auditely';
-import { needsAudit } from '@/app/_shared/lib/utils/bulkAudit';
+import { needsAudit, type BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import { exportFileName } from '@/app/_shared/lib/utils/leadExport';
 import { matchesFilters } from '@/app/_shared/lib/utils/leadView';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
@@ -25,13 +25,18 @@ interface LeadResultsProps {
   query: SearchQuery | null;
   discovery: DiscoveryProgress;
   onUpdate: (businessId: string, update: BusinessUpdate) => void;
+  /** The cross on a card; without it (the demo) cards can't be removed */
+  onRemove?: (business: BusinessWithData) => void;
 }
+
+// A card "Audit all" is still working on keeps its cross hidden until its turn is over
+const inBulkRun = (state: BulkState | undefined) => !!state && state.stage !== 'done' && state.stage !== 'failed';
 
 /**
  * One search's results: heading, sticky filter/sort/export bar and the cards,
  * revealed 20 at a time as you scroll. Mount it with a new key per result set.
  */
-export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResultsProps) {
+export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }: LeadResultsProps) {
   const discoveryDone = discovery.done >= discovery.total;
   const bulk = useBulkAudit(onUpdate);
   // Re-arranged once discovery has found the emails, and after each "Audit all" run
@@ -127,6 +132,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate }: LeadResu
               initialReport={business.ai_report}
               onUpdate={onUpdate}
               bulk={bulk.states[business.id]}
+              onRemove={onRemove && !inBulkRun(bulk.states[business.id]) ? () => onRemove(business) : undefined}
             />
           ))}
         </div>

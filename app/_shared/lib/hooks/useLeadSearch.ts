@@ -8,6 +8,7 @@ import { startingLeads } from '@/app/_shared/lib/demo/demoSamples';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
+import type { UrlAuditRemoval } from '@/app/_shared/lib/hooks/useUrlAudits';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
 import { withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
@@ -33,6 +34,7 @@ export function useLeadSearch() {
   const [query, setQuery] = useState<SearchQuery | null>(demo?.data.query ?? null);
   // Changes whenever a new result set loads: restarts discovery, resets the list view
   const [runKey, setRunKey] = useState(0);
+  const [removal, setRemoval] = useState<UrlAuditRemoval | null>(null);
 
   const discovery = useEmailDiscovery(businesses, mergeContacts, runKey, !demo);
 
@@ -100,6 +102,39 @@ export function useLeadSearch() {
     openSaved(searchId);
   }, [demo, openSaved]);
 
+  /** The cross on a card: opens the "remove?" dialog for this lead. The demo's samples stay put. */
+  const askRemove = useCallback(
+    (business: BusinessWithData) => {
+      if (!demo) setRemoval({ sites: [business], busy: false, error: null });
+    },
+    [demo]
+  );
+
+  const cancelRemove = useCallback(() => setRemoval(null), []);
+
+  /** The dialog's yes: deletes the lead from its search, with its audit, and takes it off the list */
+  const confirmRemove = useCallback(async () => {
+    if (!removal || removal.busy) return;
+    setRemoval({ ...removal, busy: true, error: null });
+    try {
+      const res = await fetch(API_ROUTES.RESULTS, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search_id: removal.sites[0].search_id, ids: removal.sites.map((site) => site.id) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRemoval({ ...removal, busy: false, error: data.error ?? "Couldn't remove it. Try again." });
+        return;
+      }
+      const removed = new Set<string>(data.removed ?? []);
+      setBusinesses((prev) => prev.filter((b) => !removed.has(b.id)));
+      setRemoval(null);
+    } catch {
+      setRemoval({ ...removal, busy: false, error: "Couldn't reach Auditely. Check your connection and try again." });
+    }
+  }, [removal, setBusinesses]);
+
   return {
     businesses,
     isSearching,
@@ -111,5 +146,10 @@ export function useLeadSearch() {
     search,
     openSaved,
     updateBusiness,
+    canRemove: !demo,
+    removal,
+    askRemove,
+    cancelRemove,
+    confirmRemove,
   };
 }

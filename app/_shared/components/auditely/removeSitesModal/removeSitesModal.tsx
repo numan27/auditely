@@ -16,10 +16,12 @@ interface RemoveSitesModalProps {
   error: string | null;
   onConfirm: () => void;
   onClose: () => void;
+  /** Leads in a saved search: running that search again reuses it, so they don't come back */
+  fromSearch?: boolean;
 }
 
-/** Asks before websites leave the "Audit a website" list: their audits go with them, for good */
-export function RemoveSitesModal({ sites, removing, error, onConfirm, onClose }: RemoveSitesModalProps) {
+/** Asks before websites leave a list: their audits go with them, for good */
+export function RemoveSitesModal({ sites, removing, error, onConfirm, onClose, fromSearch }: RemoveSitesModalProps) {
   const one = sites.length === 1;
   const sentToCrm = sites.some((site) => site.crm_sent_at);
 
@@ -44,7 +46,9 @@ export function RemoveSitesModal({ sites, removing, error, onConfirm, onClose }:
             {one
               ? 'Its audit, summary and outreach email are deleted with it.'
               : 'Their audits, summaries and outreach emails are deleted with them.'}{' '}
-            This can&apos;t be undone: to get them back you would have to audit again.
+            {fromSearch
+              ? `This can't be undone: running the same search again won't bring ${one ? 'it' : 'them'} back.`
+              : "This can't be undone: to get them back you would have to audit again."}
           </p>
           {sentToCrm && (
             <p>

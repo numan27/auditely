@@ -10,6 +10,7 @@ import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm
 import { LeadResults } from '@/app/_shared/components/auditely/leadResults/leadResults';
 import { ModeTabs, panelId, tabId, type WorkspaceMode } from '@/app/_shared/components/auditely/modeTabs/modeTabs';
 import { RecentSearches } from '@/app/_shared/components/auditely/recentSearches/recentSearches';
+import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
 import { AuditRequestsPanel } from '@/app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel';
@@ -79,6 +80,18 @@ export function Workspace() {
               query={leads.query}
               discovery={leads.discovery}
               onUpdate={leads.updateBusiness}
+              onRemove={leads.canRemove ? leads.askRemove : undefined}
+            />
+          )}
+
+          {leads.removal && (
+            <RemoveSitesModal
+              sites={leads.removal.sites}
+              removing={leads.removal.busy}
+              error={leads.removal.error}
+              onConfirm={leads.confirmRemove}
+              onClose={leads.cancelRemove}
+              fromSearch
             />
           )}
         </div>
