@@ -237,3 +237,63 @@ describe('sendEmail when sending is not set up', () => {
     expect(resend.send).not.toHaveBeenCalled();
   });
 });
+
+describe('sendEmail through an account’s own mailbox', () => {
+  const SAM = {
+    settings: { host: 'smtp.gmail.com', port: 465 as const, user: 'sam@acme.studio', pass: 'app-pass', fromEmail: 'sam@acme.studio' },
+    fromName: 'Sam',
+  };
+  const GMAIL = async () => [{ address: '142.250.1.108', family: 4 }];
+
+  it('sends a user’s email from their mailbox, in their name, without the owner’s BCC', async () => {
+    useMailbox();
+    vi.stubEnv('EMAIL_BCC', 'archive@devartventures.com');
+    vi.stubEnv('EMAIL_REPLY_TO', 'contact@devartventures.com');
+    expect(await sendEmail(email, SAM, GMAIL)).toEqual({ ok: true });
+    expect(smtp.createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: '142.250.1.108',
+        port: 465,
+        secure: true,
+        tls: { servername: 'smtp.gmail.com' },
+        auth: { user: 'sam@acme.studio', pass: 'app-pass' },
+      })
+    );
+    const message = smtp.sendMail.mock.calls[0][0];
+    expect(message).toMatchObject({ ...email, from: { name: 'Sam', address: 'sam@acme.studio' } });
+    expect(message).not.toHaveProperty('bcc');
+    expect(message).not.toHaveProperty('replyTo');
+    expect(resend.send).not.toHaveBeenCalled();
+  });
+
+  it('needs none of the owner’s sending setup', async () => {
+    vi.stubEnv('FROM_EMAIL', '');
+    vi.stubEnv('RESEND_API_KEY', '');
+    expect(await sendEmail(email, SAM, GMAIL)).toEqual({ ok: true });
+  });
+
+  it('refuses a mailbox server that points somewhere private, without connecting', async () => {
+    const result = await sendEmail(email, { ...SAM, settings: { ...SAM.settings, host: 'smtp.evil.com' } }, async () => [{ address: '10.0.0.1', family: 4 }]);
+    expect(result).toEqual({ ok: false, status: 400, error: "smtp.evil.com doesn't point to a public mail server." });
+    expect(smtp.createTransport).not.toHaveBeenCalled();
+  });
+
+  it('says the login was refused, and where to fix it', async () => {
+    smtp.sendMail.mockRejectedValue(smtpError({ code: 'EAUTH', response: '535 5.7.8 Username and Password not accepted' }));
+    expect(await sendEmail(email, SAM, GMAIL)).toEqual({
+      ok: false,
+      status: 502,
+      error: 'Your mailbox refused the login (535 5.7.8 Username and Password not accepted). Check the email address and app password in Settings.',
+    });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('app-pass');
+  });
+
+  it('passes on the server’s reason for refusing the lead', async () => {
+    smtp.sendMail.mockResolvedValue({
+      accepted: [],
+      rejected: [email.to],
+      rejectedErrors: [{ response: '550 5.1.1 No such user' }],
+    });
+    expect(await sendEmail(email, SAM, GMAIL)).toEqual({ ok: false, status: 502, error: "The email wasn't sent: 550 5.1.1 No such user" });
+  });
+});

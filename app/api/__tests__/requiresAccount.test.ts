@@ -32,6 +32,7 @@ const ROUTES = {
   usage: () => import('@/app/api/usage/route'),
   autocomplete: () => import('@/app/api/autocomplete/route'),
   'settings/profile': () => import('@/app/api/settings/profile/route'),
+  'settings/mailbox': () => import('@/app/api/settings/mailbox/route'),
 };
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 

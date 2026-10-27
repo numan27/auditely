@@ -19,6 +19,7 @@ const CLIENT = 'app/_shared/lib/supabase/client';
 const ALLOWED = [
   'app/_shared/lib/audit/pageSpeedStore.ts',
   'app/_shared/lib/brand/brand.ts',
+  'app/_shared/lib/secrets/userSecrets.ts',
   'app/_shared/lib/supabase/server.ts',
   'app/_shared/lib/usage/usage.ts',
   'app/api/inbound/audit-request/route.ts',

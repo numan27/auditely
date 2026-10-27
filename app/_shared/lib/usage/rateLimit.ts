@@ -9,6 +9,10 @@ export const AUTOCOMPLETE_PER_MINUTE = 30;
 export const AUTOCOMPLETE_PER_DAY = 500;
 /** "Write again" on a summary: a model call each time, while the audit was counted once */
 export const REWRITES_PER_HOUR = 10;
+/** Connecting a mailbox or HubSpot: each try logs in somewhere else on the account's behalf */
+export const CONNECTS_PER_HOUR = 10;
+/** Outreach from an account's own mailbox: enough for a working session, not for a blast */
+export const SENDS_PER_HOUR = 50;
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -50,3 +54,12 @@ const rewritesPerHour = windowLimit({ limit: REWRITES_PER_HOUR, windowMs: HOUR_M
 
 /** Whether this account may have a summary and email written again now */
 export const rewriteAllowed = (accountId: string, now: number = Date.now()): boolean => rewritesPerHour(accountId, now);
+
+const connectsPerHour = windowLimit({ limit: CONNECTS_PER_HOUR, windowMs: HOUR_MS });
+const sendsPerHour = windowLimit({ limit: SENDS_PER_HOUR, windowMs: HOUR_MS });
+
+/** Whether this account may try connecting a mailbox or HubSpot now */
+export const connectAllowed = (accountId: string, now: number = Date.now()): boolean => connectsPerHour(accountId, now);
+
+/** Whether this account may send another outreach email now */
+export const sendAllowed = (accountId: string, now: number = Date.now()): boolean => sendsPerHour(accountId, now);

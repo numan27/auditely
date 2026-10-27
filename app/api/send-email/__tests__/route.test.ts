@@ -6,6 +6,8 @@ import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { BRAND_UNAVAILABLE, BrandUnavailable, brandFor, emailLogo } from '@/app/_shared/lib/brand/brand';
 import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
+import { mailboxFor } from '@/app/_shared/lib/email/senders';
+import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
 
 // Fake Supabase: the business (with its audit and report) and every update
 const db = vi.hoisted(() => {
@@ -43,10 +45,12 @@ vi.mock('@/app/_shared/lib/brand/brand', async (importOriginal) => ({
 vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), sendEmail: vi.fn() }));
 // The address check (Verifalia) has its own tests
 vi.mock('@/app/_shared/lib/email/leadEmailCheck', () => ({ checkLeadEmail: vi.fn() }));
+// Which mailbox an account sends from (senders.test.ts reads saved ones for real)
+vi.mock('@/app/_shared/lib/email/senders', () => ({ mailboxFor: vi.fn() }));
 
 // The signed-in user's client: the route must hand this one to the libraries
 const userDb = { from: db.from };
-// Signed in, but not as the owner; the client records any query it is asked for
+// Signed in on the Free plan; the client records any query it is asked for
 function signInAsMember() {
   const from = vi.fn(db.from);
   session.current = { db: { from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
@@ -94,9 +98,11 @@ beforeEach(() => {
   vi.mocked(brandFor).mockReset().mockResolvedValue(ownerBrand);
   vi.mocked(emailLogo).mockReset().mockResolvedValue({ content: LOGO, contentType: 'image/png', filename: 'brand-logo.png' });
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
+  vi.mocked(mailboxFor).mockReset().mockResolvedValue({ ok: true, mailbox: 'env' });
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('POST /api/send-email', () => {
@@ -108,16 +114,20 @@ describe('POST /api/send-email', () => {
   it("sends the edited email to the business with the PDF attached, and records when", async () => {
     const { status, json } = await post(draft);
     expect(status).toBe(200);
-    expect(sendEmail).toHaveBeenCalledWith({
-      to: 'office@smiledental.com',
-      subject: 'Quick note about your site',
-      text: expect.stringMatching(/^Hi there,\nYour site is slow\.\n\n---/),
-      html: expect.stringContaining('Hi there,<br>Your site is slow.'),
-      attachments: [
-        { filename: 'audit-smile-dental.pdf', content: PDF },
-        { filename: 'brand-logo.png', content: LOGO, cid: 'brand-logo' },
-      ],
-    });
+    // No mailbox of its own: the owner's email goes through the Vercel one
+    expect(sendEmail).toHaveBeenCalledWith(
+      {
+        to: 'office@smiledental.com',
+        subject: 'Quick note about your site',
+        text: expect.stringMatching(/^Hi there,\nYour site is slow\.\n\n---/),
+        html: expect.stringContaining('Hi there,<br>Your site is slow.'),
+        attachments: [
+          { filename: 'audit-smile-dental.pdf', content: PDF },
+          { filename: 'brand-logo.png', content: LOGO, cid: 'brand-logo' },
+        ],
+      },
+      undefined
+    );
     const { html } = vi.mocked(sendEmail).mock.calls[0][0];
     expect(html).toContain('<img src="cid:brand-logo"');
     expect(html).toContain('DevArtVentures');
@@ -196,7 +206,7 @@ describe('POST /api/send-email', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("says so when email sending isn't set up, before doing any work", async () => {
+  it("says so when the owner's Vercel mailbox isn't set up, before drawing the PDF", async () => {
     vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
     expect(await post(draft)).toEqual({ status: 503, json: { error: "Email sending isn't set up." } });
     expect(renderAuditPdf).not.toHaveBeenCalled();
@@ -281,13 +291,97 @@ describe('POST /api/send-email', () => {
   });
 });
 
-describe('/api/send-email for an account that is not the owner', () => {
-  it('answers 403, before reading the lead or sending anything', async () => {
-    const from = signInAsMember();
-    expect(await post(draft)).toEqual({ status: 403, json: { error: "This isn't available on your account yet." } });
-    expect((await post({ ...draft, preview: true })).status).toBe(403);
-    expect(from).not.toHaveBeenCalled();
+describe('/api/send-email for other accounts', () => {
+  const SAVED = { host: 'smtp.gmail.com', port: 465 as const, user: 'sam@acme.studio', pass: 'app-pass', fromEmail: 'sam@acme.studio' };
+  const samProfile = {
+    email: 'tester@example.com', display_name: 'Sam Lee', company: 'Acme Studio', website: 'https://acme.studio', logo_data_url: null,
+    contact_email: 'hi@acme.studio', contact_phone: null, booking_url: null,
+  };
+  const samBrand = resolveBrand({ profile: samProfile, isOwner: false, plan: 'pro' });
+  const TESTER = { id: 'user-2', email: 'tester@example.com', isOwner: false };
+  // A tester on Pro (PLAN_OVERRIDES)
+  const signInPaid = (id = 'user-2') => {
+    vi.stubEnv('PLAN_OVERRIDES', 'tester@example.com:pro');
+    session.current = { db: userDb, account: { ...TESTER, id } };
+  };
+
+  beforeEach(() => {
+    vi.mocked(brandFor).mockResolvedValue(samBrand);
+    vi.mocked(mailboxFor).mockResolvedValue({ ok: true, mailbox: SAVED });
+  });
+
+  it('sends a paid account’s email through its own mailbox, in its brand', async () => {
+    signInPaid();
+    expect((await post(draft)).status).toBe(200);
+    expect(brandFor).toHaveBeenCalledWith('user-2');
+    expect(mailboxFor).toHaveBeenCalledWith(TESTER);
+    const [sent, mailbox] = vi.mocked(sendEmail).mock.calls[0];
+    expect(mailbox).toEqual({ settings: SAVED, fromName: 'Sam Lee' });
+    expect(sent.html).toContain('>Acme Studio</a>');
+    expect(sent.html?.toLowerCase()).not.toContain('devart');
+    expect(sent.text.toLowerCase()).not.toContain('devart');
+    // The Vercel mailbox is the owner's, so its setup doesn't matter here
+    expect(emailSetupProblem).not.toHaveBeenCalled();
+    expect(db.state.updates).toEqual([{ emailed_at: expect.any(String) }]);
+  });
+
+  it('signs as the company when the account gave no name', async () => {
+    signInPaid();
+    vi.mocked(brandFor).mockResolvedValue(resolveBrand({ profile: { ...samProfile, display_name: null }, isOwner: false, plan: 'pro' }));
+    await post(draft);
+    expect(vi.mocked(sendEmail).mock.calls[0][1]).toEqual({ settings: SAVED, fromName: 'Acme Studio' });
+  });
+
+  it('asks a paid account without a mailbox to connect one', async () => {
+    signInPaid();
+    vi.mocked(mailboxFor).mockResolvedValue({ ok: false, status: 400, error: 'Connect your mailbox in Settings to send from Auditely.' });
+    expect(await post(draft)).toEqual({ status: 400, json: { error: 'Connect your mailbox in Settings to send from Auditely.' } });
+    expect(renderAuditPdf).not.toHaveBeenCalled();
     expect(checkLeadEmail).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('asks a paid account without a name to add one', async () => {
+    signInPaid();
+    vi.mocked(brandFor).mockResolvedValue(resolveBrand({ profile: null, isOwner: false, plan: 'pro' }));
+    const error = "Add your name or company in Settings, so the email says who it's from.";
+    expect(await post(draft)).toEqual({ status: 400, json: { error } });
+    expect(await post({ ...draft, preview: true })).toEqual({ status: 400, json: { error } });
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('keeps sending from Free accounts', async () => {
+    const from = signInAsMember();
+    const refused = { status: 403, json: { error: featureMessage('mailbox') } };
+    expect(await post(draft)).toEqual(refused);
+    expect(await post({ ...draft, preview: true })).toEqual(refused);
+    expect(from).not.toHaveBeenCalled();
+    expect(brandFor).not.toHaveBeenCalled();
+    expect(checkLeadEmail).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('stops a paid account after 50 emails in an hour, counting sends, not previews', async () => {
+    signInPaid('user-50');
+    await post({ ...draft, preview: true });
+    for (let i = 0; i < 50; i++) expect((await post(draft)).status).toBe(200);
+    expect(await post(draft)).toEqual({ status: 429, json: { error: "You've sent 50 emails this hour. Try again later." } });
+    expect(sendEmail).toHaveBeenCalledTimes(50);
+  });
+
+  it('still sends the owner’s email through the Vercel mailbox when nothing is saved', async () => {
+    vi.mocked(brandFor).mockResolvedValue(ownerBrand);
+    vi.mocked(mailboxFor).mockResolvedValue({ ok: true, mailbox: 'env' });
+    expect((await post(draft)).status).toBe(200);
+    expect(mailboxFor).toHaveBeenCalledWith({ id: 'owner-1', email: 'owner@example.com', isOwner: true });
+    expect(emailSetupProblem).toHaveBeenCalled();
+    expect(vi.mocked(sendEmail).mock.calls[0][1]).toBeUndefined();
+  });
+
+  it('sends the owner’s email from a saved mailbox, without needing the Vercel one', async () => {
+    vi.mocked(brandFor).mockResolvedValue(ownerBrand);
+    vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
+    expect((await post(draft)).status).toBe(200);
+    expect(vi.mocked(sendEmail).mock.calls[0][1]).toEqual({ settings: SAVED, fromName: ownerBrand.contact!.name ?? 'DevArtVentures' });
   });
 });
