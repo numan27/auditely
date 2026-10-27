@@ -48,11 +48,14 @@ export const API_ROUTES = {
 export const INBOUND_ROUTES = {
   // devartventures.com sends each free audit request here (AUDITELY_INBOUND_SECRET)
   AUDIT_REQUEST: '/api/inbound/audit-request',
+  // Stripe sends each subscription change here; its signature (STRIPE_WEBHOOK_SECRET) is the key
+  STRIPE_WEBHOOK: '/api/stripe/webhook',
 } as const;
 
 // Everything needs a signed-in account except these; the sign-in routes run before
 // there is a session, /report/{token} is checked by its signature, /demo shows only
-// the sample checked into the repo, and the inbound route checks its secret
+// the sample checked into the repo, the inbound route checks its secret, and Stripe's
+// webhook checks Stripe's signature
 export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   API_ROUTES.AUTH,
@@ -61,6 +64,7 @@ export const PUBLIC_ROUTES = [
   ROUTES.REPORT,
   ROUTES.DEMO,
   INBOUND_ROUTES.AUDIT_REQUEST,
+  INBOUND_ROUTES.STRIPE_WEBHOOK,
 ] as const;
 
 // Pages a logged-in user should be bounced away from (not the callback: a second
