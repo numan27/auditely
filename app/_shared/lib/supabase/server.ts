@@ -11,6 +11,9 @@ import { createServerClient } from '@supabase/ssr';
 import { serviceDb, type Db } from '@/app/_shared/lib/supabase/client';
 import { canSignIn, isOwnerEmail, type Account } from '@/app/_shared/lib/auth/account';
 
+const ACCOUNTS_MIGRATION = 'docs/migrations/2026-10-28-accounts.sql';
+let loggedNoOwner = false;
+
 export interface Session {
   db: Db;
   account: Account;
@@ -48,7 +51,15 @@ export async function getSession(): Promise<Session | null> {
 export async function ownerUserId(): Promise<string | null> {
   const email = (process.env.OWNER_EMAIL ?? '').trim().toLowerCase();
   if (!email) return null;
-  const { data } = await serviceDb.from('profiles').select('id').eq('email', email).maybeSingle();
+  const { data, error } = await serviceDb.from('profiles').select('id').eq('email', email).maybeSingle();
+  if (error) {
+    console.error('[auth] Failed to look up the owner account:', `run ${ACCOUNTS_MIGRATION} in Supabase (${error.message})`);
+    return null;
+  }
+  if (!data && !loggedNoOwner) {
+    loggedNoOwner = true;
+    console.error('[auth] OWNER_EMAIL has no Auditely account yet');
+  }
   return (data?.id as string | undefined) ?? null;
 }
 

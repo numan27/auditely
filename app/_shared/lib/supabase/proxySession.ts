@@ -7,6 +7,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
+const CACHE_HEADERS = ['cache-control', 'expires', 'pragma'];
+
 /** The email in the request's session, and the response that carries its refreshed cookies */
 export async function readProxySession(request: NextRequest): Promise<{ response: NextResponse; email: string | null }> {
   let response = NextResponse.next({ request });
@@ -26,8 +28,13 @@ export async function readProxySession(request: NextRequest): Promise<{ response
   return { response, email: typeof email === 'string' && email ? email : null };
 }
 
-/** Copies the refreshed session cookies onto a redirect or JSON response */
+/** Copies the refreshed session cookies, and the no-store headers that came with them, onto a redirect or JSON response */
 export function withSessionCookies(target: NextResponse, from: NextResponse): NextResponse {
   from.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
+  // Responses that set auth cookies must not be cached, or one user's session could reach another
+  CACHE_HEADERS.forEach((name) => {
+    const value = from.headers.get(name);
+    if (value !== null) target.headers.set(name, value);
+  });
   return target;
 }

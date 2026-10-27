@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const fake = vi.hoisted(() => ({
   claims: null as { sub?: string; email?: string } | null,
   profiles: null as { id: string } | null,
+  profilesError: null as { message: string } | null,
   profileFilter: null as [string, string] | null,
 }));
 
@@ -20,7 +21,7 @@ vi.mock('@/app/_shared/lib/supabase/client', () => ({
       select: () => ({
         eq: (column: string, value: string) => {
           fake.profileFilter = [column, value];
-          return { maybeSingle: async () => ({ data: fake.profiles, error: null }) };
+          return { maybeSingle: async () => ({ data: fake.profiles, error: fake.profilesError }) };
         },
       }),
     }),
@@ -37,10 +38,12 @@ beforeEach(() => {
   vi.stubEnv('SIGNUPS_OPEN', '');
   fake.claims = null;
   fake.profiles = null;
+  fake.profilesError = null;
   fake.profileFilter = null;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe('getSession', () => {
@@ -69,7 +72,16 @@ describe('ownerUserId', () => {
     expect(fake.profileFilter).toEqual(['email', 'owner@example.com']);
   });
 
+  it('logs a failed lookup with the migration to run, and returns null', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fake.profilesError = { message: 'relation "profiles" does not exist' };
+    expect(await ownerUserId()).toBeNull();
+    expect(error).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('2026-10-28-accounts.sql'));
+    error.mockRestore();
+  });
+
   it('is null when there is no such account or no OWNER_EMAIL', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(await ownerUserId()).toBeNull();
     vi.stubEnv('OWNER_EMAIL', '');
     expect(await ownerUserId()).toBeNull();
