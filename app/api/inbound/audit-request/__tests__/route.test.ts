@@ -21,6 +21,7 @@ const db = vi.hoisted(() => {
     const chain = {
       select: () => chain,
       insert: (value: unknown) => ((op = 'insert'), (payload = value), chain),
+      upsert: (value: unknown) => ((op = 'upsert'), (payload = value), chain),
       eq: (column: string, value: unknown) => (filters.push(['eq', column, value]), chain),
       order: () => chain,
       limit: () => chain,
@@ -50,6 +51,11 @@ const { POST } = await import('@/app/api/inbound/audit-request/route');
 const SECRET = 's'.repeat(64);
 const ok = (data: unknown): Result => ({ data, error: null });
 const inserts = (table: string) => db.state.calls.filter((c) => c.table === table && c.op === 'insert');
+// The bell's notifications, in the order they were stored
+const notified = () =>
+  db.state.calls
+    .filter((c) => c.table === 'notifications' && c.op === 'upsert')
+    .flatMap((c) => c.payload as { kind: string; title: string; business_id: string }[]);
 const request = (over: Record<string, unknown> = {}) => ({
   id: 'req-1',
   name: 'Sarah Jones',
@@ -137,6 +143,40 @@ describe('POST /api/inbound/audit-request', () => {
     await background.tasks[0]();
     expect(audits.auditBusiness).toHaveBeenCalledWith('b1');
     expect(audits.generateAiReport).toHaveBeenCalledWith('a1');
+    // The bell hears of the request, then of its finished report
+    expect(notified()).toEqual([
+      expect.objectContaining({ kind: 'request_new', title: 'New audit request from Sarah Jones', business_id: 'b1' }),
+      expect.objectContaining({ kind: 'request_audited', title: 'smiledental.com is audited', business_id: 'b1' }),
+    ]);
+  });
+
+  it('tells the bell when the summary fails after the audit', async () => {
+    db.state.responses = {
+      'searches.select': [ok([{ id: 'requests' }])],
+      'businesses.select': [ok(null)],
+      'businesses.insert': [ok({ id: 'b1' })],
+    };
+    audits.auditBusiness.mockResolvedValue({ ok: true, audit: { id: 'a1' }, email: null });
+    audits.generateAiReport.mockResolvedValue({ ok: false, status: 502, error: 'AI unavailable' });
+    await send(request());
+    await background.tasks[0]();
+    expect(notified().map((n) => n.kind)).toEqual(['request_new', 'request_audit_failed']);
+    expect(notified()[1].title).toBe("Couldn't write the summary for smiledental.com");
+  });
+
+  it('still audits the request when the bell is not set up', async () => {
+    db.state.responses = {
+      'searches.select': [ok([{ id: 'requests' }])],
+      'businesses.select': [ok(null)],
+      'businesses.insert': [ok({ id: 'b1' })],
+      'notifications.upsert': [{ data: null, error: { message: "Could not find the table 'public.notifications'", code: 'PGRST205' } }],
+    };
+    audits.auditBusiness.mockResolvedValue({ ok: true, audit: { id: 'a1' }, email: null });
+    audits.generateAiReport.mockResolvedValue({ ok: true, ai_report: { id: 'r1' } });
+    await send(request());
+    await background.tasks[0]();
+    expect(audits.generateAiReport).toHaveBeenCalledWith('a1');
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('2026-10-27-notifications.sql'));
   });
 
   it('skips the summary when the audit fails: the card offers to run it', async () => {
@@ -150,6 +190,8 @@ describe('POST /api/inbound/audit-request', () => {
     await background.tasks[0]();
     expect(audits.generateAiReport).not.toHaveBeenCalled();
     expect(inserts('searches')).toHaveLength(0);
+    expect(notified().map((n) => n.kind)).toEqual(['request_new', 'request_audit_failed']);
+    expect(notified()[1].title).toBe("Couldn't audit smiledental.com");
   });
 
   it('stores a request sent twice once, and audits it once', async () => {
@@ -162,6 +204,7 @@ describe('POST /api/inbound/audit-request', () => {
     expect(json).toEqual({ id: 'b1', existing: true });
     expect(inserts('businesses')).toHaveLength(0);
     expect(background.tasks).toHaveLength(0);
+    expect(notified()).toEqual([]);
     const lookup = db.state.calls.find((c) => c.table === 'businesses' && c.op === 'select');
     expect(lookup?.filters).toContainEqual(['eq', 'request->>source_id', 'req-1']);
   });

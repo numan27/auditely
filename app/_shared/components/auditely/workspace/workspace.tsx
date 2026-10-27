@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { DemoBanner } from '@/app/_shared/components/auditely/demoBanner/demoBanner';
 import { DemoVideoThumb } from '@/app/_shared/components/auditely/demoVideoThumb/demoVideoThumb';
@@ -14,7 +15,11 @@ import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesM
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
 import { AuditRequestsPanel } from '@/app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel';
+import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useLeadSearch } from '@/app/_shared/lib/hooks/useLeadSearch';
+import { useWorkspaceNavigate } from '@/app/_shared/lib/hooks/useWorkspaceNavigate';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { parseWorkspacePath, requestPath, searchPath, workspacePath, type WorkspaceView } from '@/app/_shared/lib/utils/workspacePath';
 
 const INTRO: Record<WorkspaceMode, string> = {
   leads: 'Search local businesses, audit their websites and get a ready-to-send outreach email for each one.',
@@ -22,19 +27,75 @@ const INTRO: Record<WorkspaceMode, string> = {
   requests: 'Free audits requested on devartventures.com, audited on arrival. Reply to each within one business day.',
 };
 
-/** The home page: "Find leads", "Audit a website" and "Requests". The public demo renders it inside DemoProvider. */
+// Where a tab opens the first time it's clicked
+const TAB_HOME: Record<WorkspaceMode, WorkspaceView> = {
+  leads: { mode: 'leads', searchId: null },
+  audit: { mode: 'audit' },
+  requests: { mode: 'requests', requestId: null },
+};
+
+/**
+ * The home page: "Find leads", "Audit a website" and "Requests". The address
+ * says which tab is open, and which saved search or request it shows
+ * (workspacePath.ts), so a refresh or a shared link opens the same view.
+ * The public demo renders it inside DemoProvider, at one address: its tabs
+ * are kept here instead.
+ */
 export function Workspace() {
-  const [mode, setMode] = useState<WorkspaceMode>('leads');
+  const demo = useDemo();
+  const pathname = usePathname();
+  const navigate = useWorkspaceNavigate();
+  const [demoMode, setDemoMode] = useState<WorkspaceMode>('leads');
+  const view: WorkspaceView = demo ? TAB_HOME[demoMode] : (parseWorkspacePath(pathname) ?? TAB_HOME.leads);
+  const { mode } = view;
+
   // The audit and requests tabs load their lists the first time they're opened, then stay mounted
-  const [auditOpened, setAuditOpened] = useState(false);
-  const [requestsOpened, setRequestsOpened] = useState(false);
-  const leads = useLeadSearch();
+  const [opened, setOpened] = useState<ReadonlySet<WorkspaceMode>>(() => new Set([mode]));
+  if (!opened.has(mode)) setOpened(new Set(opened).add(mode));
+
+  // Each tab reopens where it was left: the search on screen, the request open
+  const lastPath = useRef<Partial<Record<WorkspaceMode, string>>>({});
+  useEffect(() => {
+    if (!demo) lastPath.current[mode] = pathname;
+  }, [demo, mode, pathname]);
+
+  // The search the leads show, or are opening: a search just run is already on screen when the address catches up
+  const shownSearch = useRef<string | null>(null);
+  const onSearched = useCallback(
+    (searchId: string) => {
+      shownSearch.current = searchId;
+      navigate(searchPath(searchId));
+    },
+    [navigate]
+  );
+  const leads = useLeadSearch({ onSearched });
+  const { openSaved, reset } = leads;
+
+  // The address names a search (a refresh, Saved searches, back and forward): open it, or go back to the form
+  const wantedSearch = demo || view.mode !== 'leads' ? undefined : view.searchId;
+  useEffect(() => {
+    if (wantedSearch === undefined || wantedSearch === shownSearch.current) return;
+    shownSearch.current = wantedSearch;
+    if (wantedSearch) void openSaved(wantedSearch);
+    else reset();
+  }, [wantedSearch, openSaved, reset]);
+
+  // Old links to a saved search (/?load={id}) open it at its own address
+  useEffect(() => {
+    const load = new URLSearchParams(window.location.search).get('load');
+    if (!demo && load && pathname === ROUTES.HOME) navigate(searchPath(load), { replace: true });
+  }, [demo, pathname, navigate]);
 
   const changeMode = (next: WorkspaceMode) => {
-    setMode(next);
-    if (next === 'audit') setAuditOpened(true);
-    if (next === 'requests') setRequestsOpened(true);
+    if (demo) return setDemoMode(next);
+    if (next !== mode) navigate(lastPath.current[next] ?? workspacePath(TAB_HOME[next]));
   };
+
+  // Opening a request's card names it in the address, without a new history entry for each card
+  const openRequest = useCallback(
+    (requestId: string | null) => navigate(requestId ? requestPath(requestId) : ROUTES.REQUESTS, { replace: true }),
+    [navigate]
+  );
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
@@ -65,7 +126,7 @@ export function Workspace() {
           {leads.isSearching ? (
             <ResultsSkeleton label="Finding businesses" />
           ) : !leads.hasSearched ? (
-            !leads.error && <RecentSearches onOpen={leads.openSaved} />
+            !leads.error && <RecentSearches onOpen={(searchId) => navigate(searchPath(searchId))} />
           ) : leads.businesses.length === 0 ? (
             <div className="mt-10 rounded-2xl border border-dashed border-[var(--color-border-hover)] px-6 py-12 text-center">
               <p className="font-medium text-[var(--color-text-primary)]">No businesses found</p>
@@ -97,11 +158,13 @@ export function Workspace() {
         </div>
 
         <div id={panelId('audit')} role="tabpanel" aria-labelledby={tabId('audit')} hidden={mode !== 'audit'} className="mt-3">
-          {auditOpened && <UrlAuditPanel />}
+          {opened.has('audit') && <UrlAuditPanel />}
         </div>
 
         <div id={panelId('requests')} role="tabpanel" aria-labelledby={tabId('requests')} hidden={mode !== 'requests'} className="mt-3">
-          {requestsOpened && <AuditRequestsPanel />}
+          {opened.has('requests') && (
+            <AuditRequestsPanel openId={view.mode === 'requests' ? view.requestId : null} onOpenChange={openRequest} />
+          )}
         </div>
       </main>
     </div>

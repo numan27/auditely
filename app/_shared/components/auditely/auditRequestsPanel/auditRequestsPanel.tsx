@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
@@ -9,12 +10,49 @@ import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesM
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { useAuditRequests } from '@/app/_shared/lib/hooks/useAuditRequests';
 
+interface AuditRequestsPanelProps {
+  /** The request the address names (/requests/{id}): its card opens and scrolls into view */
+  openId?: string | null;
+  /** A card was opened by hand (its id), or the named one was closed or isn't in the list (null) */
+  onOpenChange?: (id: string | null) => void;
+}
+
+export const requestCardId = (id: string) => `request-${id}`;
+
 /** "Requests": free audits requested on devartventures.com, each ready to reply to with its report */
-export function AuditRequestsPanel() {
+export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequestsPanelProps) {
   const { businesses, isLoading, refreshing, error, loadKey, refresh, updateBusiness, removal, askRemove, cancelRemove, confirmRemove } =
     useAuditRequests();
   const waiting = businesses.filter((b) => !b.emailed_at).length;
   const auditing = businesses.some((b) => !b.audit);
+  // The named request is scrolled to once; one missing from the list is looked for once more (it may have just arrived)
+  const scrolledTo = useRef<string | null>(null);
+  const lookedFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!openId || isLoading || refreshing) return;
+    const card = document.getElementById(requestCardId(openId));
+    if (card) {
+      if (scrolledTo.current !== openId) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      scrolledTo.current = openId;
+    } else if (lookedFor.current !== openId) {
+      lookedFor.current = openId;
+      void refresh();
+    } else {
+      onOpenChange?.(null);
+    }
+  }, [openId, isLoading, refreshing, businesses, refresh, onOpenChange]);
+
+  const toggle = (id: string, open: boolean) => {
+    if (open) {
+      // Opened right here: no need to scroll to it
+      scrolledTo.current = id;
+      lookedFor.current = id;
+      onOpenChange?.(id);
+    } else if (id === openId) {
+      onOpenChange?.(null);
+    }
+  };
 
   return (
     <>
@@ -64,14 +102,18 @@ export function AuditRequestsPanel() {
           </p>
           <div className="mt-5 space-y-4">
             {businesses.map((business) => (
-              <BusinessCard
-                key={`${business.id}-${loadKey}`}
-                business={business}
-                initialAudit={business.audit}
-                initialReport={business.ai_report}
-                onUpdate={updateBusiness}
-                onRemove={() => askRemove([business])}
-              />
+              // Clear of the sticky header when scrolled to
+              <div key={`${business.id}-${loadKey}`} id={requestCardId(business.id)} className="scroll-mt-20">
+                <BusinessCard
+                  business={business}
+                  initialAudit={business.audit}
+                  initialReport={business.ai_report}
+                  onUpdate={updateBusiness}
+                  onRemove={() => askRemove([business])}
+                  open={business.id === openId}
+                  onToggle={(open) => toggle(business.id, open)}
+                />
+              </div>
             ))}
           </div>
         </section>

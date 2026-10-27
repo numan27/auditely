@@ -3,6 +3,10 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   SEARCHES: '/searches',
+  // The workspace's other views, so a refresh or a bookmark opens the same one (workspacePath.ts)
+  AUDIT: '/audit',
+  REQUESTS: '/requests',
+  SEARCH: '/search',
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
@@ -27,6 +31,7 @@ export const API_ROUTES = {
   SEND_EMAIL: '/api/send-email',
   VERIFY_EMAIL: '/api/verify-email',
   AUDIT_REQUESTS: '/api/audit-requests',
+  NOTIFICATIONS: '/api/notifications',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret

@@ -4,12 +4,15 @@
 // AUDITELY_INBOUND_SECRET. The request is stored in the Requests tab with the
 // visitor's name and email, then audited and summarised in the background, so
 // the scores are usually ready by the time it's opened. A request sent twice
-// is stored once.
+// is stored once. The header bell hears of it when it arrives and when its
+// audit is done (or failed).
 
 import { after, NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/app/_shared/lib/supabase/client';
 import { auditBusiness } from '@/app/_shared/lib/audit/auditBusiness';
 import { generateAiReport } from '@/app/_shared/lib/audit/generateAiReport';
+import { requestAudited, requestAuditFailed, requestNew, type RequestRef } from '@/app/_shared/lib/notifications/messages';
+import { notify } from '@/app/_shared/lib/notifications/notify';
 import { hasInboundSecret, inboundSecret, parseInboundRequest } from '@/app/_shared/lib/requests/inboundRequest';
 import { ensureRequestSearchId } from '@/app/_shared/lib/requests/requestSearch';
 
@@ -29,15 +32,21 @@ async function storedRequest(searchId: string, sourceId: string): Promise<string
   return (data?.id as string | undefined) ?? null;
 }
 
-// The audit, then the AI summary. A failure is only logged: the card offers "Run audit".
-async function prepareReport(businessId: string) {
-  const audited = await auditBusiness(businessId);
+// The audit, then the AI summary. A failure is logged and goes to the bell: the card offers "Run audit".
+async function prepareReport(request: RequestRef) {
+  const audited = await auditBusiness(request.id);
   if (!audited.ok) {
-    console.error(`[inbound] audit of request ${businessId} failed: ${audited.error}`);
+    console.error(`[inbound] audit of request ${request.id} failed: ${audited.error}`);
+    await notify(requestAuditFailed(request, 'audit'));
     return;
   }
   const report = await generateAiReport(audited.audit.id);
-  if (!report.ok) console.error(`[inbound] AI summary of request ${businessId} failed: ${report.error}`);
+  if (!report.ok) {
+    console.error(`[inbound] AI summary of request ${request.id} failed: ${report.error}`);
+    await notify(requestAuditFailed(request, 'summary'));
+    return;
+  }
+  await notify(requestAudited(request));
 }
 
 export async function POST(request: NextRequest) {
@@ -77,6 +86,10 @@ export async function POST(request: NextRequest) {
   }
 
   const id = data.id as string;
-  after(() => prepareReport(id));
+  const ref: RequestRef = { id, host, name: details.name };
+  after(async () => {
+    await notify(requestNew(ref));
+    await prepareReport(ref);
+  });
   return NextResponse.json({ id, existing: false }, { status: 201 });
 }

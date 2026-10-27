@@ -7,6 +7,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import { ChevronRightIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
+import { searchPath } from '@/app/_shared/lib/utils/workspacePath';
 
 interface SavedSearch {
   id: string;
@@ -80,7 +81,7 @@ export default function SearchesPage() {
                 <li key={search.id}>
                   <button
                     type="button"
-                    onClick={() => router.push(`${ROUTES.HOME}?load=${search.id}`)}
+                    onClick={() => router.push(searchPath(search.id))}
                     className="group flex w-full cursor-pointer items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-[var(--color-bg-secondary)]"
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--color-bg-primary)] text-[var(--color-text-tertiary)]">

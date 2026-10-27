@@ -3,6 +3,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { auditBusiness, BULK_CONCURRENCY, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
 import { runPool } from '@/app/_shared/lib/utils/pool';
@@ -40,7 +41,7 @@ const poster =
  * and writes each one's summary. Results go to the list through `onUpdate`,
  * exactly like a card's own audit, so cards that aren't on screen are covered.
  * The run lives in this browser tab: leaving the list cancels it, and what was
- * already audited is kept.
+ * already audited is kept. A run that gets to the end goes to the header bell.
  */
 export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpdate) => void) {
   const demo = useDemo();
@@ -61,9 +62,11 @@ export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpda
       setStates((prev) => ({ ...prev, ...Object.fromEntries(targets.map((b) => [b.id, { stage: 'queued' } as BulkState])) }));
       setProgress({ total: targets.length, finished: 0, failed: 0, isRunning: true, isStopping: false });
 
+      const tally = { audited: 0, failed: 0 };
       const onStage = (id: string, state: BulkState) => {
         setStates((prev) => ({ ...prev, [id]: state }));
         if (state.stage !== 'done' && state.stage !== 'failed') return;
+        tally[state.stage === 'failed' ? 'failed' : 'audited'] += 1;
         setProgress((p) => p && { ...p, finished: p.finished + 1, failed: p.failed + Number(state.stage === 'failed') });
       };
       // In the public demo the saved sample answers instead of the API
@@ -72,6 +75,14 @@ export function useBulkAudit(onUpdate: (businessId: string, update: BusinessUpda
 
       // Also after a cancelled run (the list was left): its requests were aborted and count as failed
       controller.current = null;
+      // Only a run that got to the end: not one stopped, or cancelled by leaving the list
+      if (!demo && !stopRequested.current && !run.signal.aborted) {
+        void fetch(API_ROUTES.NOTIFICATIONS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: 'bulk_done', search_id: targets[0].search_id, ...tally }),
+        }).catch(() => {});
+      }
       // Stopped before their turn: no longer queued
       setStates((prev) => Object.fromEntries(Object.entries(prev).filter(([, state]) => state.stage !== 'queued')));
       setProgress((p) => p && { ...p, isRunning: false, isStopping: false });

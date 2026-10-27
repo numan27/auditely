@@ -34,6 +34,10 @@ interface BusinessCardProps {
   bulk?: BulkState;
   /** Start with the report open although it's already audited (the demo's sample website) */
   defaultOpen?: boolean;
+  /** Opens the report whenever it turns true, as when the address names this request (/requests/{id}) */
+  open?: boolean;
+  /** Told when the report is opened or closed by hand */
+  onToggle?: (open: boolean) => void;
   /** Adds a cross that asks to remove this business from its list (websites added by URL) */
   onRemove?: () => void;
   /** Also offer the report's Upwork version, without contact details (websites added by URL) */
@@ -78,7 +82,7 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, onRemove, upworkPdf }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, open, onToggle, onRemove, upworkPdf }: BusinessCardProps) {
   const demo = useDemo();
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
@@ -87,8 +91,17 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
   // Pre-loaded cards (from saved searches) start collapsed, and so do the ones "Audit all"
   // finishes: dozens of open reports would bury the list. A card audited by hand opens.
   const [startedBlank] = useState(!(initialAudit && initialReport));
-  const [toggled, setToggled] = useState<boolean | null>(defaultOpen ? true : null);
+  const [toggled, setToggled] = useState<boolean | null>(defaultOpen || open ? true : null);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setToggled(true);
+  }
   const isExpanded = toggled ?? (startedBlank && bulk?.stage !== 'done');
+  const toggle = () => {
+    setToggled(!isExpanded);
+    onToggle?.(!isExpanded);
+  };
 
   const isCompleted = auditStatus === 'done' && reportStatus === 'done';
   // The demo's sample has the age it has: no "Outdated" or "Over 30 days old" there
@@ -185,7 +198,7 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
           {isCompleted && (
             <button
               type="button"
-              onClick={() => setToggled(!isExpanded)}
+              onClick={toggle}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'Hide audit details' : 'Show audit details'}
               className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]"

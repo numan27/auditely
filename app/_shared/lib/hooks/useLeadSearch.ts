@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { useCallback, useRef, useState } from 'react';
+import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { startingLeads } from '@/app/_shared/lib/demo/demoSamples';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
@@ -20,9 +20,11 @@ export interface SearchQuery {
 
 /**
  * The "Find leads" workspace: runs a search or opens a saved one, then
- * discovers contacts for the results in the background.
+ * discovers contacts for the results in the background. The address
+ * (/search/{id}) is the workspace's business: `onSearched` reports each new
+ * search's id, and `openSaved` / `reset` follow the address back.
  */
-export function useLeadSearch() {
+export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) => void } = {}) {
   const demo = useDemo();
   // The public demo opens on its sample search
   const { businesses, setBusinesses, mergeContacts, updateBusiness } = useBusinessList(() =>
@@ -34,7 +36,11 @@ export function useLeadSearch() {
   const [query, setQuery] = useState<SearchQuery | null>(demo?.data.query ?? null);
   // Changes whenever a new result set loads: restarts discovery, resets the list view
   const [runKey, setRunKey] = useState(0);
+  // The saved search on screen (null: none, or the demo's sample)
+  const [searchId, setSearchId] = useState<string | null>(null);
   const [removal, setRemoval] = useState<UrlAuditRemoval | null>(null);
+  // Only the latest search or opened search may fill the list: back and forward can overtake one
+  const latest = useRef(0);
 
   const discovery = useEmailDiscovery(businesses, mergeContacts, runKey, !demo);
 
@@ -43,6 +49,7 @@ export function useLeadSearch() {
     setError(null);
     setHasSearched(false);
     setBusinesses([]);
+    return ++latest.current;
   }, [setBusinesses]);
 
   const show = useCallback(
@@ -58,7 +65,7 @@ export function useLeadSearch() {
   const search = useCallback(
     async (niche: string, location: string) => {
       if (demo) return demo.restrict('search');
-      start();
+      const run = start();
       try {
         const res = await fetch(API_ROUTES.SEARCH, {
           method: 'POST',
@@ -67,40 +74,53 @@ export function useLeadSearch() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? 'Search failed');
+        if (run !== latest.current) return;
         show(data.businesses ?? [], { niche, location });
+        if (typeof data.search_id === 'string') {
+          setSearchId(data.search_id);
+          onSearched?.(data.search_id);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Search failed. Check your connection and try again.');
+        if (run === latest.current) setError(err instanceof Error ? err.message : 'Search failed. Check your connection and try again.');
       } finally {
-        setIsSearching(false);
+        if (run === latest.current) setIsSearching(false);
       }
     },
-    [demo, start, show]
+    [demo, start, show, onSearched]
   );
 
   const openSaved = useCallback(
-    async (searchId: string) => {
-      start();
+    async (id: string) => {
+      const run = start();
+      setSearchId(id);
       try {
-        const res = await fetch(`${API_ROUTES.RESULTS}?search_id=${encodeURIComponent(searchId)}`);
+        const res = await fetch(`${API_ROUTES.RESULTS}?search_id=${encodeURIComponent(id)}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Couldn't open this search");
-        show((data.businesses ?? []).map((b: BusinessRow) => withAuditData(b)), data.search ?? null);
+        if (run !== latest.current) return;
+        // A search that was deleted (or never existed) has no record: say so instead of an empty list
+        if (!data.search) throw new Error("This search isn't saved any more. Run it again, or open another one.");
+        show((data.businesses ?? []).map((b: BusinessRow) => withAuditData(b)), data.search);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't open this search. Try again.");
+        if (run === latest.current) setError(err instanceof Error ? err.message : "Couldn't open this search. Try again.");
       } finally {
-        setIsSearching(false);
+        if (run === latest.current) setIsSearching(false);
       }
     },
     [start, show]
   );
 
-  // Opened from Saved Searches (?load=<search_id>)
-  useEffect(() => {
-    const searchId = new URLSearchParams(window.location.search).get('load');
-    if (!searchId || demo) return;
-    window.history.replaceState({}, '', ROUTES.HOME);
-    openSaved(searchId);
-  }, [demo, openSaved]);
+  /** Back to the search form and the recent searches (the address went back to /) */
+  const reset = useCallback(() => {
+    latest.current++;
+    setIsSearching(false);
+    setError(null);
+    setHasSearched(false);
+    setBusinesses([]);
+    setQuery(null);
+    setSearchId(null);
+    setRemoval(null);
+  }, [setBusinesses]);
 
   /** The cross on a card: opens the "remove?" dialog for this lead. The demo's samples stay put. */
   const askRemove = useCallback(
@@ -142,9 +162,11 @@ export function useLeadSearch() {
     error,
     query,
     runKey,
+    searchId,
     discovery,
     search,
     openSaved,
+    reset,
     updateBusiness,
     canRemove: !demo,
     removal,

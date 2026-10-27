@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import type { UrlAuditRemoval } from '@/app/_shared/lib/hooks/useUrlAudits';
+import { REQUESTS_CHANGED_EVENT } from '@/app/_shared/lib/notifications/notificationTypes';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -14,7 +15,8 @@ const UNREACHABLE = "Couldn't reach Auditely. Check your connection and try agai
 /**
  * The Requests tab: free audits requested on devartventures.com, newest
  * first. They arrive audited (or being audited) by the server; "Refresh"
- * picks up new ones and the audits finished since the list loaded.
+ * picks up new ones and the audits finished since the list loaded, and so
+ * does the header bell when it hears of a new request or a finished audit.
  */
 export function useAuditRequests() {
   const { businesses, setBusinesses, updateBusiness } = useBusinessList();
@@ -47,6 +49,12 @@ export function useAuditRequests() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  useEffect(() => {
+    const reload = () => void refresh();
+    window.addEventListener(REQUESTS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(REQUESTS_CHANGED_EVENT, reload);
+  }, [refresh]);
 
   /** The cross on a card, or "Clear all": opens the "remove?" dialog for these requests */
   const askRemove = useCallback((sites: BusinessWithData[]) => {

@@ -34,3 +34,44 @@ export function requestStatus(requestedAt: string, emailedAt: string | null | un
   if (today.getTime() === due.getTime()) return { state: 'due', label: 'Reply today' };
   return { state: 'due', label: `Reply by ${dayLabel(due)}` };
 }
+
+// The same days on a named time zone's calendar, for the server (which runs on
+// UTC) to tell a viewer what's due on theirs. Days are "YYYY-MM-DD" keys.
+
+/** The time zone if it's one this runtime knows, else undefined (the runtime's own) */
+export function knownTimeZone(timeZone: string | null | undefined): string | undefined {
+  if (!timeZone) return undefined;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The day a moment falls on in a time zone: "2026-10-27" */
+export function dayKey(date: Date, timeZone?: string): string {
+  // en-CA writes dates as YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+/** requestDueDay on a time zone's calendar */
+export function requestDueKey(requestedAt: string, timeZone?: string): string {
+  const [year, month, day] = dayKey(new Date(requestedAt), timeZone).split('-').map(Number);
+  const due = new Date(Date.UTC(year, month - 1, day));
+  do due.setUTCDate(due.getUTCDate() + 1);
+  while (due.getUTCDay() === SATURDAY || due.getUTCDay() === SUNDAY);
+  return due.toISOString().slice(0, 10);
+}
+
+/** "Wed, Oct 28" for a day key */
+export const dayKeyLabel = (key: string) =>
+  new Date(`${key}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** Whether an unanswered request's reply is due today or overdue, on a time zone's calendar; null while it's neither */
+export function requestDueToday(requestedAt: string, now: Date, timeZone?: string): 'due' | 'overdue' | null {
+  const due = requestDueKey(requestedAt, timeZone);
+  const today = dayKey(now, timeZone);
+  if (today > due) return 'overdue';
+  return today === due ? 'due' : null;
+}

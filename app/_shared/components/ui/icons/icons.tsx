@@ -94,3 +94,7 @@ export const PlayIcon = (p: IconProps) => (
 export const CopyIcon = (p: IconProps) => (
   <Icon {...p}><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></Icon>
 );
+
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9M10.3 20a1.9 1.9 0 0 0 3.4 0" /></Icon>
+);

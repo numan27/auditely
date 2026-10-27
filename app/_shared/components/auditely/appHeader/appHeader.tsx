@@ -9,6 +9,8 @@ import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/log
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { parseWorkspacePath } from '@/app/_shared/lib/utils/workspacePath';
+import { NotificationBell } from '@/app/_shared/components/auditely/notificationBell/notificationBell';
 
 const NAV = [
   { href: ROUTES.HOME, label: 'Search', short: 'Search' },
@@ -37,7 +39,8 @@ export function AppHeader() {
         ) : (
           <nav className="flex items-center gap-1 text-sm" aria-label="Main">
             {NAV.map((item) => {
-              const active = pathname === item.href;
+              // "Search" is every workspace view: its tabs, a saved search, a request
+              const active = item.href === ROUTES.HOME ? !!parseWorkspacePath(pathname) : pathname === item.href;
               return (
                 <Link
                   key={item.href}
@@ -58,6 +61,8 @@ export function AppHeader() {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          {/* The demo has no requests or saved runs to hear about */}
+          {!demo && <NotificationBell />}
           <ThemeToggle />
           {demo ? (
             <Link

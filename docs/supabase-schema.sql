@@ -79,12 +79,27 @@ CREATE TABLE IF NOT EXISTS pagespeed_cache (
   PRIMARY KEY (url_key, strategy)
 );
 
+-- 6. notifications: the header bell (lib/notifications). dedupe_key makes the
+--    same event one notification (a request resent, a due reminder seen twice).
+CREATE TABLE IF NOT EXISTS notifications (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind        TEXT        NOT NULL,
+  title       TEXT        NOT NULL,
+  body        TEXT        NOT NULL DEFAULT '',
+  business_id UUID        REFERENCES businesses(id) ON DELETE CASCADE,
+  search_id   UUID        REFERENCES searches(id) ON DELETE CASCADE,
+  dedupe_key  TEXT        UNIQUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  read_at     TIMESTAMPTZ
+);
+
 -- Indexes for common lookups (audits/ai_reports are covered by their UNIQUE indexes)
 CREATE INDEX IF NOT EXISTS idx_businesses_search_id  ON businesses(search_id);
 CREATE INDEX IF NOT EXISTS idx_searches_niche_loc    ON searches(niche, location, created_at);
 -- The site's id for an audit request: one sent twice is stored once
 CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_request_source
   ON businesses ((request->>'source_id')) WHERE request IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at DESC);
 
 -- Row Level Security: on, with no policies. The public anon key can read/write
 -- nothing; the app's server uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
@@ -93,3 +108,4 @@ ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audits     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagespeed_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
