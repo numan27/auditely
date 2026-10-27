@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { GearIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
@@ -13,9 +14,11 @@ import { parseWorkspacePath } from '@/app/_shared/lib/utils/workspacePath';
 import { NotificationBell } from '@/app/_shared/components/auditely/notificationBell/notificationBell';
 import { UsageMeter } from '@/app/_shared/components/auditely/usageMeter/usageMeter';
 
-const NAV = [
+// On a phone Settings is a gear, so the header fits at 360px
+const NAV: { href: string; label: string; short: string; icon?: typeof GearIcon }[] = [
   { href: ROUTES.HOME, label: 'Search', short: 'Search' },
   { href: ROUTES.SEARCHES, label: 'Saved searches', short: 'Saved' },
+  { href: ROUTES.SETTINGS, label: 'Settings', short: 'Settings', icon: GearIcon },
 ];
 
 export function AppHeader() {
@@ -24,7 +27,7 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/85 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4 sm:gap-8 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 sm:gap-8 sm:px-6">
         <Link
           href={demo ? ROUTES.DEMO : ROUTES.HOME}
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-[var(--color-text-primary)]"
@@ -38,7 +41,7 @@ export function AppHeader() {
             Demo
           </span>
         ) : (
-          <nav className="flex items-center gap-1 text-sm" aria-label="Main">
+          <nav className="flex items-center gap-0.5 text-sm sm:gap-1" aria-label="Main">
             {NAV.map((item) => {
               // "Search" is every workspace view: its tabs, a saved search, a request
               const active = item.href === ROUTES.HOME ? !!parseWorkspacePath(pathname) : pathname === item.href;
@@ -47,13 +50,20 @@ export function AppHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
-                  className={`whitespace-nowrap rounded-md px-2.5 py-1.5 font-medium transition-colors ${
+                  className={`whitespace-nowrap rounded-md px-2 py-1.5 font-medium transition-colors sm:px-2.5 ${
                     active
                       ? 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
-                  <span className="sm:hidden">{item.short}</span>
+                  {item.icon ? (
+                    <span className="inline-flex h-5 items-center sm:hidden">
+                      <item.icon size={16} />
+                      <span className="sr-only">{item.short}</span>
+                    </span>
+                  ) : (
+                    <span className="sm:hidden">{item.short}</span>
+                  )}
                   <span className="hidden sm:inline">{item.label}</span>
                 </Link>
               );
@@ -61,7 +71,7 @@ export function AppHeader() {
           </nav>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
           {/* The demo has no allowances, requests or saved runs to hear about */}
           {!demo && <UsageMeter />}
           {!demo && <NotificationBell />}

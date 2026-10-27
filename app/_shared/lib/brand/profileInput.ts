@@ -30,7 +30,7 @@ const SIGNATURES: Record<string, number[]> = {
 
 const LABELS = { display_name: 'Your name', company: 'Company', website: 'Website', booking_url: 'Booking link' } as const;
 
-const LOGO_REFUSED = 'The logo must be a PNG or JPEG under 256 KB.';
+export const LOGO_REFUSED = 'The logo must be a PNG or JPEG under 256 KB.';
 
 /** Why a logo can't be saved, or null when it can */
 export function logoProblem(dataUrl: string): string | null {

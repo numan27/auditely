@@ -6,9 +6,11 @@
 import type { Metadata } from 'next';
 import { connection } from 'next/server';
 import { Workspace } from '@/app/_shared/components/auditely/workspace/workspace';
+import { ConnectionsProvider } from '@/app/_shared/components/providers/ConnectionsProvider';
 import { DemoProvider } from '@/app/_shared/components/providers/DemoProvider';
 import { demoData } from '@/app/_shared/lib/demo/demoData';
 import { demoLinks } from '@/app/_shared/lib/demo/demoLinks';
+import { DEMO_CONNECTIONS } from '@/app/_shared/lib/settings/demoConnections';
 
 export const metadata: Metadata = {
   title: 'Auditely demo',
@@ -21,7 +23,9 @@ export default async function DemoPage() {
 
   return (
     <DemoProvider data={demoData} links={demoLinks()}>
-      <Workspace />
+      <ConnectionsProvider connections={DEMO_CONNECTIONS}>
+        <Workspace />
+      </ConnectionsProvider>
     </DemoProvider>
   );
 }
