@@ -10,7 +10,7 @@
 import { NextResponse } from 'next/server';
 import { serviceDb, type Db } from '@/app/_shared/lib/supabase/client';
 import type { Account } from '@/app/_shared/lib/auth/account';
-import { planFor, usagePeriod, USAGE_KINDS, type LimitReached, type Plan, type UsageKind, type UsageSummary } from './plans';
+import { planFor, usagePeriod, USAGE_KINDS, type LimitReached, type UsageKind, type UsageSummary } from './plans';
 import { limitMessage } from './usageCopy';
 
 const USAGE_MIGRATION = 'docs/migrations/2026-10-28-usage.sql';
@@ -35,34 +35,32 @@ export const UNMETERED: Meter = {
   notOnPlan: () => null,
 };
 
-function reached(plan: Plan, kind: UsageKind, limit: number, now: Date): LimitReached {
-  return { kind, plan: plan.id, limit, resetsAt: usagePeriod(now).end.toISOString() };
-}
-
 export function meterFor(account: Account, now: () => Date = () => new Date()): Meter {
   const plan = planFor(account);
   if (plan.id === 'owner') return UNMETERED;
 
-  const notOnPlan = (kind: UsageKind) => (plan.limits[kind] === 0 ? reached(plan, kind, 0, now()) : null);
+  const reached = (kind: UsageKind, limit: number, at: Date): LimitReached =>
+    ({ kind, plan: plan.id, limit, resetsAt: usagePeriod(account, at).end.toISOString() });
+  const notOnPlan = (kind: UsageKind) => (plan.limits[kind] === 0 ? reached(kind, 0, now()) : null);
 
   async function claim(kind: UsageKind): Promise<Claim> {
     const limit = plan.limits[kind];
     if (limit === null) return { ok: true, release: nothingToRelease };
     const at = now();
     if (limit === 0) {
-      const refused = reached(plan, kind, 0, at);
+      const refused = reached(kind, 0, at);
       return { ok: false, status: 402, error: limitMessage(refused), limit: refused };
     }
 
     const { data, error } = await serviceDb.rpc('claim_usage', {
-      p_user_id: account.id, p_kind: kind, p_limit: limit, p_since: usagePeriod(at).start.toISOString(),
+      p_user_id: account.id, p_kind: kind, p_limit: limit, p_since: usagePeriod(account, at).start.toISOString(),
     });
     if (error) {
       console.error(`[usage] Failed to claim ${kind}: run ${USAGE_MIGRATION} in Supabase (${error.message})`);
       return { ok: false, status: 503, error: UNAVAILABLE };
     }
     if (!data) {
-      const refused = reached(plan, kind, limit, at);
+      const refused = reached(kind, limit, at);
       return { ok: false, status: 402, error: limitMessage(refused), limit: refused };
     }
 
@@ -82,7 +80,7 @@ export function meterFor(account: Account, now: () => Date = () => new Date()): 
 /** This month's use of each allowance, as the signed-in user sees it; null when it can't be counted */
 export async function usageSummary(db: Db, account: Account, now: Date = new Date()): Promise<UsageSummary | null> {
   const plan = planFor(account);
-  const { start, end } = usagePeriod(now);
+  const { start, end } = usagePeriod(account, now);
   const unlimited = { used: 0, limit: null };
   if (plan.id === 'owner') {
     return { plan: plan.id, resetsAt: end.toISOString(), usage: { search: unlimited, audit: unlimited, email_lookup: unlimited } };

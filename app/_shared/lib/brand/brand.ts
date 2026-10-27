@@ -1,11 +1,13 @@
 // app/_shared/lib/brand/brand.ts
 
-// The brand on an account's reports and emails, read from its profile with the
-// service role: a signed report link has no session, and the report's owner, not
-// whoever opens it, decides whose name is on it. A profile that can't be read
-// stops the report rather than drawing the owner's work as Auditely's. Server-only.
+// The brand on an account's reports and emails, read from its profile and its
+// subscription with the service role: a signed report link has no session, and
+// the report's owner, not whoever opens it, decides whose name is on it. A profile
+// that can't be read stops the report rather than drawing the owner's work as
+// Auditely's; a subscription that can't be read counts as none. Server-only.
 
 import { isOwnerEmail } from '@/app/_shared/lib/auth/account';
+import { subscriptionOf } from '@/app/_shared/lib/billing/subscription';
 import { resolveBrand, type Brand, type Profile } from '@/app/_shared/lib/brand/brandRules';
 import { brandLogo } from '@/app/_shared/lib/email/brandLogo';
 import { serviceDb } from '@/app/_shared/lib/supabase/client';
@@ -35,12 +37,15 @@ export async function brandFor(userId: string | null): Promise<Brand> {
   if (!userId) return AUDITELY();
   // '*' rather than a column list: before the settings migration the new columns
   // simply aren't there, and read as blank
-  const { data, error } = await serviceDb.from('profiles').select('*').eq('id', userId).maybeSingle();
+  const [{ data, error }, subscription] = await Promise.all([
+    serviceDb.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    subscriptionOf(serviceDb, userId),
+  ]);
   if (error) throw new BrandUnavailable(error.message);
   if (!data) return AUDITELY();
   const profile = data as Profile;
   const isOwner = isOwnerEmail(profile.email);
-  return resolveBrand({ profile, isOwner, plan: planFor({ email: profile.email, isOwner }).id });
+  return resolveBrand({ profile, isOwner, plan: planFor({ email: profile.email, isOwner, subscription }).id });
 }
 
 /** The logo the outreach email attaches: the profile's own, else today's DevArtVentures file for the owner */

@@ -252,3 +252,28 @@ CREATE TABLE IF NOT EXISTS user_secrets (
 ALTER TABLE user_secrets ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON user_secrets FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_secrets TO service_role;
+
+-- 10. subscriptions: each account's latest Stripe subscription, which sets its plan.
+--     The webhook copies it from Stripe. period_anchor is Stripe's billing cycle
+--     anchor, which the monthly allowances count from. A user may read their own row
+--     and never write one: only the server's service role writes.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  user_id                 UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  plan                    TEXT        NOT NULL CHECK (plan IN ('pro', 'agency')),
+  billing_interval        TEXT        NOT NULL CHECK (billing_interval IN ('month', 'year')),
+  status                  TEXT        NOT NULL,
+  stripe_customer_id      TEXT        NOT NULL UNIQUE,
+  stripe_subscription_id  TEXT        NOT NULL UNIQUE,
+  current_period_start    TIMESTAMPTZ NOT NULL,
+  current_period_end      TIMESTAMPTZ NOT NULL,
+  period_anchor           TIMESTAMPTZ NOT NULL,
+  ends_at                 TIMESTAMPTZ,
+  updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own_subscription ON subscriptions;
+CREATE POLICY own_subscription ON subscriptions FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
+-- Supabase grants new tables to anon and authenticated by default
+REVOKE ALL ON subscriptions FROM anon, authenticated;
+GRANT SELECT ON subscriptions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON subscriptions TO service_role;

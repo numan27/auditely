@@ -5,10 +5,14 @@
 // exactly "true". Emails compare trimmed and lowercased. Client-safe: no server
 // imports, so client components can import the Account type.
 
+import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
+
 export interface Account {
   id: string;
   email: string;
   isOwner: boolean;
+  /** The live Stripe subscription; getSession fills it, and absent reads as none */
+  subscription?: Subscription | null;
 }
 
 const normalize = (email: string) => email.trim().toLowerCase();

@@ -8,12 +8,26 @@ const fake = vi.hoisted(() => ({
   profiles: null as { id: string } | null,
   profilesError: null as { message: string } | null,
   profileFilter: null as [string, string] | null,
+  subscription: null as Record<string, unknown> | null,
+  subscriptionError: null as { message: string } | null,
+  subscriptionFilter: null as [string, string] | null,
 }));
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: (_url: string, _key: string, options: { cookieOptions?: Record<string, unknown> }) => {
     fake.clientOptions = options;
-    return { auth: { getClaims: async () => ({ data: fake.claims ? { claims: fake.claims } : null, error: null }) } };
+    return {
+      auth: { getClaims: async () => ({ data: fake.claims ? { claims: fake.claims } : null, error: null }) },
+      // The account's own subscriptions row, read as the user
+      from: () => ({
+        select: () => ({
+          eq: (column: string, value: string) => {
+            fake.subscriptionFilter = [column, value];
+            return { maybeSingle: async () => ({ data: fake.subscription, error: fake.subscriptionError }) };
+          },
+        }),
+      }),
+    };
   },
 }));
 vi.mock('next/headers', () => ({ cookies: async () => ({ getAll: () => [], set: vi.fn() }) }));
@@ -43,6 +57,9 @@ beforeEach(() => {
   fake.profiles = null;
   fake.profilesError = null;
   fake.profileFilter = null;
+  fake.subscription = null;
+  fake.subscriptionError = null;
+  fake.subscriptionFilter = null;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -59,7 +76,28 @@ describe('userDb', () => {
 describe('getSession', () => {
   it('maps the claims to an account, owner by email', async () => {
     fake.claims = { sub: 'u1', email: 'Owner@Example.com' };
-    expect((await getSession())?.account).toEqual({ id: 'u1', email: 'owner@example.com', isOwner: true });
+    expect((await getSession())?.account).toEqual({ id: 'u1', email: 'owner@example.com', isOwner: true, subscription: null });
+  });
+
+  it("puts the account's live subscription on it, read as the user", async () => {
+    fake.claims = { sub: 'u2', email: 'tester@x.com' };
+    vi.stubEnv('ALLOWED_EMAILS', 'tester@x.com');
+    fake.subscription = {
+      plan: 'pro', billing_interval: 'year', status: 'active', period_anchor: '2026-03-14T09:30:00.000Z',
+      current_period_end: '2999-03-14T09:30:00.000Z', ends_at: null,
+    };
+    expect((await getSession())?.account.subscription).toMatchObject({ plan: 'pro', interval: 'year' });
+    expect(fake.subscriptionFilter).toEqual(['user_id', 'u2']);
+  });
+
+  it('signs in with no subscription when the table cannot be read', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fake.claims = { sub: 'u2', email: 'tester@x.com' };
+    vi.stubEnv('ALLOWED_EMAILS', 'tester@x.com');
+    fake.subscriptionError = { message: 'missing' };
+    const session = await getSession();
+    expect(session?.account.id).toBe('u2');
+    expect(session?.account.subscription).toBeNull();
   });
 
   it('has no session without claims, or for an email that may not sign in', async () => {
