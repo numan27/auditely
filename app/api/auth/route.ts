@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!EMAIL.test(email)) return NextResponse.json({ error: 'Enter your email address' }, { status: 400 });
 
-  // Refused here, so Supabase never creates an account for an address that may not sign in
+  // Refused here, so an emailed link never creates an account for an address that may not
+  // sign in. Google can't be stopped this early: Supabase creates the auth.users and profiles
+  // rows for a stranger before /auth/callback signs them straight back out.
   if (!canSignIn(email)) {
     return NextResponse.json(
       { error: 'Auditely is invite-only for now. Use the email you were invited with.' },

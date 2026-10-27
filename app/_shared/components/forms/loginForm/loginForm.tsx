@@ -31,7 +31,8 @@ interface LoginFormProps {
 export function LoginForm({ callbackUrl, error }: LoginFormProps) {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const next = safeCallbackUrl(callbackUrl);
-  const signInError = error ? SIGN_IN_ERRORS[error] : undefined;
+  // Own keys only: ?error=__proto__ would otherwise find Object.prototype and crash the form
+  const signInError = error && Object.hasOwn(SIGN_IN_ERRORS, error) ? SIGN_IN_ERRORS[error] : undefined;
 
   const formik = useFormik<EmailLinkFormValues>({
     initialValues: {

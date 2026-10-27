@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { DELETE } from '@/app/api/results/route';
+import { DELETE, GET } from '@/app/api/results/route';
 
 type Result = { data: unknown; error: { message: string } | null };
 
@@ -23,6 +23,7 @@ const db = vi.hoisted(() => {
       delete: () => ((op = 'delete'), chain),
       eq: (column: string, value: unknown) => (filters.push(['eq', column, value]), chain),
       in: (column: string, values: unknown) => (filters.push(['in', column, values]), chain),
+      order: () => chain,
       maybeSingle: resolve,
       then: (onOk: (r: Result) => unknown, onErr?: (e: unknown) => unknown) => resolve().then(onOk, onErr),
     };
@@ -53,6 +54,25 @@ beforeEach(() => {
   db.state.responses = {};
   db.state.calls = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+describe('GET /api/results', () => {
+  const SEARCH = '3a7e9c10-2b4d-4e6f-8a1b-9c0d2e4f6a8b';
+
+  it("loads the search's businesses among this account's own, not just what Row Level Security lets through", async () => {
+    session.current = { db: { from: db.from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+    db.state.responses = {
+      'searches.select': [ok({ niche: 'dentists', location: 'austin' })],
+      'businesses.select': [ok([{ id: 'b1', audits: [] }])],
+    };
+    const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
+    expect(await res.json()).toEqual({ search: { niche: 'dentists', location: 'austin' }, businesses: [{ id: 'b1', audits: [] }] });
+    const [businesses] = db.state.calls.filter((c) => c.table === 'businesses');
+    expect(businesses.filters).toEqual([
+      ['eq', 'search_id', SEARCH],
+      ['eq', 'user_id', 'user-2'],
+    ]);
+  });
 });
 
 describe('DELETE /api/results', () => {

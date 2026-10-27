@@ -8,9 +8,12 @@ export async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
 
+  // This account's own searches. The user_id filter is a second lock: Row Level
+  // Security already shows only their own.
   const { data, error } = await session.db
     .from('searches')
     .select('*, businesses(count)')
+    .eq('user_id', session.account.id)
     .order('created_at', { ascending: false });
 
   if (error) {

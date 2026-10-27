@@ -7,7 +7,7 @@ import { searchPlaces } from '@/app/_shared/lib/places/searchPlaces';
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
-  const { db } = session;
+  const { db, account } = session;
 
   const body = await request.json().catch(() => ({}));
   const niche: string = (body.niche ?? '').trim().toLowerCase();
@@ -17,10 +17,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'niche and location are required' }, { status: 400 });
   }
 
-  // Cache check: same niche+location searched before (Row Level Security shows only this account's searches)
+  // Cache check: same niche+location searched before by this account. The user_id
+  // filter is a second lock: Row Level Security already shows only their own searches.
   const { data: existingSearch } = await db
     .from('searches')
     .select('id')
+    .eq('user_id', account.id)
     .eq('niche', niche)
     .eq('location', location)
     .order('created_at', { ascending: false })

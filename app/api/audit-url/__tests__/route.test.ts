@@ -66,6 +66,26 @@ beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
+describe('the reserved search', () => {
+  it("is looked for among this account's own searches, not just what Row Level Security lets through", async () => {
+    session.current = { db: { from: db.from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+    db.state.responses = { 'searches.select': [ok(null)] };
+    await GET();
+    await post('washdent.com');
+    await remove({ ids: ['6f1c2f0e-8a52-4a53-9d0f-3c1c6b7e2a11'] });
+
+    const lookups = db.state.calls.filter((c) => c.table === 'searches' && c.op === 'select');
+    expect(lookups).toHaveLength(3);
+    for (const lookup of lookups) {
+      expect(lookup.filters).toEqual([
+        ['eq', 'user_id', 'user-2'],
+        ['eq', 'niche', 'website audits'],
+        ['eq', 'location', 'added by url'],
+      ]);
+    }
+  });
+});
+
 describe('POST /api/audit-url', () => {
   it('refuses an address the server must not fetch, before touching the database', async () => {
     const { status, json } = await post('http://169.254.169.254/latest');

@@ -15,11 +15,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // More than the list will hold; a longer request isn't from the app
 const MAX_REMOVED = 500;
 
-// This account's reserved search: Row Level Security shows only its own
-async function findDirectSearchId(db: Db): Promise<string | null> {
+// This account's reserved search. The user_id filter is a second lock: Row Level
+// Security already shows only its own searches.
+async function findDirectSearchId(db: Db, userId: string): Promise<string | null> {
   const { data } = await db
     .from('searches')
     .select('id')
+    .eq('user_id', userId)
     .eq('niche', DIRECT_AUDIT_SEARCH.niche)
     .eq('location', DIRECT_AUDIT_SEARCH.location)
     .order('created_at', { ascending: true })
@@ -36,9 +38,9 @@ async function loadBusiness(db: Db, id: string) {
 export async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
-  const { db } = session;
+  const { db, account } = session;
 
-  const searchId = await findDirectSearchId(db);
+  const searchId = await findDirectSearchId(db, account.id);
   if (!searchId) return NextResponse.json({ businesses: [] });
 
   const { data, error } = await db
@@ -57,13 +59,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
-  const { db } = session;
+  const { db, account } = session;
 
   const body = await request.json().catch(() => ({}));
   const parsed = normalizeWebsiteUrl(typeof body.url === 'string' ? body.url : '');
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  let searchId = await findDirectSearchId(db);
+  let searchId = await findDirectSearchId(db, account.id);
   if (!searchId) {
     const { data, error } = await db.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
     if (error || !data) {
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
-  const { db } = session;
+  const { db, account } = session;
 
   const body = await request.json().catch(() => ({}));
   const ids: unknown = body?.ids;
@@ -110,7 +112,7 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the websites to remove' }, { status: 400 });
 
-  const searchId = await findDirectSearchId(db);
+  const searchId = await findDirectSearchId(db, account.id);
   if (!searchId) return NextResponse.json({ removed: [] });
 
   const { data, error } = await db

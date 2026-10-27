@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { serviceDb, type Db } from '@/app/_shared/lib/supabase/client';
+import { SESSION_COOKIE_OPTIONS } from '@/app/_shared/lib/supabase/cookieOptions';
 import { canSignIn, isOwnerEmail, type Account } from '@/app/_shared/lib/auth/account';
 
 const ACCOUNTS_MIGRATION = 'docs/migrations/2026-10-28-accounts.sql';
@@ -23,6 +24,7 @@ export interface Session {
 export async function userDb(): Promise<Db> {
   const store = await cookies();
   return createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll: () => store.getAll(),
       setAll: (list) => {

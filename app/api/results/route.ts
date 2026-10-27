@@ -11,7 +11,7 @@ const MAX_REMOVED = 500;
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
-  const { db } = session;
+  const { db, account } = session;
 
   const { searchParams } = new URL(request.url);
   const searchId = searchParams.get('search_id');
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       )
     `)
     .eq('search_id', searchId)
+    // A second lock: Row Level Security already shows only this account's businesses
+    .eq('user_id', account.id)
     .order('created_at', { ascending: true })
     // Newest first, so the client's audits[0] / ai_reports[0] is the latest even with duplicates
     .order('created_at', { referencedTable: 'audits', ascending: false })

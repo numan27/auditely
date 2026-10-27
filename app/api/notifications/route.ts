@@ -36,10 +36,11 @@ export async function GET(request: NextRequest) {
     await syncRequestReminders(db, account.id, new Date(), timeZone);
   }
 
-  // Row Level Security shows each account only its own notifications
+  // This account's own notifications. The user_id filter is a second lock: Row Level
+  // Security already shows each account only its own.
   const [listed, counted] = await Promise.all([
-    db.from('notifications').select(COLUMNS).order('created_at', { ascending: false }).limit(LIST_LIMIT),
-    db.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+    db.from('notifications').select(COLUMNS).eq('user_id', account.id).order('created_at', { ascending: false }).limit(LIST_LIMIT),
+    db.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', account.id).is('read_at', null),
   ]);
   const error = listed.error ?? counted.error;
   if (isMissingTable(error)) return NextResponse.json(SETUP_NEEDED);
@@ -63,7 +64,11 @@ export async function PATCH(request: NextRequest) {
     (Array.isArray(ids) && ids.length > 0 && ids.length <= MAX_IDS && ids.every((id) => typeof id === 'string' && UUID.test(id)));
   if (!valid) return NextResponse.json({ error: 'Choose the notifications to mark as read' }, { status: 400 });
 
-  const update = session.db.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
+  const update = session.db
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', session.account.id)
+    .is('read_at', null);
   const { error } = await (all ? update : update.in('id', ids as string[]));
   if (error) {
     console.error(

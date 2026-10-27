@@ -168,6 +168,19 @@ describe('GET /api/notifications', () => {
     expect(upserted()).toEqual([]);
   });
 
+  it("lists and counts this account's own notifications, not just what Row Level Security lets through", async () => {
+    signInAsMember();
+    db.state.responses = { 'notifications.select': [ok([])], 'notifications.count': [ok(null, 0)] };
+    await call(GET, 'GET');
+    expect(calls('notifications', 'select').map((c) => c.filters)).toEqual([[['eq', 'user_id', 'user-2']]]);
+    expect(calls('notifications', 'count').map((c) => c.filters)).toEqual([
+      [
+        ['eq', 'user_id', 'user-2'],
+        ['is', 'read_at', null],
+      ],
+    ]);
+  });
+
   it('says the migration is needed instead of failing while the table is missing', async () => {
     db.state.responses = { 'searches.select': [ok([])], 'notifications.select': [MISSING], 'notifications.count': [MISSING] };
     const { status, json } = await call(GET, 'GET');
@@ -177,19 +190,25 @@ describe('GET /api/notifications', () => {
 });
 
 describe('PATCH /api/notifications', () => {
-  it('marks the given notifications read', async () => {
+  it("marks the given notifications read, among this account's own", async () => {
+    signInAsMember();
     const { status } = await call(PATCH, 'PATCH', { ids: [N1] });
     expect(status).toBe(200);
     const [update] = calls('notifications', 'update');
     expect(update.filters).toEqual([
+      ['eq', 'user_id', 'user-2'],
       ['is', 'read_at', null],
       ['in', 'id', [N1]],
     ]);
   });
 
-  it('marks all of them read', async () => {
+  it("marks all of this account's own read", async () => {
+    signInAsMember();
     await call(PATCH, 'PATCH', { all: true });
-    expect(calls('notifications', 'update')[0].filters).toEqual([['is', 'read_at', null]]);
+    expect(calls('notifications', 'update')[0].filters).toEqual([
+      ['eq', 'user_id', 'user-2'],
+      ['is', 'read_at', null],
+    ]);
   });
 
   it('refuses ids that are not ids', async () => {

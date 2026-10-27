@@ -5,10 +5,14 @@ import { searchPlaces } from '@/app/_shared/lib/places/searchPlaces';
 
 // Fake Supabase for a first-time search: no cached search, then the search and
 // business inserts succeed (unless businessInsertError is set). Every insert
-// payload is recorded per table, and every delete with its eq() filters.
+// payload is recorded per table, and every read and delete with its eq() filters.
 const db = vi.hoisted(() => {
   const inserts: Record<string, unknown> = {};
-  const state = { businessInsertError: null as string | null, deletes: [] as { table: string; filters: unknown[][] }[] };
+  const state = {
+    businessInsertError: null as string | null,
+    reads: [] as { table: string; filters: unknown[][] }[],
+    deletes: [] as { table: string; filters: unknown[][] }[],
+  };
   const from = (table: string) => {
     let payload: unknown;
     let deleting = false;
@@ -18,7 +22,10 @@ const db = vi.hoisted(() => {
         state.deletes.push({ table, filters });
         return { data: null, error: null };
       }
-      if (payload === undefined) return { data: null, error: null }; // the cache lookup
+      if (payload === undefined) {
+        state.reads.push({ table, filters }); // the cache lookup
+        return { data: null, error: null };
+      }
       if (table === 'businesses' && state.businessInsertError) return { data: null, error: { message: state.businessInsertError } };
       return table === 'searches'
         ? { data: { id: 'search-1' }, error: null }
@@ -69,11 +76,22 @@ beforeEach(() => {
   session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   for (const key of Object.keys(db.inserts)) delete db.inserts[key];
   db.state.businessInsertError = null;
+  db.state.reads = [];
   db.state.deletes = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('POST /api/search', () => {
+  it("reuses only this account's own earlier search, not just what Row Level Security lets through", async () => {
+    session.current = { db: { from: db.from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
+    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [] });
+    await post({ niche: 'Dentist', location: 'Austin' });
+
+    expect(db.state.reads).toEqual([
+      { table: 'searches', filters: [['user_id', 'user-2'], ['niche', 'dentist'], ['location', 'austin']] },
+    ]);
+  });
+
   it("stores each business's Google rating and review count", async () => {
     vi.mocked(searchPlaces).mockResolvedValue({
       ok: true,

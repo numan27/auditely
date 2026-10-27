@@ -2,7 +2,7 @@ import { LoginForm } from '@/app/_shared/components/forms/loginForm/loginForm';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Sign In',
+  title: 'Sign in',
   description: 'Sign in to Auditely',
 };
 

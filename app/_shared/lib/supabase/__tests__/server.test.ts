@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Fakes: the SSR client answers getClaims, the cookie store is empty, and the
-// service client's profiles lookup records its filter.
+// Fakes: the SSR client answers getClaims and records its options, the cookie
+// store is empty, and the service client's profiles lookup records its filter.
 const fake = vi.hoisted(() => ({
+  clientOptions: null as { cookieOptions?: Record<string, unknown> } | null,
   claims: null as { sub?: string; email?: string } | null,
   profiles: null as { id: string } | null,
   profilesError: null as { message: string } | null,
@@ -10,9 +11,10 @@ const fake = vi.hoisted(() => ({
 }));
 
 vi.mock('@supabase/ssr', () => ({
-  createServerClient: () => ({
-    auth: { getClaims: async () => ({ data: fake.claims ? { claims: fake.claims } : null, error: null }) },
-  }),
+  createServerClient: (_url: string, _key: string, options: { cookieOptions?: Record<string, unknown> }) => {
+    fake.clientOptions = options;
+    return { auth: { getClaims: async () => ({ data: fake.claims ? { claims: fake.claims } : null, error: null }) } };
+  },
 }));
 vi.mock('next/headers', () => ({ cookies: async () => ({ getAll: () => [], set: vi.fn() }) }));
 vi.mock('@/app/_shared/lib/supabase/client', () => ({
@@ -28,7 +30,7 @@ vi.mock('@/app/_shared/lib/supabase/client', () => ({
   },
 }));
 
-import { getSession, ownerUserId, unauthorized, ownerOnly } from '@/app/_shared/lib/supabase/server';
+import { getSession, ownerUserId, unauthorized, ownerOnly, userDb } from '@/app/_shared/lib/supabase/server';
 
 beforeEach(() => {
   vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co');
@@ -36,6 +38,7 @@ beforeEach(() => {
   vi.stubEnv('OWNER_EMAIL', 'Owner@Example.com');
   vi.stubEnv('ALLOWED_EMAILS', '');
   vi.stubEnv('SIGNUPS_OPEN', '');
+  fake.clientOptions = null;
   fake.claims = null;
   fake.profiles = null;
   fake.profilesError = null;
@@ -44,6 +47,13 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
+});
+
+describe('userDb', () => {
+  it('writes the session cookies HttpOnly, so no script can read the refresh token', async () => {
+    await userDb();
+    expect(fake.clientOptions?.cookieOptions).toMatchObject({ httpOnly: true, secure: false });
+  });
 });
 
 describe('getSession', () => {

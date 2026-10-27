@@ -6,6 +6,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { SESSION_COOKIE_OPTIONS } from '@/app/_shared/lib/supabase/cookieOptions';
 
 const CACHE_HEADERS = ['cache-control', 'expires', 'pragma'];
 
@@ -13,6 +14,7 @@ const CACHE_HEADERS = ['cache-control', 'expires', 'pragma'];
 export async function readProxySession(request: NextRequest): Promise<{ response: NextResponse; email: string | null }> {
   let response = NextResponse.next({ request });
   const db = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list, headers) => {
