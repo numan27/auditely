@@ -115,8 +115,9 @@ export const PUBLIC_ROUTES = [
 // sign-in has to finish)
 export const AUTH_ROUTES = [ROUTES.LOGIN, ROUTES.SIGNUP] as const;
 
-// Addresses people type or bookmark for the home page; they forward to it instead of a 404
-export const HOME_ALIASES = ['/home'] as const;
+// Addresses people type or bookmark for the home page; they forward to it instead of a 404.
+// The template's dashboard (its page is kept, with made-up numbers) forwards too.
+export const HOME_ALIASES = ['/home', ROUTES.DASHBOARD] as const;
 
 export const DEFAULT_LOGIN_REDIRECT = ROUTES.HOME;
 export const DEFAULT_LOGOUT_REDIRECT = ROUTES.LOGIN;

@@ -20,7 +20,7 @@ import { readProxySession, withSessionCookies } from "@/app/_shared/lib/supabase
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // "/home" isn't a page: forward it to the home page before anything remembers it as the login destination
+  // "/home" and the template's "/dashboard" aren't pages: forward them home before anything remembers one as the login destination
   if (isHomeAlias(pathname)) {
     return NextResponse.redirect(new URL(`${ROUTES.HOME}${search}`, request.url));
   }

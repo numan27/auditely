@@ -33,8 +33,10 @@ describe('route access', () => {
     expect(BOTID_PATH).toBe('/149e9513-01fa-4fb0-aad4-566afd725d1b');
   });
 
-  it('treats /home as another address for the home page, and nothing else', () => {
+  it("treats /home and the template's /dashboard as other addresses for the home page, and nothing else", () => {
     expect(isHomeAlias('/home')).toBe(true);
+    // The template's dashboard (made-up numbers) isn't part of Auditely
+    expect(isHomeAlias(ROUTES.DASHBOARD)).toBe(true);
     expect(isHomeAlias(ROUTES.HOME)).toBe(false);
     expect(isHomeAlias('/home/extra')).toBe(false);
     expect(isHomeAlias(ROUTES.SEARCHES)).toBe(false);
