@@ -23,8 +23,14 @@ vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
   userDb: async () => ({ auth }),
 }));
 
-const post = (body: unknown) =>
-  POST(new NextRequest('https://auditely.app/api/auth', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) }));
+const post = (body: unknown, cookie?: string) =>
+  POST(
+    new NextRequest('https://auditely.app/api/auth', {
+      method: 'POST',
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+      headers: cookie ? { cookie } : undefined,
+    })
+  );
 
 // The emailRedirectTo the link was sent with
 const redirectTo = () => new URL(auth.signInWithOtp.mock.calls[0][0].options.emailRedirectTo);
@@ -95,6 +101,13 @@ describe('POST /api/auth', () => {
     const res = await post({ email: 'owner@example.com' });
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Couldn't send the link. Try again in a minute." });
+  });
+
+  it('puts the free audit in the sign-in link so it can be kept from any browser', async () => {
+    await post({ email: 'owner@example.com', callbackUrl: '/plans' }, 'auditely_free_audit=f1.sig%2B/');
+    const url = redirectTo();
+    expect(url.searchParams.get('next')).toBe('/plans');
+    expect(url.searchParams.get('keep')).toBe('f1.sig+/');
   });
 });
 
