@@ -103,3 +103,14 @@ export function meterLabel(summary: UsageSummary): { text: string; empty: boolea
   const noun = closest.limit === 1 ? one : many;
   return { text: `${count(closest.left)} of ${count(closest.limit)} ${noun} left`, empty: false };
 }
+
+/** What a Re-audit costs on a plan with a limit, or null when it costs nothing to ask (no limit, or none left: the limit message explains) */
+export function reAuditNote(summary: UsageSummary): string | null {
+  const { used, limit } = summary.usage.audit;
+  if (limit === null || limit <= 0) return null;
+  const left = limit - used;
+  if (left <= 0) return null;
+  const date = formatResetDate(summary.resetsAt);
+  if (left === 1) return `A Re-audit measures the site afresh and uses your last audit until ${date}.`;
+  return `A Re-audit measures the site afresh and uses one of your audits. You have ${count(left)} left until ${date}.`;
+}

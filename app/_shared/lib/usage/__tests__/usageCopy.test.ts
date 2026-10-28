@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLANS, type LimitReached, type PlanId, type UsageSummary } from '@/app/_shared/lib/usage/plans';
-import { askForMore, formatBillingDate, formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel } from '@/app/_shared/lib/usage/usageCopy';
+import { askForMore, formatBillingDate, formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel, reAuditNote } from '@/app/_shared/lib/usage/usageCopy';
 
 const reached = (over: Partial<LimitReached> = {}): LimitReached =>
   ({ kind: 'search', plan: 'pro', limit: 25, resetsAt: '2026-11-14T00:00:00.000Z', ...over });
@@ -55,6 +55,19 @@ describe('meterLabel', () => {
   it('says none are left, and until when', () => expect(meterLabel(summary(1, 0))).toEqual({ text: 'No searches left until Nov 1', empty: true }));
   it('never goes below zero', () => expect(meterLabel(summary(0, 9))?.text).toBe('No audits left until Nov 1'));
   it('shows nothing for an account without limits', () => expect(meterLabel(summary(3, 3, 'owner'))).toBeNull());
+});
+
+describe('reAuditNote', () => {
+  const summary = (audit: number, plan: PlanId = 'free'): UsageSummary => ({
+    plan, resetsAt: '2026-11-01T00:00:00.000Z',
+    usage: { search: { used: 0, limit: PLANS[plan].limits.search }, audit: { used: audit, limit: PLANS[plan].limits.audit }, email_lookup: { used: 0, limit: PLANS[plan].limits.email_lookup } },
+  });
+  it('says a Re-audit uses an audit, and how many are left', () =>
+    expect(reAuditNote(summary(0))).toBe('A Re-audit measures the site afresh and uses one of your audits. You have 2 left until Nov 1.'));
+  it('says when it is the last one', () =>
+    expect(reAuditNote(summary(1))).toBe('A Re-audit measures the site afresh and uses your last audit until Nov 1.'));
+  it('asks nothing when none are left: the limit message explains', () => expect(reAuditNote(summary(2))).toBeNull());
+  it('asks nothing of an account without limits', () => expect(reAuditNote(summary(5, 'owner'))).toBeNull());
 });
 
 describe('featureMessage for per-user settings', () => {

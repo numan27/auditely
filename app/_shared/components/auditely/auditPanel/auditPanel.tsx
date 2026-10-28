@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { GaugeIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
@@ -12,8 +12,11 @@ import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist
 import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack';
 import { AiReportSection } from '@/app/_shared/components/auditely/aiReportSection/aiReportSection';
 import { ReportActions } from '@/app/_shared/components/auditely/reportActions/reportActions';
+import { ReAuditConfirm } from '@/app/_shared/components/auditely/reAuditConfirm/reAuditConfirm';
 import type { useBusinessAudit } from '@/app/_shared/lib/hooks/useBusinessAudit';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+import { reAuditNote } from '@/app/_shared/lib/usage/usageCopy';
 import type { useCrmSend } from '@/app/_shared/lib/hooks/useCrmSend';
 import type { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import type { Business } from '@/app/_shared/lib/types/auditely';
@@ -62,7 +65,17 @@ function Failed({ message, onRetry }: { message: string; onRetry: () => void }):
 /** The body of a business card: audit states, scores, findings and the AI report */
 export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanelProps) {
   const demo = useDemo();
+  const summary = useUsage()?.summary;
+  // What the Re-audit costs, while its question is open
+  const [confirming, setConfirming] = useState<string | null>(null);
   const { audit, report, auditStatus, auditError, reportStatus, queued } = state;
+
+  // On a plan with a limit, Re-audit asks first: it uses one of the account's audits
+  const askReAudit = () => {
+    const note = !demo && summary ? reAuditNote(summary) : null;
+    if (note) setConfirming(note);
+    else state.reAudit();
+  };
 
   if (!business.website) {
     return (
@@ -118,7 +131,7 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={state.reAudit}
+                onClick={askReAudit}
                 // Queued: "Audit all" is about to write this audit's summary
                 disabled={reportStatus === 'loading' || queued || state.rewriting}
                 leftIcon={<RefreshIcon size={14} />}
@@ -168,6 +181,9 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
       </div>
 
       {report && <ReportActions businessName={business.name} state={state} crm={crm} mail={mail} upworkPdf={upworkPdf} request={business.request} />}
+      {confirming && (
+        <ReAuditConfirm businessName={business.name} note={confirming} onConfirm={state.reAudit} onClose={() => setConfirming(null)} />
+      )}
     </>
   );
 }
