@@ -73,7 +73,8 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
     if (await mail.send(draft)) setComposing(false);
   };
 
-  const problem = crm.error ?? mail.warning;
+  // The PDF's first: it's what was pressed last when it's set (pressing again clears it)
+  const problem = state.pdfError ?? crm.error ?? mail.warning;
   const done = [mail.sentAt && `Emailed ${sentOn(mail.sentAt)}`, crm.sentAt && `Sent to HubSpot ${sentOn(crm.sentAt)}`].filter(Boolean);
 
   return (

@@ -17,7 +17,7 @@ export type AuditPdfResult =
 
 export async function renderAuditPdf(db: Db, auditId: string, variant: PdfVariant = 'full'): Promise<AuditPdfResult> {
   const { data: audit } = await db.from('audits').select('*, businesses(*)').eq('id', auditId).single();
-  if (!audit) return { ok: false, status: 404, error: 'Audit not found' };
+  if (!audit) return { ok: false, status: 404, error: "Couldn't find this audit. Refresh the page and try again." };
 
   const { data: aiReport } = await db
     .from('ai_reports')
@@ -26,7 +26,7 @@ export async function renderAuditPdf(db: Db, auditId: string, variant: PdfVarian
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!aiReport) return { ok: false, status: 404, error: 'AI report not found — generate the report first' };
+  if (!aiReport) return { ok: false, status: 404, error: "The summary isn't written yet. Download the PDF once it shows." };
 
   const business = audit.businesses as PdfBusiness & { user_id: string | null };
   // Never drawn under the wrong name: a profile that can't be read stops here
@@ -44,7 +44,8 @@ export async function renderAuditPdf(db: Db, auditId: string, variant: PdfVarian
         ? await renderUpworkPdf(audit, business, aiReport, brand)
         : await renderPdf(audit, business, aiReport, brand);
     return { ok: true, pdf, filename: pdfFileName(business.name, variant) };
-  } catch {
-    return { ok: false, status: 500, error: 'Failed to generate PDF' };
+  } catch (err) {
+    console.error('[pdf] drawing failed:', err);
+    return { ok: false, status: 500, error: "Couldn't make the PDF. Try again in a minute." };
   }
 }

@@ -111,6 +111,14 @@ describe('auditBusiness', () => {
     expect(stages.at(-1)).toEqual({ stage: 'failed', error: 'Audit failed' });
     expect(onLimit).not.toHaveBeenCalled();
   });
+
+  // An answer that wasn't JSON, a platform timeout page say
+  it("says the audit didn't finish when the server gives no reason", async () => {
+    const stages: BulkState[] = [];
+    const post: Post = async () => ({ ok: false, data: null });
+    await auditBusiness(business(), { post, onUpdate: vi.fn(), onStage: (_id, state) => stages.push(state) });
+    expect(stages.at(-1)).toEqual({ stage: 'failed', error: "The audit didn't finish. Try again in a minute." });
+  });
 });
 
 describe('shownStatus', () => {

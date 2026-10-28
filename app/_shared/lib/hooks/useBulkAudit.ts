@@ -8,6 +8,7 @@ import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { planHas, type LimitReached } from '@/app/_shared/lib/usage/plans';
 import { auditBusiness, BULK_CONCURRENCY, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
+import { postJson } from '@/app/_shared/lib/utils/jsonRequest';
 import { runPool } from '@/app/_shared/lib/utils/pool';
 import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/auditely';
 
@@ -21,22 +22,11 @@ export interface BulkProgress {
   isStopping: boolean;
 }
 
-// A request that never got an answer (offline, cancelled) counts as failed
+// A request that never got an answer (offline, cancelled) fails with the connection message
 const poster =
   (signal: AbortSignal): Post =>
-  async (path, body) => {
-    try {
-      const res = await fetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal,
-      });
-      return { ok: res.ok, data: await res.json().catch(() => null) };
-    } catch {
-      return { ok: false, data: null };
-    }
-  };
+  (path, body) =>
+    postJson(path, body, signal);
 
 /**
  * "Audit all" for a results list: audits the given businesses a few at a time

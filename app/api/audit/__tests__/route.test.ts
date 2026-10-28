@@ -240,7 +240,7 @@ describe('POST /api/audit', () => {
     vi.mocked(runAudit).mockRejectedValue(new AuditUnavailableError('Blocked (403)'));
     const { status, json } = await post({ business_id: 'biz-1' });
     expect(status).toBe(502);
-    expect(json.error).toBe("Couldn't audit this site: Blocked (403)");
+    expect(json.error).toBe("Couldn't audit this site: it turns away automated visits.");
     expect(db.ops('audits', 'insert')).toHaveLength(0);
     expect(db.ops('audits', 'update')).toHaveLength(0);
   });
@@ -250,7 +250,9 @@ describe('POST /api/audit', () => {
     givenDb({ 'audits.select': [ok(null)] });
     const { status, json } = await post({ business_id: 'biz-1' });
     expect(status).toBe(503);
-    expect(json.error).toBe('GOOGLE_PAGESPEED_API_KEY is not configured');
+    // The missing key is for the owner's logs, not the tester
+    expect(json.error).toBe("Audits aren't available right now. Try again later.");
+    expect(console.error).toHaveBeenCalledWith('[audit] GOOGLE_PAGESPEED_API_KEY is not configured');
     expect(runAudit).not.toHaveBeenCalled();
   });
 
@@ -262,7 +264,7 @@ describe('POST /api/audit', () => {
     });
     const { status, json } = await post({ business_id: 'biz-1', force: true });
     expect(status).toBe(500);
-    expect(json.error).toBe('Failed to store audit');
+    expect(json.error).toBe("Couldn't save the audit. Try again in a minute.");
   });
 
   describe('against the plan', () => {
@@ -304,8 +306,9 @@ describe('POST /api/audit', () => {
     it('gives the audit back when it fails unexpectedly', async () => {
       givenDb({ 'audits.select': [ok(null)] });
       vi.mocked(runAudit).mockRejectedValue(new Error('socket hang up'));
-      const { status } = await post({ business_id: 'biz-1' });
+      const { status, json } = await post({ business_id: 'biz-1' });
       expect(status).toBe(500);
+      expect(json.error).toBe("The audit didn't finish. Try again in a minute.");
       expect(meter.release).toHaveBeenCalledOnce();
     });
 
@@ -313,7 +316,7 @@ describe('POST /api/audit', () => {
       givenDb({ 'audits.select': [ok(null)], 'audits.insert': [fail('permission denied')] });
       const { status, json } = await post({ business_id: 'biz-1' });
       expect(status).toBe(500);
-      expect(json.error).toBe('Failed to store audit');
+      expect(json.error).toBe("Couldn't save the audit. Try again in a minute.");
       expect(meter.release).toHaveBeenCalledOnce();
     });
 
@@ -327,8 +330,9 @@ describe('POST /api/audit', () => {
 
     it('does not claim for a business without a website', async () => {
       givenDb({ 'businesses.select': [ok({ ...business, website: null })], 'audits.select': [ok(null)] });
-      const { status } = await post({ business_id: 'biz-1' });
+      const { status, json } = await post({ business_id: 'biz-1' });
       expect(status).toBe(400);
+      expect(json.error).toBe('This business has no website to audit.');
       expect(meter.claim).not.toHaveBeenCalled();
     });
   });

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error('[results] Failed to load businesses:', error.message);
-    return NextResponse.json({ error: 'Failed to load results' }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't open this search. Try again in a minute." }, { status: 500 });
   }
 
   return NextResponse.json({ search: search ?? null, businesses: businesses ?? [] });
@@ -81,7 +81,7 @@ export async function DELETE(request: NextRequest) {
     .select('id');
   if (error) {
     console.error('[results] Failed to remove businesses:', error.message);
-    return NextResponse.json({ error: 'Failed to remove the business' }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't remove them. Try again in a minute." }, { status: 500 });
   }
   return NextResponse.json({ removed: (data ?? []).map((row) => row.id as string) });
 }

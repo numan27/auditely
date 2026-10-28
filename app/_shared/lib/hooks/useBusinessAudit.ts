@@ -8,23 +8,39 @@ import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { readLimit } from '@/app/_shared/lib/usage/plans';
 import { downloadBlob } from '@/app/_shared/lib/utils/browserExport';
+import { postJson, UNREACHABLE } from '@/app/_shared/lib/utils/jsonRequest';
+import { AUDIT_BROKE } from '@/app/_shared/lib/audit/auditFailure';
 import { shownStatus, type BulkState, type Post } from '@/app/_shared/lib/utils/bulkAudit';
 import type { AiReport, Audit, AuditStatus, Business, BusinessUpdate, PdfVariant, ReportStatus } from '@/app/_shared/lib/types/auditely';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const REWRITE_FAILED = "Couldn't write it again. Try again in a minute.";
+const PDF_FAILED = "Couldn't make the PDF. Try again in a minute.";
 
 // The real routes. In the public demo the saved sample answers instead (demo/replay.ts).
-const send: Post = async (path, body) => {
-  const res = await fetch(path, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
-  return { ok: res.ok, data: await res.json() };
-};
+const send: Post = (path, body) => postJson(path, body);
 
 /** An audit's PDF report, in the version asked for. The demo's are built ahead from the saved sample, in one version. */
 export const requestPdf = (auditId: string, variant: PdfVariant, demo: boolean): Promise<Response> =>
   demo
     ? fetch(demoReportPath(auditId))
     : fetch(API_ROUTES.PDF, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ audit_id: auditId, variant }) });
+
+/** The PDF, or why there isn't one, in words the card can show */
+export async function fetchPdf(
+  auditId: string,
+  variant: PdfVariant,
+  demo: boolean
+): Promise<{ ok: true; blob: Blob } | { ok: false; error: string }> {
+  try {
+    const res = await requestPdf(auditId, variant, demo);
+    if (res.ok) return { ok: true, blob: await res.blob() };
+    const answer = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    return { ok: false, error: typeof answer?.error === 'string' ? answer.error : PDF_FAILED };
+  } catch {
+    return { ok: false, error: UNREACHABLE };
+  }
+}
 
 export const pdfDownloadName = (businessName: string, variant: PdfVariant): string =>
   `audit-${businessName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}${variant === 'upwork' ? '-upwork' : ''}.pdf`;
@@ -67,6 +83,8 @@ export function useBusinessAudit(
   const [email, setEmail] = useState<string | null>(business.email ?? null);
   // Which version is being prepared
   const [pdfLoading, setPdfLoading] = useState<PdfVariant | null>(null);
+  // Why the last download didn't happen; pressing it again clears it
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [rewriting, setRewriting] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const lastForce = useRef(false);
@@ -105,7 +123,7 @@ export function useBusinessAudit(
     setReportStatus('loading');
     try {
       const { ok, data } = await request(API_ROUTES.GENERATE, { audit_id: auditId });
-      const { ai_report, error } = data as { ai_report: AiReport; error?: string };
+      const { ai_report, error } = (data ?? {}) as { ai_report: AiReport; error?: string };
       if (!ok) throw new Error(error);
       setReport(ai_report);
       setReportStatus('done');
@@ -121,7 +139,7 @@ export function useBusinessAudit(
       setRewriteError(null);
       try {
         const { ok, data } = await request(API_ROUTES.GENERATE, { audit_id: auditId, rewrite: true });
-        const { ai_report, error } = data as { ai_report: AiReport; error?: string };
+        const { ai_report, error } = (data ?? {}) as { ai_report: AiReport; error?: string };
         if (!ok) return setRewriteError(error || REWRITE_FAILED);
         setReport(ai_report);
         onUpdate?.(business.id, { ai_report });
@@ -146,7 +164,7 @@ export function useBusinessAudit(
       };
       try {
         const { ok, data } = await request(API_ROUTES.AUDIT, { business_id: business.id, force });
-        const result = data as { audit: Audit; email?: string | null; error?: string };
+        const result = (data ?? {}) as { audit: Audit; email?: string | null; error?: string };
         if (!ok) {
           // Past the plan's audits: the dialog explains it, and the card goes back to how it was
           const limit = readLimit(data);
@@ -154,7 +172,7 @@ export function useBusinessAudit(
             usage.promptUpgrade({ limit });
             return setAuditStatus(audit ? 'done' : 'idle');
           }
-          return fail(result.error || 'Audit failed');
+          return fail(result.error || AUDIT_BROKE);
         }
         setAudit(result.audit);
         if (result.email) setEmail(result.email);
@@ -167,7 +185,7 @@ export function useBusinessAudit(
         });
         generateReport(result.audit.id);
       } catch {
-        fail('Audit failed');
+        fail(AUDIT_BROKE);
       } finally {
         // The meter reads afresh whatever happened: a failed audit is usually given back, but not always
         usage?.refresh();
@@ -193,19 +211,11 @@ export function useBusinessAudit(
     async (variant: PdfVariant = 'full') => {
       if (!audit) return;
       setPdfLoading(variant);
-      try {
-        const res = await requestPdf(audit.id, variant, !!demo);
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error);
-        }
-        const blob = await res.blob();
-        downloadBlob(blob, pdfDownloadName(business.name, variant));
-      } catch (err) {
-        console.error('PDF download failed:', err);
-      } finally {
-        setPdfLoading(null);
-      }
+      setPdfError(null);
+      const result = await fetchPdf(audit.id, variant, !!demo);
+      if (result.ok) downloadBlob(result.blob, pdfDownloadName(business.name, variant));
+      else setPdfError(result.error);
+      setPdfLoading(null);
     },
     [audit, business.name, demo]
   );
@@ -218,6 +228,7 @@ export function useBusinessAudit(
     email,
     saveEmail,
     pdfLoading,
+    pdfError,
     runAudit,
     reAudit,
     retryAudit,

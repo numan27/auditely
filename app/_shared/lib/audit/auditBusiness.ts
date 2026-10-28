@@ -9,6 +9,7 @@
 import type { Db } from '@/app/_shared/lib/supabase/client';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 import { runAudit, AuditUnavailableError } from '@/app/_shared/lib/audit/runAudit';
+import { auditFailureMessage, AUDIT_BROKE, AUDIT_NOT_SAVED, AUDITS_OFF, NO_WEBSITE } from '@/app/_shared/lib/audit/auditFailure';
 import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
 import { isOutdatedAudit, isStaleAudit, type AuditOutcome, type AuditRow } from '@/app/_shared/lib/audit/types';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
@@ -116,12 +117,14 @@ export async function auditBusiness(
   }
 
   if (!business.website) {
-    return { ok: false, status: 400, error: 'Business has no website' };
+    return { ok: false, status: 400, error: NO_WEBSITE };
   }
 
-  // Without PageSpeed the audit would be stored as current with no scores
+  // Without PageSpeed the audit would be stored as current with no scores. The
+  // missing key is for the logs; the tester is told audits are off for now.
   if (!process.env.GOOGLE_PAGESPEED_API_KEY) {
-    return { ok: false, status: 503, error: 'GOOGLE_PAGESPEED_API_KEY is not configured' };
+    console.error('[audit] GOOGLE_PAGESPEED_API_KEY is not configured');
+    return { ok: false, status: 503, error: AUDITS_OFF };
   }
 
   // A site added by URL or requested on devartventures.com has no business listing:
@@ -154,10 +157,11 @@ export async function auditBusiness(
   } catch (err) {
     await claim.release();
     if (err instanceof AuditUnavailableError) {
-      return { ok: false, status: 502, error: `Couldn't audit this site: ${err.message}` };
+      console.warn(`[audit] couldn't audit ${business.website}: ${err.message}`);
+      return { ok: false, status: 502, error: auditFailureMessage(err.message) };
     }
     console.error('[audit] unexpected failure:', err);
-    return { ok: false, status: 500, error: 'Audit failed' };
+    return { ok: false, status: 500, error: AUDIT_BROKE };
   }
 
   const saved = existing
@@ -166,7 +170,7 @@ export async function auditBusiness(
 
   if (!saved) {
     await claim.release();
-    return { ok: false, status: 500, error: 'Failed to store audit' };
+    return { ok: false, status: 500, error: AUDIT_NOT_SAVED };
   }
 
   return { ok: true, audit: saved, email: outcome.email };

@@ -73,6 +73,16 @@ describe('GET /api/results', () => {
       ['eq', 'user_id', 'user-2'],
     ]);
   });
+
+  it("says plainly when the businesses can't be loaded", async () => {
+    db.state.responses = {
+      'searches.select': [ok({ niche: 'dentists', location: 'austin' })],
+      'businesses.select': [{ data: null, error: { message: 'boom' } }],
+    };
+    const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Couldn't open this search. Try again in a minute.");
+  });
 });
 
 describe('DELETE /api/results', () => {
@@ -146,6 +156,6 @@ describe('DELETE /api/results', () => {
     db.state.responses = { 'searches.select': [leadSearch], 'businesses.delete': [{ data: null, error: { message: 'boom' } }] };
     const { status, json } = await remove({ search_id: SEARCH, ids: [A] });
     expect(status).toBe(500);
-    expect(json.error).toMatch(/remove/i);
+    expect(json.error).toBe("Couldn't remove them. Try again in a minute.");
   });
 });

@@ -148,8 +148,15 @@ describe('POST /api/search', () => {
     const { status, json } = await post({ niche: 'dentist', location: 'austin' });
 
     expect(status).toBe(500);
-    expect(json.error).toBe('Failed to store businesses');
+    expect(json.error).toBe("Couldn't save the search. Try again in a minute.");
     expect(db.state.deletes).toEqual([{ table: 'searches', filters: [['id', 'search-1']] }]);
+  });
+
+  it('asks for both a type of business and a city', async () => {
+    const { status, json } = await post({ niche: 'dentist', location: '  ' });
+    expect(status).toBe(400);
+    expect(json.error).toBe('Enter a type of business and a city.');
+    expect(searchPlaces).not.toHaveBeenCalled();
   });
 
   it('reuses only a search under 30 days old', async () => {
@@ -189,8 +196,9 @@ describe('POST /api/search', () => {
   it("gives the search back when the search can't be saved", async () => {
     vi.mocked(searchPlaces).mockResolvedValue(ONE_PLACE);
     db.state.searchInsertError = 'permission denied for table searches';
-    const { status } = await post({ niche: 'dentist', location: 'austin' });
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
     expect(status).toBe(500);
+    expect(json.error).toBe("Couldn't save the search. Try again in a minute.");
     expect(meter.release).toHaveBeenCalledTimes(1);
   });
 

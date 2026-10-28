@@ -9,10 +9,9 @@ import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
-import { readLimit } from '@/app/_shared/lib/usage/plans';
+import { requestSaved, requestSearch } from '@/app/_shared/lib/hooks/leadSearchRequests';
 import type { UrlAuditRemoval } from '@/app/_shared/lib/hooks/useUrlAudits';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
-import { withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
 
 export interface SearchQuery {
@@ -73,36 +72,20 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
       if (demo) return demo.restrict('search');
       const run = start();
       setPending({ niche, location });
-      try {
-        const res = await fetch(API_ROUTES.SEARCH, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ niche, location }),
-        });
-        const data = await res.json();
-        usage?.refresh();
-        if (!res.ok) {
-          // Past the plan's searches: the dialog explains it, and the form stays as it was
-          const limit = readLimit(data);
-          if (limit && usage) {
-            if (run === latest.current) usage.promptUpgrade({ limit });
-            return;
-          }
-          throw new Error(data.error ?? 'Search failed');
-        }
-        if (run !== latest.current) return;
-        show(data.businesses ?? [], { niche, location });
-        if (typeof data.search_id === 'string') {
-          setSearchId(data.search_id);
-          onSearched?.(data.search_id);
-        }
-      } catch (err) {
-        if (run === latest.current) setError(err instanceof Error ? err.message : 'Search failed. Check your connection and try again.');
-      } finally {
-        if (run === latest.current) {
-          setIsSearching(false);
-          setPending(null);
-        }
+      const result = await requestSearch(niche, location);
+      usage?.refresh();
+      if (run !== latest.current) return;
+      setIsSearching(false);
+      setPending(null);
+      if (!result.ok) {
+        // Past the plan's searches: the dialog explains it, and the form stays as it was
+        if (result.limit && usage) return usage.promptUpgrade({ limit: result.limit });
+        return setError(result.error);
+      }
+      show(result.businesses, { niche, location });
+      if (result.searchId) {
+        setSearchId(result.searchId);
+        onSearched?.(result.searchId);
       }
     },
     [demo, start, show, onSearched, usage]
@@ -112,19 +95,11 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
     async (id: string) => {
       const run = start();
       setSearchId(id);
-      try {
-        const res = await fetch(`${API_ROUTES.RESULTS}?search_id=${encodeURIComponent(id)}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Couldn't open this search");
-        if (run !== latest.current) return;
-        // A search that was deleted (or never existed) has no record: say so instead of an empty list
-        if (!data.search) throw new Error("This search isn't saved any more. Run it again, or open another one.");
-        show((data.businesses ?? []).map((b: BusinessRow) => withAuditData(b)), data.search);
-      } catch (err) {
-        if (run === latest.current) setError(err instanceof Error ? err.message : "Couldn't open this search. Try again.");
-      } finally {
-        if (run === latest.current) setIsSearching(false);
-      }
+      const result = await requestSaved(id);
+      if (run !== latest.current) return;
+      setIsSearching(false);
+      if (result.ok) show(result.businesses, result.search);
+      else setError(result.error);
     },
     [start, show]
   );

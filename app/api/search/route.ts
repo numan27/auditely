@@ -9,6 +9,8 @@ import { meterFor, refusal } from '@/app/_shared/lib/usage/usage';
 // limit how long place details may be kept
 const SEARCH_REUSE_DAYS = 30;
 
+const NOT_SAVED = "Couldn't save the search. Try again in a minute.";
+
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
   const location: string = (body.location ?? '').trim().toLowerCase();
 
   if (!niche || !location) {
-    return NextResponse.json({ error: 'niche and location are required' }, { status: 400 });
+    return NextResponse.json({ error: 'Enter a type of business and a city.' }, { status: 400 });
   }
 
   // Cache check: same niche+location searched recently by this account. A reused
@@ -69,8 +71,9 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (searchInsertError || !newSearch) {
+    console.error('[search] Failed to save the search:', searchInsertError?.message);
     await claim.release();
-    return NextResponse.json({ error: 'Failed to create search record' }, { status: 500 });
+    return NextResponse.json({ error: NOT_SAVED }, { status: 500 });
   }
 
   // Persist all places in one bulk insert. Rows in one insert share NOW(), so
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
       const { error: cleanupError } = await db.from('searches').delete().eq('id', newSearch.id);
       if (cleanupError) console.error('[search] Failed to remove the empty search:', cleanupError.message);
       await claim.release();
-      return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
+      return NextResponse.json({ error: NOT_SAVED }, { status: 500 });
     }
     businesses = data ?? [];
   } else {

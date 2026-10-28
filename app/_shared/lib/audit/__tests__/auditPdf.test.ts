@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderAuditPdf } from '@/app/_shared/lib/audit/auditPdf';
+import { renderPdf } from '@/app/_shared/lib/audit/pdfRender';
 import { BRAND_UNAVAILABLE, BrandUnavailable } from '@/app/_shared/lib/brand/brand';
 import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
 import type { Db } from '@/app/_shared/lib/supabase/client';
@@ -7,6 +8,11 @@ import type { Db } from '@/app/_shared/lib/supabase/client';
 // The brand of the business's account; brand.test.ts reads profiles for real
 const brandFor = vi.hoisted(() => vi.fn());
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+// The real renderer, which one test makes fail
+vi.mock('@/app/_shared/lib/audit/pdfRender', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/app/_shared/lib/audit/pdfRender')>();
+  return { ...real, renderPdf: vi.fn(real.renderPdf) };
+});
 vi.mock('@/app/_shared/lib/brand/brand', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/_shared/lib/brand/brand')>()),
   brandFor,
@@ -62,7 +68,26 @@ describe('renderAuditPdf', () => {
 
   it('has no Upwork version either before the AI report is written', async () => {
     db.state.report = null;
-    expect(await renderAuditPdf(fakeDb, AUDIT, 'upwork')).toEqual({ ok: false, status: 404, error: 'AI report not found — generate the report first' });
+    expect(await renderAuditPdf(fakeDb, AUDIT, 'upwork')).toEqual({
+      ok: false,
+      status: 404,
+      error: "The summary isn't written yet. Download the PDF once it shows.",
+    });
+  });
+
+  it("says plainly when the audit isn't there", async () => {
+    db.state.audit = null;
+    expect(await renderAuditPdf(fakeDb, AUDIT)).toEqual({
+      ok: false,
+      status: 404,
+      error: "Couldn't find this audit. Refresh the page and try again.",
+    });
+  });
+
+  it("says plainly when the PDF can't be drawn", async () => {
+    vi.mocked(renderPdf).mockRejectedValueOnce(new Error('font missing'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await renderAuditPdf(fakeDb, AUDIT)).toEqual({ ok: false, status: 500, error: "Couldn't make the PDF. Try again in a minute." });
   });
 
   it('draws the report in the brand of the business’s account', async () => {

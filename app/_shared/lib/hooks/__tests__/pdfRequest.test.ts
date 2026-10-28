@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { pdfDownloadName, requestPdf } from '@/app/_shared/lib/hooks/useBusinessAudit';
+import { fetchPdf, pdfDownloadName, requestPdf } from '@/app/_shared/lib/hooks/useBusinessAudit';
 
 const fetchMock = vi.fn();
 
@@ -30,6 +30,30 @@ describe('requestPdf', () => {
   it("fetches the demo's ready-made report instead", async () => {
     await requestPdf('demo-a1', 'full', true);
     expect(fetchMock.mock.calls[0]).toEqual(['/demo/report/demo-a1']);
+  });
+});
+
+// What the card shows: the file, or why there isn't one
+describe('fetchPdf', () => {
+  it('gives the file', async () => {
+    const result = await fetchPdf('a1', 'full', false);
+    if (!result.ok) throw new Error(result.error);
+    expect(await result.blob.text()).toBe('%PDF-1.4');
+  });
+
+  it("passes on the server's reason", async () => {
+    fetchMock.mockResolvedValue(Response.json({ error: "The summary isn't written yet. Download the PDF once it shows." }, { status: 404 }));
+    expect(await fetchPdf('a1', 'full', false)).toEqual({ ok: false, error: "The summary isn't written yet. Download the PDF once it shows." });
+  });
+
+  it("says the PDF wasn't made when the server gives no reason", async () => {
+    fetchMock.mockResolvedValue(new Response('<html>An error occurred</html>', { status: 504 }));
+    expect(await fetchPdf('a1', 'full', false)).toEqual({ ok: false, error: "Couldn't make the PDF. Try again in a minute." });
+  });
+
+  it("says Auditely couldn't be reached when there's no answer", async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    expect(await fetchPdf('a1', 'full', false)).toEqual({ ok: false, error: "Couldn't reach Auditely. Check your connection and try again." });
   });
 });
 

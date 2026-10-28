@@ -6,6 +6,7 @@
 import { API_ROUTES } from '@/app/_shared/lib/config/routes';
 import type { AiReport, Audit, AuditStatus, BusinessUpdate, BusinessWithData, ReportStatus } from '@/app/_shared/lib/types/auditely';
 import { readLimit, type LimitReached } from '@/app/_shared/lib/usage/plans';
+import { AUDIT_BROKE } from '@/app/_shared/lib/audit/auditFailure';
 
 // An audit runs PageSpeed twice and a summary calls the AI: three at a time
 // keeps well inside both services' rate limits
@@ -47,7 +48,7 @@ export async function auditBusiness(business: BusinessWithData, { post, onUpdate
     const data = res.data as { audit?: Audit; email?: string | null; error?: string } | null;
     if (!res.ok || !data?.audit) {
       const limit = readLimit(res.data);
-      if (!limit) return onStage(id, { stage: 'failed', error: data?.error || 'Audit failed' });
+      if (!limit) return onStage(id, { stage: 'failed', error: data?.error || AUDIT_BROKE });
       onStage(id, { stage: 'queued' });
       return onLimit?.(limit);
     }
