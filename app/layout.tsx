@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/app/_shared/components/providers/ThemeProvider";
+import { SiteAnalytics } from "@/app/_shared/components/providers/siteAnalytics";
 import { AUDITELY_URL } from "@/app/_shared/lib/config/site";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
         </ThemeProvider>
+        <SiteAnalytics />
       </body>
     </html>
   );

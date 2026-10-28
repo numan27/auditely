@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-import { proxy } from '@/proxy';
+import { config, proxy } from '@/proxy';
 import { API_ROUTES, BOTID_PATH, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 
 // The Supabase session the proxy reads: who is signed in, and a refreshed cookie on
@@ -146,5 +146,19 @@ describe('proxy', () => {
       await visit(ROUTES.DEMO),
     ];
     for (const res of answers) expect(keepsSession(res)).toBe(true);
+  });
+});
+
+describe('which requests the proxy sees', () => {
+  // The matcher is one path pattern; as a regular expression it reads the same way
+  const runsOn = (path: string) => new RegExp(`^${config.matcher[0]}$`).test(path);
+
+  it("leaves Vercel's analytics script and the visits it reports to Vercel", () => {
+    expect(runsOn('/_vercel/insights/script.js')).toBe(false);
+    expect(runsOn('/_vercel/insights/view')).toBe(false);
+  });
+
+  it('still runs on every page and API route', () => {
+    for (const path of ['/', '/settings', '/report/abc', '/api/search', '/opengraph-image']) expect(runsOn(path), path).toBe(true);
   });
 });

@@ -94,6 +94,14 @@ describe('the Privacy Policy', () => {
     ]);
   });
 
+  it('says visits are counted by Vercel Web Analytics, without cookies or private addresses', () => {
+    const page = text(privacy);
+    expect(page).toContain('Vercel Web Analytics');
+    expect(page).toMatch(/counts visits without cookies/);
+    expect(page).toMatch(/Report links aren.t counted, and other private addresses are counted without the part that identifies them/);
+    expect(page).toContain('Vercel: hosting, visit counts, and the bot check on the free audit.');
+  });
+
   it('says what free-audit visitors leave behind, and that the address itself is never stored', () => {
     const page = text(privacy);
     expect(page).toMatch(/salted hash of your network address/);

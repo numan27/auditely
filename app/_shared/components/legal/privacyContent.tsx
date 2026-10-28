@@ -42,6 +42,11 @@ export function PrivacyContent() {
             address, never the address itself, so each network gets one free audit; a cookie that brings your audit
             back; and Vercel&apos;s bot check, which reads signals from your browser to tell people from bots.
           </li>
+          <li>
+            <strong>Visits:</strong> which pages are opened, the site that sent you there, and your browser, type of
+            device and country, counted by Vercel Web Analytics. Report links aren&apos;t counted, and other private
+            addresses are counted without the part that identifies them.
+          </li>
         </ul>
         <p>Like most websites, our hosting keeps short-lived request logs, network addresses included, to run and protect the service.</p>
       </LegalSection>
@@ -50,6 +55,7 @@ export function PrivacyContent() {
         <ul>
           <li>To run Auditely: sign you in, run your searches and audits, write summaries and drafts, send the emails you choose to send, and keep track of your plan and allowances.</li>
           <li>To keep it safe: stop abuse, bots and fraud, and fix what breaks.</li>
+          <li>To make it better: see which pages people visit and where they come from.</li>
           <li>To tell you about your account: sign-in links, receipts, and changes that matter.</li>
         </ul>
       </LegalSection>
@@ -58,7 +64,7 @@ export function PrivacyContent() {
         <p>Service providers that run parts of Auditely for us, each only for its own job:</p>
         <ul>
           <li>Supabase: our database and sign-in.</li>
-          <li>Vercel: hosting, and the bot check on the free audit.</li>
+          <li>Vercel: hosting, visit counts, and the bot check on the free audit.</li>
           <li>Stripe: payments and sales tax.</li>
           <li>Google: Places for business details, PageSpeed for audits, and Google sign-in if you use it.</li>
           <li>Groq: writing the summaries and draft emails.</li>
@@ -100,7 +106,8 @@ export function PrivacyContent() {
         <p>
           Auditely uses only what it needs to work: sign-in cookies that keep you signed in, your light or dark theme
           saved in your browser, and the free audit&apos;s cookie, which brings back the audit you ran. Vercel&apos;s bot
-          check may set its own. There are no advertising cookies, and nothing follows you to other sites.
+          check may set its own. Vercel Web Analytics counts visits without cookies. There are no advertising cookies,
+          and nothing follows you to other sites.
         </p>
       </LegalSection>
 
