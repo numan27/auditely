@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GearIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
-import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
+// import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
 import { ProfileMenu } from '@/app/_shared/components/auditely/profileMenu/profileMenu';
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
@@ -76,8 +76,8 @@ export function AppHeader() {
           {/* The demo has no allowances, requests or saved runs to hear about */}
           {!demo && <UsageMeter />}
           {!demo && <NotificationBell />}
-          {/* The beta's way to reach the owner; the demo has no account to reply to */}
-          {!demo && <FeedbackButton />}
+          {/* Feedback floats at the bottom right instead (FloatingFeedback, in the app layout), with its word on a phone too */}
+          {/* {!demo && <FeedbackButton />} */}
           <ThemeToggle />
           {demo ? (
             <Link

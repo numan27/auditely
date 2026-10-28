@@ -139,7 +139,7 @@ describe('PlansView', () => {
     expect(html).toContain('$24 a month');
     expect(html).toContain('or $240 a year');
     expect(html).toContain(
-      'Auditely is in beta, and Pro and Agency open when it ends. Need more searches or audits before then? Ask through Feedback at the top of the page.'
+      'Auditely is in beta, and Pro and Agency open when it ends. Need more searches or audits before then? Ask through Feedback at the bottom right of the page.'
     );
   });
 

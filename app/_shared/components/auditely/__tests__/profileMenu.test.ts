@@ -46,6 +46,11 @@ describe('ProfileMenu', () => {
     expect(text(html)).not.toContain('Log out');
   });
 
+  it('leaves Feedback to the button at the bottom right, so the header keeps its room on a phone', () => {
+    const html = renderToStaticMarkup(createElement(ProfileCardContext.Provider, { value: numan }, createElement(AppHeader)));
+    expect(text(html)).not.toContain('Feedback');
+  });
+
   it('names the account by its email when no name is saved', () => {
     const html = renderToStaticMarkup(createElement(ProfileCardContext.Provider, { value: bare }, createElement(ProfileMenu)));
     expect(html).toContain('aria-label="Your account: sam@acme.studio"');
@@ -54,7 +59,7 @@ describe('ProfileMenu', () => {
 
 describe('ProfilePanel', () => {
   const panel = (card: ProfileCard, plan = 'Free') =>
-    renderToStaticMarkup(createElement(ProfilePanel, { card, planName: plan, onClose: () => {}, onLogout: () => {} }));
+    renderToStaticMarkup(createElement(ProfilePanel, { card, planName: plan, onClose: () => {}, onLogout: () => {}, onFeedback: () => {} }));
 
   it('shows the name, company, email and plan, with Edit profile, plans and Log out', () => {
     const html = panel(numan);
@@ -65,6 +70,10 @@ describe('ProfilePanel', () => {
     expect(html).toMatch(/<a[^>]*href="\/settings#profile"[^>]*>Edit profile<\/a>/);
     expect(html).toMatch(/<a[^>]*href="\/plans"[^>]*>Plans and usage<\/a>/);
     expect(html).toMatch(/<button[^>]*>Log out<\/button>/);
+  });
+
+  it('has Send feedback beside the account links', () => {
+    expect(panel(numan)).toMatch(/<button[^>]*type="button"[^>]*>Send feedback<\/button>/);
   });
 
   it('asks for a name and logo when none are saved, and shows the email once', () => {

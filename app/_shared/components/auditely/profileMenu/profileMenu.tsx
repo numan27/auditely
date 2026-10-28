@@ -4,10 +4,11 @@
 
 // The header's profile menu: the signed-in person's logo (or initials) opens their
 // name, company, email and plan, with the way to edit the profile in Settings, see
-// the plans and log out. Without a card it falls back to the account's email.
+// the plans, send feedback and log out. Without a card it falls back to the account's email.
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
+import { FeedbackModal } from '@/app/_shared/components/auditely/feedback/feedbackModal';
 import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
@@ -60,10 +61,11 @@ interface ProfilePanelProps {
   planName: string | null;
   onClose: () => void;
   onLogout: () => void;
+  onFeedback: () => void;
 }
 
-/** The menu's dropdown: who is signed in, then Edit profile, Plans and usage, and Log out */
-export function ProfilePanel({ card, planName, onClose, onLogout }: ProfilePanelProps) {
+/** The menu's dropdown: who is signed in, then Edit profile, Plans and usage, Send feedback, and Log out */
+export function ProfilePanel({ card, planName, onClose, onLogout, onFeedback }: ProfilePanelProps) {
   const title = titleOf(card);
   const company = card.name?.trim() && card.company?.trim() ? card.company : null;
   const blank = !card.name?.trim() && !card.company?.trim() && !card.logo;
@@ -86,6 +88,7 @@ export function ProfilePanel({ card, planName, onClose, onLogout }: ProfilePanel
       <div className="py-1">
         <Link href={`${ROUTES.SETTINGS}#profile`} onClick={onClose} className={itemClasses}>Edit profile</Link>
         <Link href={ROUTES.PLANS} onClick={onClose} className={itemClasses}>Plans and usage</Link>
+        <button type="button" onClick={onFeedback} className={itemClasses}>Send feedback</button>
       </div>
       <div className="border-t border-[var(--color-border)] py-1">
         <button type="button" onClick={onLogout} className={itemClasses}>Log out</button>
@@ -101,6 +104,7 @@ export function ProfileMenu() {
   const summary = useUsage()?.summary;
   const logout = useLogout();
   const [open, setOpen] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -154,9 +158,14 @@ export function ProfileMenu() {
             planName={summary ? PLANS[summary.plan].name : null}
             onClose={() => setOpen(false)}
             onLogout={logout}
+            onFeedback={() => {
+              setOpen(false);
+              setFeedback(true);
+            }}
           />
         </div>
       )}
+      {feedback && <FeedbackModal onClose={() => setFeedback(false)} />}
     </div>
   );
 }

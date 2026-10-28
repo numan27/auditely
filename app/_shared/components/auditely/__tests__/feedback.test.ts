@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
 import { FeedbackModal } from '@/app/_shared/components/auditely/feedback/feedbackModal';
+import { FloatingFeedback } from '@/app/_shared/components/auditely/feedback/floatingFeedback';
 
 describe('FeedbackModal', () => {
   it('asks what is working and what is not, and sends it', () => {
@@ -26,6 +27,23 @@ describe('FeedbackButton', () => {
     const html = renderToStaticMarkup(createElement(FeedbackButton));
     expect(html).toMatch(/<button[^>]*type="button"/);
     expect(html).toContain('Feedback');
+    expect(html).not.toContain('role="dialog"');
+  });
+});
+
+describe('FloatingFeedback', () => {
+  const html = renderToStaticMarkup(createElement(FloatingFeedback));
+  const button = html.match(/<button[^>]*>[\s\S]*?<\/button>/)?.[0] ?? '';
+
+  it('stays at the bottom right of the page, so a tester always finds it', () => {
+    expect(button).toMatch(/class="[^"]*\bfixed\b[^"]*"/);
+    expect(button).toMatch(/class="[^"]*\bbottom-[^"]*"/);
+    expect(button).toMatch(/class="[^"]*\bright-[^"]*"/);
+  });
+
+  it('reads Feedback on a phone too, not only an icon', () => {
+    expect(button).toMatch(/<span>Feedback<\/span>/);
+    expect(button).not.toContain('sr-only');
     expect(html).not.toContain('role="dialog"');
   });
 });

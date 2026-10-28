@@ -245,7 +245,7 @@ export function PlansView({ summary, billing }: { summary: UsageSummary | null; 
         {waitingForBeta(billing) && (
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--color-text-secondary)]">
             Auditely is in beta, and Pro and Agency open when it ends. Need more searches or audits before then? Ask through
-            Feedback at the top of the page.
+            Feedback at the bottom right of the page.
           </p>
         )}
         {buying && <IntervalSwitch interval={billing.interval} />}
