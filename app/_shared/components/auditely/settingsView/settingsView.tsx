@@ -7,6 +7,8 @@ import { ToastProvider } from '@/app/_shared/components/ui/toast/toast';
 import { BillingButton } from '@/app/_shared/components/auditely/billing/billingButton';
 import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/connectedRow';
 import { FreeAuditsSection, type FreeAuditsSummary } from '@/app/_shared/components/auditely/settingsView/freeAuditsSection';
+import { GrowthSection } from '@/app/_shared/components/auditely/settingsView/growthSection';
+import type { GrowthCounts } from '@/app/_shared/lib/growth/funnel';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
 import { PasswordSection } from '@/app/_shared/components/auditely/settingsView/passwordSection';
@@ -33,6 +35,8 @@ export interface SettingsViewProps {
   billingReady: boolean;
   /** Today's free audits, for the owner only */
   freeAudits: FreeAuditsSummary | null;
+  /** The last 7 and 30 days' numbers, for the owner only; counts are null when they couldn't be read */
+  growth: { counts: GrowthCounts[] | null } | null;
 }
 
 const PLANS_LINK = 'font-medium text-[var(--color-primary-600)] hover:underline';
@@ -68,7 +72,7 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
 }
 
 /** The account's profile and branding, its mailbox and HubSpot, its password, and its plan */
-export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits }: SettingsViewProps) {
+export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits, growth }: SettingsViewProps) {
   const paying = plan !== 'owner' && subscription;
   return (
     <ToastProvider position="bottom-right">
@@ -165,6 +169,7 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
       </Section>
 
       {freeAudits && <FreeAuditsSection freeAudits={freeAudits} />}
+      {growth && <GrowthSection counts={growth.counts} />}
     </ToastProvider>
   );
 }

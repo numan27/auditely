@@ -53,6 +53,7 @@ const view = (over: {
       subscription: over.subscription ?? null,
       billingReady: over.billingReady ?? false,
       freeAudits: null,
+      growth: null,
     })
   );
 };

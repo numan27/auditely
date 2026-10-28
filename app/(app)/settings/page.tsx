@@ -4,7 +4,7 @@
 // with Manage billing. The profile is read as the user; only its fields go to the
 // browser, and what is connected goes as labels, never a password or token. The
 // subscription goes as its plan and dates, never a Stripe id. The owner also sees
-// today's free audits; nobody else's page reads them.
+// today's free audits and the last 7 and 30 days' numbers; nobody else's page reads them.
 
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -16,6 +16,8 @@ import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { dayStart, freeAuditSetup } from '@/app/_shared/lib/freeAudit/freeAuditRules';
 import { freeAuditsSince } from '@/app/_shared/lib/freeAudit/freeAuditStore';
+import { growthCounts, type GrowthCounts } from '@/app/_shared/lib/growth/funnel';
+import { growthRows } from '@/app/_shared/lib/growth/growthStore';
 import { connectionsFor } from '@/app/_shared/lib/settings/connections';
 import { getSession } from '@/app/_shared/lib/supabase/server';
 
@@ -42,16 +44,24 @@ async function freeAuditsToday(): Promise<FreeAuditsSummary> {
   };
 }
 
+/** The last 7 and 30 days' numbers; null when they couldn't be read */
+async function growthToDate(): Promise<GrowthCounts[] | null> {
+  const now = new Date();
+  const rows = await growthRows(now);
+  return rows && growthCounts(rows, now);
+}
+
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) redirect(ROUTES.LOGIN);
   const { db, account } = session;
 
-  const [{ data, error }, connections, freeAudits] = await Promise.all([
+  const [{ data, error }, connections, freeAudits, growth] = await Promise.all([
     // '*': before the settings migration the new columns aren't there, and read as blank
     db.from('profiles').select('*').eq('id', account.id).maybeSingle(),
     connectionsFor(account),
     account.isOwner ? freeAuditsToday() : null,
+    account.isOwner ? growthToDate().then((counts) => ({ counts })) : null,
   ]);
   if (error) console.error('[settings] Failed to read the profile:', error.message);
   const row = (data ?? {}) as Partial<Record<keyof ProfileFields, string | null>>;
@@ -71,6 +81,7 @@ export default async function SettingsPage() {
           subscription={account.subscription ?? null}
           billingReady={billingReady()}
           freeAudits={freeAudits}
+          growth={growth}
         />
       </main>
     </div>
