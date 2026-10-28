@@ -1,5 +1,6 @@
 import { LoginForm } from '@/app/_shared/components/forms/loginForm/loginForm';
 import { signupsOpen } from '@/app/_shared/lib/auth/account';
+import { googleSignInOn } from '@/app/_shared/lib/auth/googleSignIn';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       error={first(error)}
       open={signupsOpen()}
       method={first(method) === 'password' ? 'password' : 'link'}
+      google={await googleSignInOn()}
     />
   );
 }

@@ -3,13 +3,16 @@
 // "Continue with Google": asks Supabase for Google's consent page and sends the
 // browser there. Google comes back to /auth/callback on this site with a code,
 // carrying where the user was going; the PKCE verifier for that code is set as a
-// cookie on this redirect. Whether the account may sign in is checked there.
+// cookie on this redirect. Whether the account may sign in is checked there. While
+// Google isn't turned on in Supabase, an old link to here goes back to the login.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { googleSignInOn } from '@/app/_shared/lib/auth/googleSignIn';
 import { userDb } from '@/app/_shared/lib/supabase/server';
 import { ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
 
 export async function GET(request: NextRequest) {
+  if (!(await googleSignInOn())) return NextResponse.redirect(new URL(`${ROUTES.LOGIN}?error=google-off`, request.url));
   const url = new URL(request.url);
   const next = safeCallbackUrl(url.searchParams.get('next'));
   const db = await userDb();

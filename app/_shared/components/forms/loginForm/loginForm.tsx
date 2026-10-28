@@ -17,6 +17,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
   link: 'That sign-in link has expired or was already used. Send yourself a new one.',
   closed: 'Auditely is invite-only for now. Use the email you were invited with.',
   google: "Couldn't reach Google. Try again, or use your email.",
+  'google-off': "Google sign-in isn't available yet. Use your email instead.",
 };
 
 // "Continue with Google" looks like the form's button, but it's a link: the browser leaves for Google
@@ -36,6 +37,8 @@ interface LoginFormProps {
   open?: boolean;
   /** Sign in with an emailed link, or with the password set in Settings (/login?method=password) */
   method?: 'link' | 'password';
+  /** Google sign-in is turned on in Supabase (googleSignInOn(), read on the server) */
+  google?: boolean;
 }
 
 /** The sign-in page, by link or by password, still headed where the visitor was going */
@@ -48,28 +51,29 @@ function loginHref(next: string, method: 'link' | 'password') {
 }
 
 // The heading, the line under it, and the way to the other page
-function copyFor(mode: 'signin' | 'signup', open: boolean, byPassword: boolean) {
+function copyFor(mode: 'signin' | 'signup', open: boolean, byPassword: boolean, google: boolean) {
+  const orGoogle = google ? ', or use Google' : '';
   if (mode === 'signup') {
     return {
       heading: 'Create your Auditely account',
-      lead: `Free, with ${countOf('search', PLANS.free.limits.search ?? 0)} and ${countOf('audit', PLANS.free.limits.audit ?? 0)} a month. We'll email you a link, or use Google.`,
+      lead: `Free, with ${countOf('search', PLANS.free.limits.search ?? 0)} and ${countOf('audit', PLANS.free.limits.audit ?? 0)} a month. We'll email you a link${orGoogle}.`,
       other: { prompt: 'Already have an account?', label: 'Sign in', path: ROUTES.LOGIN },
     };
   }
   if (!open) return { heading: 'Sign in to Auditely', lead: 'Use the email you were invited with.', other: null };
   return {
     heading: 'Sign in to Auditely',
-    lead: byPassword ? 'Sign in with your email and password, or use Google.' : "We'll email you a sign-in link, or use Google.",
+    lead: byPassword ? `Sign in with your email and password${orGoogle}.` : `We'll email you a sign-in link${orGoogle}.`,
     other: { prompt: 'New to Auditely?', label: 'Create an account', path: ROUTES.SIGNUP },
   };
 }
 
-export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, method = 'link' }: LoginFormProps) {
+export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, method = 'link', google = true }: LoginFormProps) {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const next = safeCallbackUrl(callbackUrl);
   // Passwords are for signing in: a new account starts with a link or Google, and sets one in Settings
   const byPassword = mode === 'signin' && method === 'password';
-  const copy = copyFor(mode, open, byPassword);
+  const copy = copyFor(mode, open, byPassword, google);
   // Where the visitor was headed comes along to the other page
   const otherHref = copy.other && (next === ROUTES.HOME ? copy.other.path : `${copy.other.path}?callbackUrl=${encodeURIComponent(next)}`);
   // Own keys only: ?error=__proto__ would otherwise find Object.prototype and crash the form
@@ -209,9 +213,11 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
       )}
 
       {/* A full page load, not a client-side navigation: the route sends the browser on to Google */}
-      <a href={`${ROUTES.AUTH_GOOGLE}?next=${encodeURIComponent(next)}`} className={googleLinkClasses}>
-        Continue with Google
-      </a>
+      {google && (
+        <a href={`${ROUTES.AUTH_GOOGLE}?next=${encodeURIComponent(next)}`} className={googleLinkClasses}>
+          Continue with Google
+        </a>
+      )}
 
       <ConsentLine />
 

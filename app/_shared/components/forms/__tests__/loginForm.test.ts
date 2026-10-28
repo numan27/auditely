@@ -10,6 +10,24 @@ const render = (props: Props) => renderToStaticMarkup(createElement(LoginForm, p
 const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
 
 describe('LoginForm', () => {
+  it("leaves Google out while it isn't turned on, so nobody is sent to a dead end", () => {
+    for (const props of [{ open: true }, { mode: 'signup' as const, open: true }, { open: true, method: 'password' as const }]) {
+      const html = render({ ...props, google: false });
+      expect(html).not.toContain('/auth/google');
+      expect(text(html)).not.toContain('Google');
+    }
+    expect(text(render({ open: true, google: false }))).toContain("We'll email you a sign-in link.");
+    expect(text(render({ mode: 'signup', open: true, google: false }))).toContain(
+      "Free, with 1 search and 2 audits a month. We'll email you a link."
+    );
+    expect(text(render({ open: true, method: 'password', google: false }))).toContain('Sign in with your email and password.');
+    expect(render({ open: true })).toContain('href="/auth/google?next=%2F"');
+  });
+
+  it('says Google sign-in is off when an old link to it is followed', () => {
+    expect(text(form('google-off'))).toContain("Google sign-in isn't available yet. Use your email instead.");
+  });
+
   it('says what went wrong on the way back from a sign-in', () => {
     expect(form('link')).toContain('That sign-in link has expired or was already used. Send yourself a new one.');
     expect(form('closed')).toContain('Auditely is invite-only for now. Use the email you were invited with.');

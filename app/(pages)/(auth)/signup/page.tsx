@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { LoginForm } from '@/app/_shared/components/forms/loginForm/loginForm';
 import { signupsOpen } from '@/app/_shared/lib/auth/account';
+import { googleSignInOn } from '@/app/_shared/lib/auth/googleSignIn';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 export const metadata: Metadata = {
@@ -24,5 +25,5 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   if (!signupsOpen()) {
     redirect(callbackUrl ? `${ROUTES.LOGIN}?callbackUrl=${encodeURIComponent(callbackUrl)}` : ROUTES.LOGIN);
   }
-  return <LoginForm mode="signup" open callbackUrl={callbackUrl} />;
+  return <LoginForm mode="signup" open callbackUrl={callbackUrl} google={await googleSignInOn()} />;
 }

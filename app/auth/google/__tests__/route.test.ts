@@ -16,6 +16,8 @@ const auth = vi.hoisted(() => ({
   getClaims: vi.fn(),
   signOut: vi.fn(),
 }));
+const google = vi.hoisted(() => ({ on: true }));
+vi.mock('@/app/_shared/lib/auth/googleSignIn', () => ({ googleSignInOn: async () => google.on }));
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
 vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
@@ -28,6 +30,7 @@ const start = (query = '') => GET(new NextRequest(`https://auditely.app/auth/goo
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   Object.values(auth).forEach((fn) => fn.mockReset());
+  google.on = true;
   auth.signInWithOAuth.mockResolvedValue({ data: { provider: 'google', url: GOOGLE }, error: null });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -48,6 +51,13 @@ describe('GET /auth/google', () => {
       await start(`?next=${next}`);
       expect(auth.signInWithOAuth.mock.calls[0][0].options.redirectTo).toBe('https://auditely.app/auth/callback?next=%2F');
     }
+  });
+
+  it("sends the user back to the login, not to Supabase's error page, while Google isn't turned on", async () => {
+    google.on = false;
+    const res = await start('?next=%2Fplans');
+    expect(auth.signInWithOAuth).not.toHaveBeenCalled();
+    expect(new URL(res.headers.get('location')!).href).toBe('https://auditely.app/login?error=google-off');
   });
 
   it('sends the user back to the login when Google sign-in cannot start', async () => {
