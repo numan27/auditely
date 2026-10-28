@@ -4,6 +4,7 @@
 // and the email finder.
 
 import { AUDITELY_URL } from '@/app/_shared/lib/config/site';
+import { lookupAll, publicHost, type HostLookup } from '@/app/_shared/lib/utils/publicAddress';
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
@@ -38,9 +39,46 @@ function isBotChallenge(headers: Record<string, string>, html: string): boolean 
   return html.length < MAX_CHALLENGE_BYTES && CHALLENGE_MARKERS.test(html);
 }
 
+/** A site or redirect hop that isn't on the public internet */
+export class NotPublicError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotPublicError';
+  }
+}
+
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
+const NOT_PUBLIC = 'it points to a private address';
+
+/**
+ * fetch that follows redirects itself, checking every hop's host is public
+ * before requesting it. The response's url is the last hop.
+ */
+export async function publicFetch(
+  url: string,
+  init: RequestInit,
+  lookup: HostLookup = lookupAll,
+  maxRedirects = 5
+): Promise<Response> {
+  let target = url;
+  let request: RequestInit = { ...init, redirect: 'manual' };
+  for (let redirects = 0; ; redirects++) {
+    const hop = new URL(target);
+    if ((hop.protocol !== 'http:' && hop.protocol !== 'https:') || (await publicHost(hop.hostname, lookup)) !== 'public') {
+      throw new NotPublicError(`${hop.hostname || hop.protocol} isn't a public address`);
+    }
+    const res = await fetch(target, request);
+    const location = res.headers.get('location');
+    if (!REDIRECTS.has(res.status) || !location) return res;
+    await res.body?.cancel().catch(() => {});
+    if (redirects >= maxRedirects) throw new Error('Too many redirects');
+    target = new URL(location, hop).href;
+    if (res.status === 303) request = { ...request, method: 'GET', body: undefined };
+  }
+}
+
 function get(url: string): Promise<Response> {
-  return fetch(url, {
-    redirect: 'follow',
+  return publicFetch(url, {
     headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
@@ -88,6 +126,7 @@ export async function fetchSite(website: string): Promise<SiteFetchResult> {
   try {
     res = await get(start.href);
   } catch (err) {
+    if (err instanceof NotPublicError) return failure(NOT_PUBLIC);
     const timedOut = err instanceof Error && err.name === 'TimeoutError';
     return failure(timedOut ? 'Site timed out' : 'Site unreachable');
   }
@@ -137,7 +176,8 @@ export async function fetchPage(url: string): Promise<PageFetchResult> {
     res = await get(url);
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'TimeoutError';
-    return { ok: false, status: null, finalUrl: null, html: null, reason: timedOut ? 'Page timed out' : 'Page unreachable' };
+    const reason = err instanceof NotPublicError ? NOT_PUBLIC : timedOut ? 'Page timed out' : 'Page unreachable';
+    return { ok: false, status: null, finalUrl: null, html: null, reason };
   }
 
   const finalUrl = res.url || url;
