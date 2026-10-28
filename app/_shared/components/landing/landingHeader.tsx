@@ -5,9 +5,9 @@ import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss'
 import { wrapClasses } from '@/app/_shared/components/landing/landingStyles';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
-const startClasses = [buttonStyles.button, buttonStyles['button--primary'], buttonStyles['button--md']].join(' ');
+const startClasses = [buttonStyles.button, buttonStyles['button--primary'], buttonStyles['button--md'], 'whitespace-nowrap'].join(' ');
 const linkClasses =
-  'rounded-lg px-3 py-3 text-[15px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]';
+  'whitespace-nowrap rounded-lg px-3 py-3 text-[15px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]';
 
 /** The logo, home: the sign-in pages' top bar has it too */
 export function LandingLogo() {
@@ -22,7 +22,7 @@ export function LandingLogo() {
   );
 }
 
-// The landing page's, and the Terms' and Privacy's, top bar. It stays at the top
+// The landing page's, and the Terms', Privacy's and Contact's, top bar. It stays at the top
 // as the page scrolls. The page's own sections hide below 960px; signing in and
 // starting free never do.
 const SECTIONS = [

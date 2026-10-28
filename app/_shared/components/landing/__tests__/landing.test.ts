@@ -276,6 +276,13 @@ describe('the header', () => {
     expect(linkTo(html, 'Sign in')).toContain('href="/login"');
     expect(linkTo(html, 'Start free')).toContain('href="/signup"');
   });
+
+  // At 375px they used to break onto two lines each
+  it('keeps Sign in and Start free on one line on a phone', () => {
+    const html = renderToStaticMarkup(createElement(LandingHeader));
+    expect(linkTo(html, 'Sign in')).toMatch(/class="[^"]*whitespace-nowrap/);
+    expect(linkTo(html, 'Start free')).toMatch(/class="[^"]*whitespace-nowrap/);
+  });
 });
 
 describe('the sample report', () => {
