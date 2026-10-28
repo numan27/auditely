@@ -61,7 +61,7 @@ export function PrivacyContent() {
           <li>Stripe: payments and sales tax.</li>
           <li>Google: Places for business details, PageSpeed for audits, and Google sign-in if you use it.</li>
           <li>Groq: writing the summaries and draft emails.</li>
-          <li>Hunter, Snov and Verifalia: finding and checking business email addresses.</li>
+          <li>Hunter, Tomba, Snov, Apollo and Verifalia: finding and checking business email addresses.</li>
           <li>Resend: delivering email.</li>
           <li>HubSpot, when you connect it: the leads you send there.</li>
         </ul>

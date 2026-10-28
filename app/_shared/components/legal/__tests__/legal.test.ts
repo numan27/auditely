@@ -95,7 +95,7 @@ describe('the Privacy Policy', () => {
     expect(page).toContain('California');
     expect(page).toContain('CCPA');
     expect(page).toContain("We don't sell your personal information or share it for advertising.");
-    for (const provider of ['Supabase', 'Vercel', 'Stripe', 'Google', 'Groq', 'Hunter', 'Snov', 'Verifalia', 'Resend', 'HubSpot']) {
+    for (const provider of ['Supabase', 'Vercel', 'Stripe', 'Google', 'Groq', 'Hunter', 'Tomba', 'Snov', 'Apollo', 'Verifalia', 'Resend', 'HubSpot']) {
       expect(page, provider).toContain(provider);
     }
     expect(page).toMatch(/under 13/);
