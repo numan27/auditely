@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { proxy } from '@/proxy';
-import { API_ROUTES, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, BOTID_PATH, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 
 // The Supabase session the proxy reads: who is signed in, and a refreshed cookie on
 // the response it hands back, so each test can see whether that cookie survives
@@ -69,8 +69,16 @@ describe('proxy', () => {
   });
 
   it('still answers 401 to a logged-out call of any API route but the login', async () => {
-    for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH)) {
+    for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH && p !== API_ROUTES.FREE_AUDIT)) {
       expect((await visit(path)).status).toBe(401);
+    }
+  });
+
+  it('lets a signed-out visitor run the free audit and pass its bot check', async () => {
+    for (const path of [API_ROUTES.FREE_AUDIT, `${BOTID_PATH}/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js`]) {
+      const res = await visit(path);
+      expect(res.status).not.toBe(401);
+      expect(sentTo(res)).toBeNull();
     }
   });
 

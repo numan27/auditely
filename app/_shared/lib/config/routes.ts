@@ -22,9 +22,11 @@ export const ROUTES = {
   AUTH_GOOGLE: '/auth/google',
 } as const;
 
-// API route paths. Only AUTH is public (see PUBLIC_ROUTES below).
+// API route paths. Only AUTH and FREE_AUDIT are public (see PUBLIC_ROUTES below).
 export const API_ROUTES = {
   AUTH: '/api/auth',
+  // The landing page's free audit: one per visitor's network, behind BotID
+  FREE_AUDIT: '/api/free-audit',
   AUDIT: '/api/audit',
   AUDIT_URL: '/api/audit-url',
   GENERATE: '/api/generate',
@@ -56,13 +58,19 @@ export const INBOUND_ROUTES = {
   STRIPE_WEBHOOK: '/api/stripe/webhook',
 } as const;
 
+// BotID's challenge script and the calls it makes, which withBotId (next.config.ts)
+// rewrites to Vercel. A signed-out visitor has to reach it to pass the bot check.
+export const BOTID_PATH = '/149e9513-01fa-4fb0-aad4-566afd725d1b';
+
 // Everything needs a signed-in account except these; the sign-in routes run before
 // there is a session, /report/{token} is checked by its signature, /demo shows only
-// the sample checked into the repo, the inbound route checks its secret, and Stripe's
-// webhook checks Stripe's signature
+// the sample checked into the repo, the free audit checks BotID and its own limits,
+// the inbound route checks its secret, and Stripe's webhook checks Stripe's signature
 export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   API_ROUTES.AUTH,
+  API_ROUTES.FREE_AUDIT,
+  BOTID_PATH,
   ROUTES.AUTH_CALLBACK,
   ROUTES.AUTH_GOOGLE,
   ROUTES.REPORT,

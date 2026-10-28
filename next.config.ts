@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -29,4 +30,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// BotID's challenge script and its calls go through this site to Vercel (BOTID_PATH in routes.ts)
+export default withBotId(nextConfig);

@@ -1,6 +1,6 @@
 // app/_shared/components/auditely/auditScores/auditScores.tsx
 
-import type { Audit } from '@/app/_shared/lib/types/auditely';
+import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 import { scoreTone, topLighthouseIssues, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 
 const SSL_EXPIRY_WARN_DAYS = 30;
@@ -57,7 +57,7 @@ function ScoreTile({ label, score, reason }: { label: string; score: number | nu
   );
 }
 
-function SslTile({ audit }: { audit: Audit }) {
+function SslTile({ audit }: { audit: AuditFields }) {
   const ssl = audit.checks?.ssl;
   if (audit.ssl_valid === null) {
     return <Tile label="SSL" value="—" tone="none" fill={0} reason={ssl?.error ?? 'Not measured'} />;
@@ -77,7 +77,7 @@ function SslTile({ audit }: { audit: Audit }) {
   );
 }
 
-function psiReason(audit: Audit, strategy: 'mobile' | 'desktop'): string | undefined {
+function psiReason(audit: AuditFields, strategy: 'mobile' | 'desktop'): string | undefined {
   const status = audit.checks?.psi?.[strategy];
   return status && status !== 'ok' ? `PageSpeed failed: ${status}` : undefined;
 }
@@ -106,7 +106,7 @@ function KeyIssues({ rawJson }: { rawJson: Record<string, unknown> }) {
   );
 }
 
-export function AuditScores({ audit }: { audit: Audit }) {
+export function AuditScores({ audit }: { audit: AuditFields }) {
   const siteReason = audit.checks?.site?.reason;
   return (
     <div>
