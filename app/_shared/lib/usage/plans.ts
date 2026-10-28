@@ -28,7 +28,7 @@ export interface Plan {
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free', name: 'Free', monthlyPrice: 0, yearlyPrice: 0,
-    limits: { search: 1, audit: 5, email_lookup: 0 },
+    limits: { search: 1, audit: 1, email_lookup: 0 },
     features: { auditAll: false, export: false, branding: false, mailbox: false, hubspot: false },
   },
   pro: {

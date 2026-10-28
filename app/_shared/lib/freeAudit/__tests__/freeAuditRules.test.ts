@@ -115,7 +115,7 @@ describe('days and windows', () => {
 describe('free audit copy', () => {
   it('names the Free allowance and drops the reason’s full stop', () => {
     expect(FREE_AUDIT_COPY.again).toBe(
-      "You've had your free audit, so here's the one you ran. Sign up free to keep it and run 5 audits a month."
+      "You've had your free audit, so here's the one you ran. Sign up free to keep it and run 1 audit a month."
     );
     expect(FREE_AUDIT_COPY.failed('example.com', 'The site took too long to answer.')).toBe(
       "Couldn't audit example.com: the site took too long to answer. Check the address and try again. This didn't use your free audit."

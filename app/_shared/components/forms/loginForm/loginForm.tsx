@@ -9,6 +9,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
 import { API_ROUTES, ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
+import { countOf } from '@/app/_shared/lib/usage/usageCopy';
 import { ConsentLine } from '@/app/_shared/components/forms/consentLine/consentLine';
 
 // What went wrong on the way back from a sign-in (/auth/callback, /auth/google), by ?error=
@@ -51,7 +52,7 @@ function copyFor(mode: 'signin' | 'signup', open: boolean, byPassword: boolean) 
   if (mode === 'signup') {
     return {
       heading: 'Create your Auditely account',
-      lead: `Free, with ${PLANS.free.limits.audit} audits a month. We'll email you a link, or use Google.`,
+      lead: `Free, with ${countOf('search', PLANS.free.limits.search ?? 0)} and ${countOf('audit', PLANS.free.limits.audit ?? 0)} a month. We'll email you a link, or use Google.`,
       other: { prompt: 'Already have an account?', label: 'Sign in', path: ROUTES.LOGIN },
     };
   }

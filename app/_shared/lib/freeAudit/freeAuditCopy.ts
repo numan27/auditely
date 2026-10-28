@@ -5,6 +5,7 @@
 
 import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
+import { countOf } from '@/app/_shared/lib/usage/usageCopy';
 
 export type FreeAuditReason = 'off' | 'unavailable' | 'invalid' | 'notPublic' | 'bot' | 'visitor' | 'cap' | 'failed';
 
@@ -20,15 +21,15 @@ export type FreeAuditResponse =
   | { ok: true; result: FreeAuditView; again: boolean }
   | { ok: false; reason: FreeAuditReason; error: string };
 
-const n = PLANS.free.limits.audit;
+const audits = countOf('audit', PLANS.free.limits.audit ?? 0);
 
 /** A reason, as it reads after a colon: no full stop, and an ordinary first word in lower case ("PageSpeed" and "HTTP" stay) */
 const midSentence = (reason: string) =>
   reason.trim().replace(/\.+$/, '').replace(/^[A-Z](?=[a-z]*(?:[\s(,]|$))/, (first) => first.toLowerCase());
 
 export const FREE_AUDIT_COPY = {
-  again: `You've had your free audit, so here's the one you ran. Sign up free to keep it and run ${n} audits a month.`,
-  visitor: `Someone on this network has already had the free audit. Sign up free to run ${n} audits a month.`,
+  again: `You've had your free audit, so here's the one you ran. Sign up free to keep it and run ${audits} a month.`,
+  visitor: `Someone on this network has already had the free audit. Sign up free to run ${audits} a month.`,
   cap: 'Free audits are paused for today. Sign up free to run your own now, or try again tomorrow.',
   notPublic: "That isn't a public website. Enter the site's address, like example.com.",
   notFound: (host: string) => `${host} wasn't found. Check the address and try again.`,
@@ -39,6 +40,6 @@ export const FREE_AUDIT_COPY = {
   failed: (host: string, reason: string) =>
     `Couldn't audit ${host}: ${midSentence(reason)}. Check the address and try again. This didn't use your free audit.`,
   keepTitle: 'Keep this audit',
-  keepText: `Sign up free and it's saved to your account, with a PDF to send and ${n} more audits every month.`,
-  used: `Your free audit is used. Sign up free to run ${n} audits a month, or audit a whole city's businesses on Pro.`,
+  keepText: `Sign up free and it's saved to your account, with a PDF to send and ${audits} of your own every month.`,
+  used: `Your free audit is used. Sign up free to run ${audits} a month, or audit a whole city's businesses on Pro.`,
 };

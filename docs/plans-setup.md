@@ -1,7 +1,7 @@
 # Plans setup
 
 Every account except yours (`OWNER_EMAIL`) now has a plan, and each plan has a monthly allowance of
-searches, audits and email lookups. Free is 1 search, 5 audits and no email lookups a month; Pro and
+searches, audits and email lookups. Free is 1 search, 1 audit and no email lookups a month; Pro and
 Agency give more and add Audit all and exporting. Allowances reset on the first of each month, UTC. Your
 own account has no limits and is never counted.
 

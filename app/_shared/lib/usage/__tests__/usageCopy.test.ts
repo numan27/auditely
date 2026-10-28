@@ -46,10 +46,10 @@ describe('meterLabel', () => {
     usage: { search: { used: search, limit: PLANS[plan].limits.search }, audit: { used: audit, limit: PLANS[plan].limits.audit }, email_lookup: { used: 0, limit: PLANS[plan].limits.email_lookup } },
   });
   it('shows the allowance closest to running out, audits on a tie', () => {
-    expect(meterLabel(summary(0, 0))).toEqual({ text: '5 of 5 audits left this month', empty: false });
-    expect(meterLabel(summary(0, 2))).toEqual({ text: '3 of 5 audits left this month', empty: false });
+    expect(meterLabel(summary(0, 0))).toEqual({ text: '1 of 1 audit left this month', empty: false });
+    expect(meterLabel(summary(0, 50, 'pro'))).toEqual({ text: '200 of 250 audits left this month', empty: false });
   });
-  it('says none are left', () => expect(meterLabel(summary(1, 2))).toEqual({ text: 'No searches left this month', empty: true }));
+  it('says none are left', () => expect(meterLabel(summary(1, 0))).toEqual({ text: 'No searches left this month', empty: true }));
   it('never goes below zero', () => expect(meterLabel(summary(0, 9))?.text).toBe('No audits left this month'));
   it('shows nothing for an account without limits', () => expect(meterLabel(summary(3, 3, 'owner'))).toBeNull());
 });

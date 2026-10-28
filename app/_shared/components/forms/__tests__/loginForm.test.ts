@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LoginForm } from '@/app/_shared/components/forms/loginForm/loginForm';
-import { PLANS } from '@/app/_shared/lib/usage/plans';
 
 type Props = Parameters<typeof LoginForm>[0];
 const form = (error?: string) => renderToStaticMarkup(createElement(LoginForm, { error }));
@@ -41,7 +40,7 @@ describe('LoginForm', () => {
   it('invites a new visitor to make a free account', () => {
     const html = render({ mode: 'signup', open: true });
     expect(text(html)).toContain('Create your Auditely account');
-    expect(text(html)).toContain(`Free, with ${PLANS.free.limits.audit} audits a month. We'll email you a link, or use Google.`);
+    expect(text(html)).toContain("Free, with 1 search and 1 audit a month. We'll email you a link, or use Google.");
     expect(text(html)).toContain('Already have an account? Sign in');
     expect(html).toContain('href="/login"');
   });
