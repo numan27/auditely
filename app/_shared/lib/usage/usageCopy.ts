@@ -40,6 +40,11 @@ export function formatResetDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
+/** "Mar 14, 2027": a renewal or end date as it falls in UTC */
+export function formatBillingDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
 export function limitMessage(limit: LimitReached): string {
   const [one, many] = NOUNS[limit.kind];
   if (limit.limit === 0) return `${capitalize(many)} aren't part of the ${PLANS[limit.plan].name} plan.`;

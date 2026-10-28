@@ -11,6 +11,7 @@ import { createServerClient } from '@supabase/ssr';
 import { serviceDb, type Db } from '@/app/_shared/lib/supabase/client';
 import { SESSION_COOKIE_OPTIONS } from '@/app/_shared/lib/supabase/cookieOptions';
 import { canSignIn, isOwnerEmail, type Account } from '@/app/_shared/lib/auth/account';
+import { subscriptionOf } from '@/app/_shared/lib/billing/subscription';
 
 const ACCOUNTS_MIGRATION = 'docs/migrations/2026-10-28-accounts.sql';
 let loggedNoOwner = false;
@@ -46,7 +47,8 @@ export async function getSession(): Promise<Session | null> {
   if (!claims?.sub || typeof claims.email !== 'string' || !claims.email) return null;
   const email = claims.email.trim().toLowerCase();
   if (!canSignIn(email)) return null;
-  return { db, account: { id: claims.sub, email, isOwner: isOwnerEmail(email) } };
+  const subscription = await subscriptionOf(db, claims.sub);
+  return { db, account: { id: claims.sub, email, isOwner: isOwnerEmail(email), subscription } };
 }
 
 /** The owner's user id, found by OWNER_EMAIL; null when the owner hasn't signed in yet */

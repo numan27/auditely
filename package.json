@@ -30,6 +30,7 @@
     "redux-persist": "^6.0.0",
     "resend": "^6.12.3",
     "sass": "^1.97.3",
+    "stripe": "23.0.1",
     "verifalia": "^5.0.0",
     "yup": "^1.7.1"
   },

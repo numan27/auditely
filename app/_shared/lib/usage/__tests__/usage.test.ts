@@ -24,6 +24,13 @@ const { meterFor, usageSummary } = await import('@/app/_shared/lib/usage/usage')
 const tester = { id: 'u2', email: 'tester@x.com', isOwner: false };
 const owner = { id: 'u1', email: 'owner@x.com', isOwner: true };
 const now = () => new Date('2026-10-14T09:00:00Z');
+// Bought on Mar 14 at 09:30 UTC, yearly: now() is half an hour before this month's window opens
+const subscriber = {
+  ...tester,
+  subscription: {
+    plan: 'pro', interval: 'year', status: 'active', anchor: '2026-03-14T09:30:00.000Z', periodEnd: '2027-03-14T09:30:00.000Z', endsAt: null,
+  } as const,
+};
 
 const selects: unknown[][] = [];
 const filters: unknown[][] = [];
@@ -87,6 +94,13 @@ describe('meterFor', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("counts a subscriber's month from the billing anchor, at the plan's limit", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: null });
+    const claim = await meterFor(subscriber, now).claim('search');
+    expect(rpc).toHaveBeenCalledWith('claim_usage', { p_user_id: 'u2', p_kind: 'search', p_limit: 25, p_since: '2026-09-14T09:30:00.000Z' });
+    expect(claim).toMatchObject({ ok: false, limit: { plan: 'pro', resetsAt: '2026-10-14T09:30:00.000Z' } });
+  });
+
   it('fails closed with a 503 when the ledger is missing', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'function claim_usage does not exist' } });
     expect(await meterFor(tester, now).claim('search')).toEqual({ ok: false, status: 503, error: "Couldn't check this month's allowance. Try again in a minute." });
@@ -108,6 +122,12 @@ describe('usageSummary', () => {
     expect(selects).toEqual([['id', { count: 'exact', head: true }], ['id', { count: 'exact', head: true }]]);
     expect(filters).toContainEqual(['gte', 'created_at', '2026-10-01T00:00:00.000Z']);
     expect(filters).toContainEqual(['eq', 'user_id', 'u2']);
+  });
+
+  it("summarises a subscriber's month from the billing anchor", async () => {
+    const summary = await usageSummary(userDb({ search: 3 }), subscriber, now());
+    expect(summary).toMatchObject({ plan: 'pro', resetsAt: '2026-10-14T09:30:00.000Z', usage: { search: { used: 3, limit: 25 } } });
+    expect(filters).toContainEqual(['gte', 'created_at', '2026-09-14T09:30:00.000Z']);
   });
 
   it('summarises the owner without a query', async () => {

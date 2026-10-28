@@ -1,11 +1,13 @@
 // app/_shared/lib/usage/plans.ts
 
 // The plans, their monthly allowances and what each one unlocks. The owner has
-// no limits and is never counted. Testers get a plan from PLAN_OVERRIDES
-// (email:plan pairs) until Stripe sells them. Allowances reset on the first of
-// each calendar month, UTC. Client-safe: no server imports.
+// no limits and is never counted. A live Stripe subscription sets an account's
+// plan; PLAN_OVERRIDES (email:plan pairs) still gives testers one without paying.
+// Free allowances reset on the first of each calendar month, UTC; a paid plan's
+// every month from its billing anchor. Client-safe: no server imports.
 
 import type { Account } from '@/app/_shared/lib/auth/account';
+import { monthlyWindow } from '@/app/_shared/lib/billing/billingRules';
 
 export type UsageKind = 'search' | 'audit' | 'email_lookup';
 export const USAGE_KINDS: readonly UsageKind[] = ['search', 'audit', 'email_lookup'];
@@ -78,18 +80,27 @@ export function parsePlanOverrides(value: string | undefined): Map<string, PlanI
   return overrides;
 }
 
-/** The owner's plan, then a tester's override, then Free */
-export function planFor(account: Pick<Account, 'email' | 'isOwner'>, env: NodeJS.ProcessEnv = process.env): Plan {
+/** The owner's plan, then a live subscription's, then a tester's override, then Free */
+export function planFor(
+  account: Pick<Account, 'email' | 'isOwner' | 'subscription'>,
+  env: NodeJS.ProcessEnv = process.env
+): Plan {
   if (account.isOwner) return PLANS.owner;
+  if (account.subscription) return PLANS[account.subscription.plan];
   const override = parsePlanOverrides(env.PLAN_OVERRIDES).get(account.email.trim().toLowerCase());
   return PLANS[override ?? 'free'];
 }
 
 /** The calendar month, in UTC, that `now` falls in */
-export function usagePeriod(now: Date): { start: Date; end: Date } {
+export function calendarMonth(now: Date): { start: Date; end: Date } {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
   return { start: new Date(Date.UTC(year, month, 1)), end: new Date(Date.UTC(year, month + 1, 1)) };
+}
+
+/** The month an account's allowances are counted in: from its billing anchor when it pays, else the calendar month */
+export function usagePeriod(account: Pick<Account, 'isOwner' | 'subscription'>, now: Date): { start: Date; end: Date } {
+  return account.subscription ? monthlyWindow(new Date(account.subscription.anchor), now) : calendarMonth(now);
 }
 
 export function planHas(plan: PlanId, feature: Feature): boolean {

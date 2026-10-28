@@ -10,8 +10,9 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
-  // The plans and this month's allowances
+  // The plans and this month's allowances; Checkout comes back to /plans/done
   PLANS: '/plans',
+  PLANS_DONE: '/plans/done',
   // Private PDF report links (/report/{signed token}) — public, the token is the key
   REPORT: '/report',
   // The public demo: the workspace on a saved sample, with nothing live behind it
@@ -42,17 +43,23 @@ export const API_ROUTES = {
   SETTINGS_PROFILE: '/api/settings/profile',
   SETTINGS_MAILBOX: '/api/settings/mailbox',
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
+  // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
+  BILLING_CHECKOUT: '/api/billing/checkout',
+  BILLING_PORTAL: '/api/billing/portal',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret
 export const INBOUND_ROUTES = {
   // devartventures.com sends each free audit request here (AUDITELY_INBOUND_SECRET)
   AUDIT_REQUEST: '/api/inbound/audit-request',
+  // Stripe sends each subscription change here; its signature (STRIPE_WEBHOOK_SECRET) is the key
+  STRIPE_WEBHOOK: '/api/stripe/webhook',
 } as const;
 
 // Everything needs a signed-in account except these; the sign-in routes run before
 // there is a session, /report/{token} is checked by its signature, /demo shows only
-// the sample checked into the repo, and the inbound route checks its secret
+// the sample checked into the repo, the inbound route checks its secret, and Stripe's
+// webhook checks Stripe's signature
 export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   API_ROUTES.AUTH,
@@ -61,6 +68,7 @@ export const PUBLIC_ROUTES = [
   ROUTES.REPORT,
   ROUTES.DEMO,
   INBOUND_ROUTES.AUDIT_REQUEST,
+  INBOUND_ROUTES.STRIPE_WEBHOOK,
 ] as const;
 
 // Pages a logged-in user should be bounced away from (not the callback: a second

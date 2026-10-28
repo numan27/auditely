@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PLANS, parsePlanOverrides, planFor, usagePeriod, planHas, exhausted, readLimit, type UsageSummary,
+  PLANS, parsePlanOverrides, planFor, calendarMonth, usagePeriod, planHas, exhausted, readLimit, type UsageSummary,
 } from '@/app/_shared/lib/usage/plans';
+
+const yearly = {
+  plan: 'pro', interval: 'year', status: 'active', anchor: '2026-03-14T09:30:00.000Z', periodEnd: '2027-03-14T09:30:00.000Z', endsAt: null,
+} as const;
 
 describe('parsePlanOverrides', () => {
   it('reads email:plan pairs, trimmed and lowercased', () => {
@@ -23,6 +27,12 @@ describe('planFor', () => {
   it('gives an overridden tester their plan, whatever the case', () =>
     expect(planFor({ email: 'ANN@x.com', isOwner: false }, env).id).toBe('pro'));
   it('puts everyone else on Free', () => expect(planFor({ email: 'zed@x.com', isOwner: false }, env).id).toBe('free'));
+  it('takes the plan from a live subscription, before an override', () => {
+    const overridden = { PLAN_OVERRIDES: 'tester@x.com:agency' } as unknown as NodeJS.ProcessEnv;
+    expect(planFor({ email: 'tester@x.com', isOwner: false, subscription: yearly }, overridden).id).toBe('pro');
+    expect(planFor({ email: 'tester@x.com', isOwner: false, subscription: null }, overridden).id).toBe('agency');
+    expect(planFor({ email: 'o@x.com', isOwner: true, subscription: yearly }, overridden).id).toBe('owner');
+  });
 });
 
 describe('PLANS', () => {
@@ -36,16 +46,24 @@ describe('PLANS', () => {
   });
 });
 
-describe('usagePeriod', () => {
+describe('calendarMonth', () => {
   it('is the calendar month in UTC', () => {
-    const { start, end } = usagePeriod(new Date('2026-10-31T23:59:59Z'));
+    const { start, end } = calendarMonth(new Date('2026-10-31T23:59:59Z'));
     expect(start.toISOString()).toBe('2026-10-01T00:00:00.000Z');
     expect(end.toISOString()).toBe('2026-11-01T00:00:00.000Z');
   });
   it('starts a new month at midnight UTC', () =>
-    expect(usagePeriod(new Date('2026-11-01T00:00:00Z')).start.toISOString()).toBe('2026-11-01T00:00:00.000Z'));
+    expect(calendarMonth(new Date('2026-11-01T00:00:00Z')).start.toISOString()).toBe('2026-11-01T00:00:00.000Z'));
   it('rolls December into January', () =>
-    expect(usagePeriod(new Date('2026-12-15T12:00:00Z')).end.toISOString()).toBe('2027-01-01T00:00:00.000Z'));
+    expect(calendarMonth(new Date('2026-12-15T12:00:00Z')).end.toISOString()).toBe('2027-01-01T00:00:00.000Z'));
+});
+
+describe('usagePeriod', () => {
+  it('counts a paid plan from its anchor and Free by the calendar month', () => {
+    const now = new Date('2026-10-27T12:00:00Z');
+    expect(usagePeriod({ isOwner: false, subscription: yearly }, now).start.toISOString()).toBe('2026-10-14T09:30:00.000Z');
+    expect(usagePeriod({ isOwner: false, subscription: null }, now).start.toISOString()).toBe('2026-10-01T00:00:00.000Z');
+  });
 });
 
 describe('exhausted', () => {

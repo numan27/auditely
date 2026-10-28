@@ -12,8 +12,9 @@ import { canSignIn } from "@/app/_shared/lib/auth/account";
 import { readProxySession, withSessionCookies } from "@/app/_shared/lib/supabase/proxySession";
 
 // This proxy handles authentication and route protection.
-// The whole app is private except the login page, the sign-in routes, report links, the demo and
-// the route devartventures.com sends audit requests to (it checks its own secret).
+// The whole app is private except the login page, the sign-in routes, report links, the demo,
+// the route devartventures.com sends audit requests to (it checks its own secret), and Stripe's
+// webhook (it checks Stripe's signature).
 // It also refreshes the Supabase session: every answer carries the refreshed cookies.
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

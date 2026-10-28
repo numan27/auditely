@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
 
-const db = vi.hoisted(() => ({ row: null as unknown, error: null as unknown, asked: [] as unknown[] }));
+// The profiles lookup answers row/error, the subscriptions lookup subscription/subscriptionError
+const db = vi.hoisted(() => ({
+  row: null as unknown,
+  error: null as unknown,
+  subscription: null as unknown,
+  subscriptionError: null as unknown,
+  asked: [] as unknown[],
+}));
 vi.mock('@/app/_shared/lib/supabase/client', () => ({
   serviceDb: {
     from: (table: string) => ({
@@ -9,6 +16,9 @@ vi.mock('@/app/_shared/lib/supabase/client', () => ({
         eq: (column: string, value: string) => ({
           maybeSingle: async () => {
             db.asked.push({ table, columns, column, value });
+            if (table === 'subscriptions') {
+              return { data: db.subscriptionError ? null : db.subscription, error: db.subscriptionError };
+            }
             return { data: db.error ? null : db.row, error: db.error };
           },
         }),
@@ -30,6 +40,8 @@ const auditelyBrand = resolveBrand({ profile: null, isOwner: false, plan: 'free'
 beforeEach(() => {
   db.row = null;
   db.error = null;
+  db.subscription = null;
+  db.subscriptionError = null;
   db.asked = [];
 });
 
@@ -42,7 +54,7 @@ describe('brandFor', () => {
     vi.stubEnv('OWNER_EMAIL', 'owner@x.com');
     db.row = { id: 'u1', email: 'owner@x.com', company: null };
     expect((await brandFor('u1')).kind).toBe('owner');
-    expect(db.asked).toEqual([{ table: 'profiles', columns: '*', column: 'id', value: 'u1' }]);
+    expect(db.asked).toContainEqual({ table: 'profiles', columns: '*', column: 'id', value: 'u1' });
   });
 
   it('reads a profile from before the migration, with none of the new columns', async () => {
@@ -66,6 +78,23 @@ describe('brandFor', () => {
     expect((await brandFor(null)).kind).toBe('auditely');
     expect(db.asked).toEqual([]);
     expect((await brandFor('u5')).kind).toBe('auditely');
+  });
+
+  it('brands the reports of an account that pays through Stripe', async () => {
+    db.row = { id: 'u2', email: 'sam@x.com', display_name: 'Sam', company: 'Acme' };
+    db.subscription = {
+      plan: 'pro', billing_interval: 'month', status: 'active', period_anchor: '2026-10-14T09:30:00.000Z',
+      current_period_end: '2999-11-14T09:30:00.000Z', ends_at: null,
+    };
+    expect((await brandFor('u2')).kind).not.toBe('auditely');
+    expect(db.asked).toContainEqual(expect.objectContaining({ table: 'subscriptions', column: 'user_id', value: 'u2' }));
+  });
+
+  it('brands as Free while the subscriptions table is missing', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    db.row = { id: 'u2', email: 'sam@x.com', display_name: 'Sam', company: 'Acme' };
+    db.subscriptionError = { message: 'relation "subscriptions" does not exist' };
+    expect((await brandFor('u2')).kind).toBe('auditely');
   });
 
   it('refuses to guess when the profile can’t be read', async () => {
