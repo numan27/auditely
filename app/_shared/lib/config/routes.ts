@@ -69,8 +69,9 @@ export const INBOUND_ROUTES = {
 // rewrites to Vercel. A signed-out visitor has to reach it to pass the bot check.
 export const BOTID_PATH = '/149e9513-01fa-4fb0-aad4-566afd725d1b';
 
-// What search engines read (app/robots.ts, app/sitemap.ts)
-export const SEO_FILES = { ROBOTS: '/robots.txt', SITEMAP: '/sitemap.xml' } as const;
+// What search engines read (app/robots.ts, app/sitemap.ts), and the image a shared
+// link shows (app/opengraph-image.tsx), which link previews fetch without an account
+export const SEO_FILES = { ROBOTS: '/robots.txt', SITEMAP: '/sitemap.xml', SHARE_IMAGE: '/opengraph-image' } as const;
 
 // Everything needs a signed-in account except these; the sign-in and sign-up pages
 // run before there is a session, Terms, Privacy and the search engines' files are
@@ -84,6 +85,7 @@ export const PUBLIC_ROUTES = [
   ROUTES.PRIVACY,
   SEO_FILES.ROBOTS,
   SEO_FILES.SITEMAP,
+  SEO_FILES.SHARE_IMAGE,
   API_ROUTES.AUTH,
   API_ROUTES.FREE_AUDIT,
   BOTID_PATH,

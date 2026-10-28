@@ -87,6 +87,11 @@ describe('route access', () => {
     expect(isPublicRoute('/sitemap.xml')).toBe(true);
   });
 
+  // Link previews fetch it without an account
+  it('lets anyone load the share image', () => {
+    expect(isPublicRoute('/opengraph-image')).toBe(true);
+  });
+
   it('opens the sign-in callback and the Google start without a login', () => {
     expect(ROUTES.AUTH_CALLBACK).toBe('/auth/callback');
     expect(ROUTES.AUTH_GOOGLE).toBe('/auth/google');

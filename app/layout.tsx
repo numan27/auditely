@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/app/_shared/components/providers/ThemeProvider";
 import { SiteAnalytics } from "@/app/_shared/components/providers/siteAnalytics";
 import { AUDITELY_URL } from "@/app/_shared/lib/config/site";
+import { SHARE_DESCRIPTION } from "@/app/_shared/lib/seo/shareCopy";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,10 @@ export const metadata: Metadata = {
   description:
     "Audit any website in about a minute: speed, SEO, mobile, SSL and AI-search readiness, explained in plain English.",
   metadataBase: new URL(AUDITELY_URL),
+  // A shared link shows the site's name and app/opengraph-image.tsx as a large card;
+  // the home page gives its own title (app/(app)/page.tsx)
+  openGraph: { type: "website", siteName: "Auditely", title: "Auditely", description: SHARE_DESCRIPTION },
+  twitter: { card: "summary_large_image" },
   robots: {
     index: false,
     follow: false,

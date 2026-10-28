@@ -16,7 +16,8 @@ vi.mock('@/app/_shared/components/providers/siteAnalytics', () => ({
   SiteAnalytics: () => createElement('i', { id: 'site-analytics' }),
 }));
 
-import RootLayout from '@/app/layout';
+import RootLayout, { metadata } from '@/app/layout';
+import { SHARE_DESCRIPTION } from '@/app/_shared/lib/seo/shareCopy';
 
 describe('the root layout', () => {
   it("renders the page's markup on the server", () => {
@@ -27,5 +28,10 @@ describe('the root layout', () => {
   it('counts visits on every page', () => {
     const html = renderToStaticMarkup(createElement(RootLayout, null, createElement('p', null, 'A page')));
     expect(html).toContain('<i id="site-analytics"></i>');
+  });
+
+  it('gives every shared link a large image card with the site name', () => {
+    expect(metadata.openGraph).toMatchObject({ type: 'website', siteName: 'Auditely', title: 'Auditely', description: SHARE_DESCRIPTION });
+    expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
   });
 });
