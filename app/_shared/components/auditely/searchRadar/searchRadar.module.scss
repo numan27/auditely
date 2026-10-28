@@ -1,0 +1,117 @@
+// app/_shared/components/auditely/searchRadar/searchRadar.module.scss
+
+// The search's map: a radar sweeping round the city, each pin blinking on as the
+// sweep passes it. One turn takes $turn; a pin's delay is its angle's share of it.
+// Nothing moves for a visitor who asked for less motion.
+
+$turn: 3.6s;
+
+.map {
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+// The sweep: a wedge of colour trailing the line, round the centre
+.sweep {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg 300deg, rgb(47 79 224 / 0.04) 320deg, rgb(47 79 224 / 0.22) 359deg, transparent 360deg);
+  animation: turn $turn linear infinite;
+}
+
+@keyframes turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+// Rings going out from the city, one after another
+.ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: 1.5px solid var(--color-primary-600);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ring $turn ease-out infinite;
+}
+
+@keyframes ring {
+  from {
+    opacity: 0.45;
+    scale: 0.6;
+  }
+  to {
+    opacity: 0;
+    scale: 5;
+  }
+}
+
+// A business found: drops in as the sweep passes, then fades before it comes round
+.pin {
+  position: absolute;
+  translate: -50% -100%;
+  color: var(--color-primary-600);
+  opacity: 0;
+  animation: pin $turn ease-out infinite;
+}
+
+@keyframes pin {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.4);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0) scale(1.12);
+  }
+  14% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+// The status line changing
+.line {
+  animation: line 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes line {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep,
+  .ring,
+  .line {
+    animation: none;
+  }
+
+  .ring {
+    opacity: 0.2;
+    scale: 2;
+  }
+
+  .pin {
+    animation: none;
+    opacity: 1;
+  }
+}

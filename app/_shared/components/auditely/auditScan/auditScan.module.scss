@@ -1,0 +1,106 @@
+// app/_shared/components/auditely/auditScan/auditScan.module.scss
+
+// The audit's picture: a beam going down the website, each block of the page
+// lighting as the beam crosses it, and the checks taking turns to glow. One pass
+// takes $scan; a block's delay is where it sits down the page. The checks run at
+// once, so the glow goes round them and never stops on one: nothing here says a
+// check is done. Nothing moves for a visitor who asked for less motion.
+
+$scan: 2.6s;
+$checks: 7;
+$turn: 0.9s;
+
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+// The beam: a line with a fading trail above it, coming down from the top
+.beam {
+  position: absolute;
+  inset: 0;
+  translate: 0 -100%;
+  background: linear-gradient(to bottom, transparent 55%, rgb(47 79 224 / 0.14) 96%, var(--color-primary-500) 99%, transparent 100%);
+  animation: scan $scan linear infinite;
+}
+
+@keyframes scan {
+  85% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 0;
+    opacity: 0;
+  }
+}
+
+// A block of the page, lit as the beam crosses it
+.block {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--color-bg-tertiary);
+  animation: seen $scan ease-out infinite;
+}
+
+@keyframes seen {
+  0%,
+  6% {
+    background: var(--color-primary-200);
+  }
+  30%,
+  100% {
+    background: var(--color-bg-tertiary);
+  }
+}
+
+// A check: the glow takes $turn on each, round all $checks
+.check {
+  animation: glow ($turn * $checks) ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%,
+  14% {
+    border-color: var(--color-primary-300);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+  }
+  22%,
+  100% {
+    border-color: var(--color-border);
+    background: transparent;
+    color: var(--color-text-tertiary);
+  }
+}
+
+:global(.dark) .check {
+  animation-name: glow-dark;
+}
+
+@keyframes glow-dark {
+  0%,
+  14% {
+    border-color: var(--color-primary-500);
+    background: rgb(47 79 224 / 0.18);
+    color: var(--color-primary-200);
+  }
+  22%,
+  100% {
+    border-color: var(--color-border);
+    background: transparent;
+    color: var(--color-text-tertiary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam {
+    animation: none;
+    translate: 0 -45%;
+  }
+
+  .block,
+  .check {
+    animation: none;
+  }
+}

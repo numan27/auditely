@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { GaugeIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
+import { AuditScan } from '@/app/_shared/components/auditely/auditScan/auditScan';
 import { AuditScores } from '@/app/_shared/components/auditely/auditScores/auditScores';
 import { AuditChecklist } from '@/app/_shared/components/auditely/auditChecklist/auditChecklist';
 import { TechStack } from '@/app/_shared/components/auditely/techStack/techStack';
@@ -75,8 +76,8 @@ export function AuditPanel({ business, state, crm, mail, upworkPdf }: AuditPanel
     return (
       <div className={`${ROW} border-t border-[var(--color-border)] px-5 py-4 sm:px-6`}>
         {auditStatus === 'loading' ? (
-          <Status
-            busy
+          <AuditScan
+            domain={domainOf(business.website)}
             title={demo ? `Replaying the saved audit of ${domainOf(business.website)}…` : `Auditing ${domainOf(business.website)}…`}
             detail={
               demo

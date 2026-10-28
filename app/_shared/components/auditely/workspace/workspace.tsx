@@ -13,6 +13,7 @@ import { ModeTabs, panelId, tabId, type WorkspaceMode } from '@/app/_shared/comp
 import { RecentSearches } from '@/app/_shared/components/auditely/recentSearches/recentSearches';
 import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
+import { SearchRadar } from '@/app/_shared/components/auditely/searchRadar/searchRadar';
 import { UrlAuditPanel } from '@/app/_shared/components/auditely/urlAuditPanel/urlAuditPanel';
 import { AuditRequestsPanel } from '@/app/_shared/components/auditely/auditRequestsPanel/auditRequestsPanel';
 import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
@@ -129,7 +130,11 @@ export function Workspace() {
           )}
 
           {leads.isSearching ? (
-            <ResultsSkeleton label="Finding businesses" />
+            leads.pending ? (
+              <SearchRadar niche={leads.pending.niche} location={leads.pending.location} />
+            ) : (
+              <ResultsSkeleton label="Finding businesses" />
+            )
           ) : !leads.hasSearched ? (
             !leads.error && <RecentSearches onOpen={(searchId) => navigate(searchPath(searchId))} />
           ) : leads.businesses.length === 0 ? (

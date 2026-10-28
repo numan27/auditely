@@ -37,6 +37,8 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
   const [hasSearched, setHasSearched] = useState(!!demo);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<SearchQuery | null>(demo?.data.query ?? null);
+  // The new search running now (null while a saved one opens): the radar names it
+  const [pending, setPending] = useState<SearchQuery | null>(null);
   // Changes whenever a new result set loads: restarts discovery, resets the list view
   const [runKey, setRunKey] = useState(0);
   // The saved search on screen (null: none, or the demo's sample)
@@ -49,6 +51,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
 
   const start = useCallback(() => {
     setIsSearching(true);
+    setPending(null);
     setError(null);
     setHasSearched(false);
     setBusinesses([]);
@@ -69,6 +72,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
     async (niche: string, location: string) => {
       if (demo) return demo.restrict('search');
       const run = start();
+      setPending({ niche, location });
       try {
         const res = await fetch(API_ROUTES.SEARCH, {
           method: 'POST',
@@ -95,7 +99,10 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
       } catch (err) {
         if (run === latest.current) setError(err instanceof Error ? err.message : 'Search failed. Check your connection and try again.');
       } finally {
-        if (run === latest.current) setIsSearching(false);
+        if (run === latest.current) {
+          setIsSearching(false);
+          setPending(null);
+        }
       }
     },
     [demo, start, show, onSearched, usage]
@@ -126,6 +133,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
   const reset = useCallback(() => {
     latest.current++;
     setIsSearching(false);
+    setPending(null);
     setError(null);
     setHasSearched(false);
     setBusinesses([]);
@@ -170,6 +178,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
   return {
     businesses,
     isSearching,
+    pending,
     hasSearched,
     error,
     query,
