@@ -6,7 +6,8 @@
 // write one), the devartventures.com webhook, signed report links, the brand lookup
 // (a report's owner, not the viewer, decides its brand), saved secrets (a user may
 // never read a ciphertext, even their own) and the subscription store (only Stripe,
-// never the user, writes a plan).
+// never the user, writes a plan) and the free audit store (no account may read
+// another visitor's free audit).
 // Anywhere else it could hand one user another's data. The `Db` type carries no
 // access, so `import type { Db }` is fine anywhere.
 
@@ -21,6 +22,7 @@ const ALLOWED = [
   'app/_shared/lib/audit/pageSpeedStore.ts',
   'app/_shared/lib/billing/subscriptionStore.ts',
   'app/_shared/lib/brand/brand.ts',
+  'app/_shared/lib/freeAudit/freeAuditStore.ts',
   'app/_shared/lib/secrets/userSecrets.ts',
   'app/_shared/lib/supabase/server.ts',
   'app/_shared/lib/usage/usage.ts',
