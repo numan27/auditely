@@ -5,17 +5,11 @@ import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { ChevronRightIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
-import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { LoadFailed } from '@/app/_shared/components/auditely/loadFailed/loadFailed';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { loadSavedSearches, type SavedSearch } from '@/app/_shared/lib/utils/savedSearches';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 import { searchPath } from '@/app/_shared/lib/utils/workspacePath';
-
-interface SavedSearch {
-  id: string;
-  niche: string;
-  location: string;
-  created_at: string;
-  business_count: number;
-}
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -41,14 +35,25 @@ export default function SearchesPage() {
   const router = useRouter();
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Why the list didn't load: shown with Try again, never as "No saved searches yet"
+  const [error, setError] = useState<string | null>(null);
+
+  // Try again loads the list afresh
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    fetch(API_ROUTES.SEARCHES)
-      .then((res) => res.json())
-      .then((data) => setSearches(data.searches ?? []))
-      .catch(() => setSearches([]))
-      .finally(() => setIsLoading(false));
-  }, []);
+    loadSavedSearches().then((result) => {
+      if (result.ok) setSearches(result.searches);
+      else setError(result.error);
+      setIsLoading(false);
+    });
+  }, [attempt]);
+
+  const retry = () => {
+    setIsLoading(true);
+    setError(null);
+    setAttempt((n) => n + 1);
+  };
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
@@ -65,6 +70,8 @@ export default function SearchesPage() {
         <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
           {isLoading ? (
             <ListSkeleton />
+          ) : error ? (
+            <LoadFailed title="Your saved searches didn't load" message={error} onRetry={retry} />
           ) : searches.length === 0 ? (
             <div className="px-6 py-14 text-center">
               <p className="font-medium text-[var(--color-text-primary)]">No saved searches yet</p>

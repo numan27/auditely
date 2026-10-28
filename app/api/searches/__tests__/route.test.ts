@@ -69,6 +69,6 @@ describe('GET /api/searches', () => {
     db.state.response = { data: null, error: { message: 'boom' } };
     const res = await GET();
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: 'Failed to load searches' });
+    expect(await res.json()).toEqual({ error: "Couldn't load your saved searches. Try again in a minute." });
   });
 });

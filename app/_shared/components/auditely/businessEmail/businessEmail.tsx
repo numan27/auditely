@@ -11,6 +11,7 @@ import { checkMark, type CheckMark, type EmailCheck } from '@/app/_shared/lib/em
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { exhausted, readLimit } from '@/app/_shared/lib/usage/plans';
+import { copyText } from '@/app/_shared/lib/utils/browserExport';
 
 interface BusinessEmailProps {
   email: string | null;
@@ -38,7 +39,7 @@ const MARK_TONES: Record<CheckMark['tone'], string> = {
 export function BusinessEmail({ email, website, businessId, check, onFound }: BusinessEmailProps) {
   const demo = useDemo();
   const usage = useUsage();
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [finding, setFinding] = useState(false);
   // After a search with no email: whether the plan kept it to the website
   const [notFound, setNotFound] = useState<{ limited: boolean } | null>(null);
@@ -46,9 +47,10 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
 
   const copyEmail = async () => {
     if (!email) return;
-    await navigator.clipboard.writeText(email);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // The browser can refuse (permission, or the page wasn't focused): then it says so
+    const done = await copyText(email);
+    setCopy(done ? 'copied' : 'failed');
+    setTimeout(() => setCopy('idle'), done ? 2000 : 6000);
   };
 
   const search = async (apiFallback: boolean) => {
@@ -100,12 +102,17 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
           <button
             type="button"
             onClick={copyEmail}
-            title={copied ? 'Copied' : 'Copy email'}
-            aria-label={copied ? 'Email copied' : 'Copy email'}
+            title={copy === 'copied' ? 'Copied' : 'Copy email'}
+            aria-label={copy === 'copied' ? 'Email copied' : 'Copy email'}
             className="cursor-pointer rounded p-0.5 text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
           >
-            {copied ? <CheckIcon size={13} className="text-emerald-500" /> : <CopyIcon size={13} />}
+            {copy === 'copied' ? <CheckIcon size={13} className="text-emerald-500" /> : <CopyIcon size={13} />}
           </button>
+          {copy === 'failed' && (
+            <span role="status" className="text-xs text-red-600 dark:text-red-400">
+              Couldn&apos;t copy. Select the address instead.
+            </span>
+          )}
           {/* The word, not just a tick: the copy button beside it turns into a tick too */}
           {mark && (
             <span title={mark.title} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${MARK_TONES[mark.tone]}`}>

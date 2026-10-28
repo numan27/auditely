@@ -30,3 +30,13 @@ export async function copyToClipboard({ html, text }: { html: string; text: stri
   }
   await navigator.clipboard.writeText(text);
 }
+
+/** Copies plain text; false when the browser refused or has no clipboard here */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}

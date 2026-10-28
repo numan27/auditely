@@ -18,7 +18,7 @@ export async function GET() {
 
   if (error) {
     console.error('[searches] Failed to load searches:', error.message);
-    return NextResponse.json({ error: 'Failed to load searches' }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't load your saved searches. Try again in a minute." }, { status: 500 });
   }
 
   // Websites added by URL and requested audits live on the home page's tabs, not here

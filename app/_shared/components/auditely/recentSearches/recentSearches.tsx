@@ -5,18 +5,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRightIcon } from '@/app/_shared/components/ui/icons/icons';
-import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
+import { loadSavedSearches, type SavedSearch as FullSavedSearch } from '@/app/_shared/lib/utils/savedSearches';
 
-interface SavedSearch {
-  id: string;
-  niche: string;
-  location: string;
-  business_count: number;
-}
+type SavedSearch = Pick<FullSavedSearch, 'id' | 'niche' | 'location' | 'business_count'>;
 
 const SHOWN = 6;
 
@@ -57,11 +53,12 @@ export function FirstSearch() {
 export function RecentSearches({ onOpen }: { onOpen: (searchId: string) => void }) {
   const [searches, setSearches] = useState<SavedSearch[] | null>(null);
 
+  // A list that didn't load shows nothing here, not the first-search welcome: the
+  // Saved searches page says why and tries again
   useEffect(() => {
-    fetch(API_ROUTES.SEARCHES)
-      .then((res) => res.json())
-      .then((data) => setSearches(data.searches ?? []))
-      .catch(() => setSearches([]));
+    loadSavedSearches().then((result) => {
+      if (result.ok) setSearches(result.searches);
+    });
   }, []);
 
   if (searches === null) return null;

@@ -10,6 +10,7 @@ import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import { useConnections } from '@/app/_shared/lib/hooks/useConnections';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
 import type { AiReport, AuditRequest } from '@/app/_shared/lib/types/auditely';
+import { copyText } from '@/app/_shared/lib/utils/browserExport';
 
 interface AiReportSectionProps {
   report: AiReport;
@@ -27,13 +28,14 @@ interface AiReportSectionProps {
 
 /** One email as "Send email" will send it, with a button to copy it */
 function EmailDraft({ title, hint, draft }: { title: string; hint?: string; draft: OutreachDraft }) {
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const text = `Subject: ${draft.subject}\n\n${draft.body}`;
 
+  // The browser can refuse (permission, or the page wasn't focused): then it says so
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const done = await copyText(text);
+    setCopy(done ? 'copied' : 'failed');
+    setTimeout(() => setCopy('idle'), done ? 2000 : 6000);
   };
 
   return (
@@ -43,10 +45,15 @@ function EmailDraft({ title, hint, draft }: { title: string; hint?: string; draf
           {title}
           {hint && <span className="ml-2 font-normal text-[var(--color-text-tertiary)]">{hint}</span>}
         </h4>
-        <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}>
-          {copied ? 'Copied' : 'Copy email'}
+        <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copy === 'copied' ? <CheckIcon size={14} /> : <CopyIcon size={14} />}>
+          {copy === 'copied' ? 'Copied' : 'Copy email'}
         </Button>
       </div>
+      {copy === 'failed' && (
+        <p role="status" className="mb-2 text-sm text-red-600 dark:text-red-400">
+          Couldn&apos;t copy. Select the email below and copy it yourself.
+        </p>
+      )}
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-4">
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{text}</p>
       </div>
