@@ -1,17 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import { StoreProvider } from '@/app/_shared/components/providers/StoreProvider';
 import { useAuth } from '@/app/_shared/lib/hooks/useAuth';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { useLogout } from '@/app/_shared/lib/hooks/useLogout';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// The template's dashboard is the redux store's only user, so the store, and its
+// wait for the saved state, wrap these pages alone
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <StoreProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </StoreProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const { logout: clearClientAuth, user } = useAuth();
   const logoutSession = useLogout();
 

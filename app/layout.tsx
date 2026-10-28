@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/app/_shared/components/providers/ThemeProvider";
-import { StoreProvider } from "@/app/_shared/components/providers/StoreProvider";
 import { AUDITELY_URL } from "@/app/_shared/lib/config/site";
 
 const geistSans = Geist({
@@ -43,11 +42,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased min-h-screen`}
       >
-        <StoreProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </StoreProvider>
+        {/* The redux store lives with the template's dashboard, its only user: its
+            PersistGate rendered nothing until the browser restored it, so every
+            page arrived empty (app/(pages)/(dashboard)/layout.tsx) */}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
