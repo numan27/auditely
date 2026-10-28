@@ -74,7 +74,6 @@ describe('the Terms', () => {
       expect(page).toContain(LEGAL.effectiveDate);
     }
     expect(text(terms)).toContain(LEGAL.governingState);
-    expect(render(LandingFooter)).toContain(`href="mailto:${LEGAL.contactEmail}"`);
   });
 });
 
@@ -128,9 +127,18 @@ describe('legal pages', () => {
     }
   });
 
-  it('lets search engines index both pages', () => {
-    expect(termsMetadata).toMatchObject({ title: 'Terms', robots: { index: true, follow: true } });
-    expect(privacyMetadata).toMatchObject({ title: 'Privacy Policy', robots: { index: true, follow: true } });
+  // Unlinked for now: the sign-up line still links to them, so they stay up
+  it('keeps both pages out of search results for now', () => {
+    expect(termsMetadata).toMatchObject({ title: 'Terms', robots: { index: false, follow: true } });
+    expect(privacyMetadata).toMatchObject({ title: 'Privacy Policy', robots: { index: false, follow: true } });
+  });
+
+  it('leaves Terms and Privacy out of the footer, and links Contact to the contact page', () => {
+    const footer = render(LandingFooter);
+    expect(footer).toMatch(/<a[^>]*href="\/contact"[^>]*>\s*Contact\s*<\/a>/);
+    expect(footer).not.toContain('href="/terms"');
+    expect(footer).not.toContain('href="/privacy"');
+    expect(footer).not.toContain('mailto:');
   });
 
   it('is not ready while a placeholder is left', () => {

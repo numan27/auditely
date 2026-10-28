@@ -4,7 +4,8 @@ import { PrivacyContent } from '@/app/_shared/components/legal/privacyContent';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'What Auditely collects, why, and what you can do about it.',
-  robots: { index: true, follow: true },
+  // Unlinked for now (only the sign-up line links here), so out of search results
+  robots: { index: false, follow: true },
 };
 
 export default function PrivacyPage() {

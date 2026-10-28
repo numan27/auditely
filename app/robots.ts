@@ -16,7 +16,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      allow: [ROUTES.HOME, ROUTES.TERMS, ROUTES.PRIVACY, ROUTES.DEMO],
+      // Terms and Privacy aren't listed while they're unlinked; their pages say noindex
+      allow: [ROUTES.HOME, ROUTES.CONTACT, ROUTES.DEMO],
       disallow: [
         '/api/',
         '/auth/',

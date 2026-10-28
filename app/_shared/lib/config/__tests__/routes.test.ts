@@ -40,12 +40,12 @@ describe('route access', () => {
     expect(isHomeAlias(ROUTES.SEARCHES)).toBe(false);
   });
 
-  it('opens the demo and its reports, and no API route but signing in and the free audit', () => {
+  it('opens the demo and its reports, and no API route but signing in, the free audit and the contact form', () => {
     expect(isPublicRoute(ROUTES.DEMO)).toBe(true);
     expect(demoReportPath('demo-a1')).toBe('/demo/report/demo-a1');
     expect(isPublicRoute(demoReportPath('demo-a1'))).toBe(true);
     expect(isPublicRoute('/demos')).toBe(false);
-    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT];
+    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT, API_ROUTES.CONTACT];
     for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(!open.includes(path));
     expect(isProtectedRoute('/api/autocomplete')).toBe(true);
   });
@@ -79,6 +79,15 @@ describe('route access', () => {
     // A signed-in user is sent home from the sign-up page, as from the login
     expect(isAuthRoute(ROUTES.SIGNUP)).toBe(true);
     expect(isAuthRoute(ROUTES.TERMS)).toBe(false);
+  });
+
+  // The form checks BotID and its own limit, like the free audit
+  it('opens the contact page and the route its form sends to', () => {
+    expect([ROUTES.CONTACT, API_ROUTES.CONTACT]).toEqual(['/contact', '/api/contact']);
+    expect(isPublicRoute(ROUTES.CONTACT)).toBe(true);
+    expect(isPublicRoute(API_ROUTES.CONTACT)).toBe(true);
+    expect(isAuthRoute(ROUTES.CONTACT)).toBe(false);
+    expect(isProtectedRoute('/contacts')).toBe(true);
   });
 
   // Search engines read these without an account

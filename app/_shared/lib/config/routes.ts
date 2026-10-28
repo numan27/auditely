@@ -6,6 +6,8 @@ export const ROUTES = {
   SIGNUP: '/signup',
   TERMS: '/terms',
   PRIVACY: '/privacy',
+  // The contact form, emailed to the team (OWNER_EMAIL)
+  CONTACT: '/contact',
   SEARCHES: '/searches',
   // The workspace's other views, so a refresh or a bookmark opens the same one (workspacePath.ts)
   AUDIT: '/audit',
@@ -26,7 +28,7 @@ export const ROUTES = {
   AUTH_GOOGLE: '/auth/google',
 } as const;
 
-// API route paths. Only AUTH (and AUTH_PASSWORD under it) and FREE_AUDIT are public (see PUBLIC_ROUTES below).
+// API route paths. Only AUTH (and AUTH_PASSWORD under it), FREE_AUDIT and CONTACT are public (see PUBLIC_ROUTES below).
 export const API_ROUTES = {
   AUTH: '/api/auth',
   // Signing in with the password an account set in Settings, behind BotID
@@ -59,6 +61,8 @@ export const API_ROUTES = {
   BILLING_PORTAL: '/api/billing/portal',
   // A tester's note to the owner, from the header's Feedback button
   FEEDBACK: '/api/feedback',
+  // The public contact form's messages, behind BotID and a per-network limit
+  CONTACT: '/api/contact',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret
@@ -81,20 +85,23 @@ export const SEO_FILES = { ROBOTS: '/robots.txt', SITEMAP: '/sitemap.xml', SHARE
 export const MEDIA_FILES = { WALKTHROUGH: '/media/walkthrough.mp4', WALKTHROUGH_POSTER: '/media/walkthrough-poster.jpg' } as const;
 
 // Everything needs a signed-in account except these; the sign-in and sign-up pages
-// run before there is a session, Terms, Privacy and the search engines' files are
-// for everyone, /report/{token} is checked by its signature, /demo shows only
-// the sample checked into the repo, the free audit checks BotID and its own limits,
+// run before there is a session, Terms, Privacy, Contact and the search engines' files
+// are for everyone, /report/{token} is checked by its signature, /demo shows only
+// the sample checked into the repo, the free audit and the contact form check BotID
+// and their own limits,
 // the inbound route checks its secret, and Stripe's webhook checks Stripe's signature
 export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   ROUTES.SIGNUP,
   ROUTES.TERMS,
   ROUTES.PRIVACY,
+  ROUTES.CONTACT,
   SEO_FILES.ROBOTS,
   SEO_FILES.SITEMAP,
   SEO_FILES.SHARE_IMAGE,
   API_ROUTES.AUTH,
   API_ROUTES.FREE_AUDIT,
+  API_ROUTES.CONTACT,
   BOTID_PATH,
   ROUTES.AUTH_CALLBACK,
   ROUTES.AUTH_GOOGLE,

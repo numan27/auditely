@@ -1,6 +1,6 @@
 // app/(pages)/(legal)/layout.tsx
 
-// The Terms and the Privacy Policy: the landing page's header and footer around
+// The Terms, the Privacy Policy and the contact page: the landing page's header and footer around
 // one readable column.
 
 import type { ReactNode } from 'react';

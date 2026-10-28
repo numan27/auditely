@@ -1,7 +1,7 @@
 // app/sitemap.ts
 
 // The public pages, once sign-ups are open; nothing before that (robots.ts keeps
-// search engines out anyway).
+// search engines out anyway). Terms and Privacy are left out while they're unlinked.
 
 import type { MetadataRoute } from 'next';
 import { signupsOpen } from '@/app/_shared/lib/auth/account';
@@ -12,5 +12,5 @@ export const dynamic = 'force-dynamic';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   if (!signupsOpen()) return [];
-  return [ROUTES.HOME, ROUTES.TERMS, ROUTES.PRIVACY].map((path) => ({ url: `${AUDITELY_URL}${path}` }));
+  return [ROUTES.HOME, ROUTES.CONTACT].map((path) => ({ url: `${AUDITELY_URL}${path}` }));
 }

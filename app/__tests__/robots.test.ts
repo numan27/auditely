@@ -14,7 +14,7 @@ describe('robots and the sitemap', () => {
     expect(robots()).toEqual({
       rules: {
         userAgent: '*',
-        allow: ['/', '/terms', '/privacy', '/demo'],
+        allow: ['/', '/contact', '/demo'],
         disallow: ['/api/', '/auth/', '/report/', '/search', '/searches', '/audit', '/requests', '/plans', '/settings'],
       },
       sitemap: `${AUDITELY_URL}/sitemap.xml`,
@@ -24,9 +24,10 @@ describe('robots and the sitemap', () => {
     expect(robots()).toEqual({ rules: { userAgent: '*', disallow: '/' } });
   });
 
-  it('lists the public pages only once sign-ups are open', () => {
+  // Terms and Privacy stay out while they're unlinked: their pages say noindex
+  it('lists the home and contact pages only once sign-ups are open', () => {
     vi.stubEnv('SIGNUPS_OPEN', 'true');
-    expect(sitemap().map((entry) => entry.url)).toEqual([`${AUDITELY_URL}/`, `${AUDITELY_URL}/terms`, `${AUDITELY_URL}/privacy`]);
+    expect(sitemap().map((entry) => entry.url)).toEqual([`${AUDITELY_URL}/`, `${AUDITELY_URL}/contact`]);
     vi.stubEnv('SIGNUPS_OPEN', '');
     expect(sitemap()).toEqual([]);
   });

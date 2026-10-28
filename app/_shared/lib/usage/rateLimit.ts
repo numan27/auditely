@@ -15,6 +15,8 @@ export const CONNECTS_PER_HOUR = 10;
 export const SENDS_PER_HOUR = 50;
 /** Feedback to the owner: an email each, so a stuck key can't fill the inbox */
 export const FEEDBACK_PER_HOUR = 10;
+/** Contact form messages from one network: an email each, and anyone can send them */
+export const CONTACT_PER_HOUR = 5;
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -70,3 +72,8 @@ const feedbackPerHour = windowLimit({ limit: FEEDBACK_PER_HOUR, windowMs: HOUR_M
 
 /** Whether this account may send the owner another piece of feedback now */
 export const feedbackAllowed = (accountId: string, now: number = Date.now()): boolean => feedbackPerHour(accountId, now);
+
+const contactPerHour = windowLimit({ limit: CONTACT_PER_HOUR, windowMs: HOUR_MS });
+
+/** Whether this visitor's network may send the team another message now */
+export const contactAllowed = (ip: string, now: number = Date.now()): boolean => contactPerHour(ip, now);

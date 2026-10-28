@@ -91,8 +91,8 @@ describe('proxy', () => {
     expect(sentTo(await visit(`${ROUTES.REQUESTS}/r-42`))).toBe(`${ROUTES.LOGIN}?callbackUrl=%2Frequests%2Fr-42`);
   });
 
-  it('still answers 401 to a logged-out call of any API route but the sign-ins and the free audit', async () => {
-    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT];
+  it('still answers 401 to a logged-out call of any API route but the sign-ins, the free audit and the contact form', async () => {
+    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT, API_ROUTES.CONTACT];
     for (const path of Object.values(API_ROUTES).filter((p) => !open.includes(p))) {
       expect((await visit(path)).status).toBe(401);
     }
