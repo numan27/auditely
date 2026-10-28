@@ -50,6 +50,29 @@ describe('proxy', () => {
     expect(sentTo(await visit('/?load=abc'))).toBe(ROUTES.DEMO);
   });
 
+  it('shows a signed-out visitor the landing page once sign-ups are open', async () => {
+    vi.stubEnv('SIGNUPS_OPEN', 'true');
+    for (const path of [ROUTES.HOME, '/?ref=hn']) {
+      const res = await visit(path);
+      expect(sentTo(res), path).toBeNull();
+      expect(res.status, path).toBe(200);
+    }
+    expect(sentTo(await visit(ROUTES.SIGNUP))).toBeNull();
+    expect(sentTo(await visit(ROUTES.SIGNUP, STRANGER))).toBe(ROUTES.HOME);
+  });
+
+  it('still sends a signed-out visitor to the demo while sign-ups are closed', async () => {
+    expect(sentTo(await visit(ROUTES.HOME))).toBe(ROUTES.DEMO);
+    expect(sentTo(await visit(ROUTES.TERMS))).toBeNull();
+    expect(sentTo(await visit(ROUTES.PRIVACY))).toBeNull();
+  });
+
+  it("answers an API call without a session with 'Sign in to continue'", async () => {
+    const res = await visit(API_ROUTES.SEARCHES);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'Sign in to continue' });
+  });
+
   // Sign-ups are closed: a session for anyone off the list opens nothing
   it('treats a session for an email that may not sign in as logged out', async () => {
     expect(sentTo(await visit(ROUTES.HOME, STRANGER))).toBe(ROUTES.DEMO);

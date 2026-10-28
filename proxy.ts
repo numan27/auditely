@@ -8,13 +8,14 @@ import {
   isHomeAlias,
   isProtectedRoute,
 } from "@/app/_shared/lib/config/routes";
-import { canSignIn } from "@/app/_shared/lib/auth/account";
+import { canSignIn, signupsOpen } from "@/app/_shared/lib/auth/account";
 import { readProxySession, withSessionCookies } from "@/app/_shared/lib/supabase/proxySession";
 
 // This proxy handles authentication and route protection.
-// The whole app is private except the login page, the sign-in routes, report links, the demo,
-// the route devartventures.com sends audit requests to (it checks its own secret), and Stripe's
-// webhook (it checks Stripe's signature).
+// The whole app is private except the login and sign-up pages, the sign-in routes, Terms and
+// Privacy, report links, the demo, the free audit, the route devartventures.com sends audit
+// requests to (it checks its own secret), and Stripe's webhook (it checks Stripe's signature).
+// Once sign-ups are open, the home page is the landing page for a visitor who isn't signed in.
 // It also refreshes the Supabase session: every answer carries the refreshed cookies.
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -28,15 +29,17 @@ export async function proxy(request: NextRequest) {
   const { response, email } = await readProxySession(request);
   const isLoggedIn = !!email && canSignIn(email);
 
-  // The home page shows a visitor who isn't logged in the public demo, not a sign-in form
+  // The home page shows a visitor who isn't logged in the landing page once sign-ups are
+  // open, and the public demo until then, never a sign-in form
   if (pathname === ROUTES.HOME && !isLoggedIn) {
+    if (signupsOpen()) return response;
     return withSessionCookies(NextResponse.redirect(new URL(LOGGED_OUT_HOME, request.url)), response);
   }
 
   // Handle protected routes
   if (isProtectedRoute(pathname) && !isLoggedIn) {
     if (isApiRoute(pathname)) {
-      return withSessionCookies(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), response);
+      return withSessionCookies(NextResponse.json({ error: "Sign in to continue" }, { status: 401 }), response);
     }
     const loginUrl = new URL(ROUTES.LOGIN, request.url);
     loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);

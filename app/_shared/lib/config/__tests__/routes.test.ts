@@ -73,6 +73,20 @@ describe('route access', () => {
 
   // The sign-in link and Google both come back here before there is a session; a
   // signed-in user isn't bounced away, so a second sign-in still finishes
+  it('keeps signup, Terms and Privacy public', () => {
+    expect([ROUTES.SIGNUP, ROUTES.TERMS, ROUTES.PRIVACY]).toEqual(['/signup', '/terms', '/privacy']);
+    for (const path of [ROUTES.SIGNUP, ROUTES.TERMS, ROUTES.PRIVACY]) expect(isPublicRoute(path), path).toBe(true);
+    // A signed-in user is sent home from the sign-up page, as from the login
+    expect(isAuthRoute(ROUTES.SIGNUP)).toBe(true);
+    expect(isAuthRoute(ROUTES.TERMS)).toBe(false);
+  });
+
+  // Search engines read these without an account
+  it('lets anyone read robots.txt and the sitemap', () => {
+    expect(isPublicRoute('/robots.txt')).toBe(true);
+    expect(isPublicRoute('/sitemap.xml')).toBe(true);
+  });
+
   it('opens the sign-in callback and the Google start without a login', () => {
     expect(ROUTES.AUTH_CALLBACK).toBe('/auth/callback');
     expect(ROUTES.AUTH_GOOGLE).toBe('/auth/google');

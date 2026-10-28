@@ -28,8 +28,13 @@ export function isOwnerEmail(email: string, env: NodeJS.ProcessEnv = process.env
   return owner !== '' && normalize(email) === owner;
 }
 
-/** True for the owner and the allowlist, or for anyone once SIGNUPS_OPEN is "true" */
+/** True once SIGNUPS_OPEN is exactly "true": anyone may make an account */
+export function signupsOpen(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.SIGNUPS_OPEN === 'true';
+}
+
+/** True for the owner and the allowlist, or for anyone once sign-ups are open */
 export function canSignIn(email: string, env: NodeJS.ProcessEnv = process.env): boolean {
-  if (env.SIGNUPS_OPEN === 'true') return true;
+  if (signupsOpen(env)) return true;
   return isOwnerEmail(email, env) || parseEmails(env.ALLOWED_EMAILS).includes(normalize(email));
 }
