@@ -4,6 +4,8 @@
 
 // The landing page's prices, from the same plans and feature names as /plans.
 // Every button starts at sign-up; a paid plan carries on to /plans to buy it.
+// During the beta (checkout closed) the paid plans show their prices and say
+// they open when it ends.
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -51,7 +53,11 @@ function extras(plan: Plan): string[] {
   return PLAN_FEATURES.filter(({ feature }) => plan.features[feature]).map(({ label }) => label);
 }
 
-function PlanCard({ plan, interval }: { plan: Plan; interval: BillingInterval }) {
+/** Where a paid plan's button would be while checkout is closed */
+const waiting =
+  'my-6 flex min-h-12 items-center justify-center rounded-xl border border-dashed border-[var(--color-border-hover)] px-4 text-[15px] font-semibold text-[var(--color-text-secondary)]';
+
+function PlanCard({ plan, interval, open }: { plan: Plan; interval: BillingInterval; open: boolean }) {
   const { amount, per } = planPrice(plan, interval);
   const pick = plan.id === PICK;
   const lines = [
@@ -72,9 +78,13 @@ function PlanCard({ plan, interval }: { plan: Plan; interval: BillingInterval })
         {amount}
         {per && <small className="ml-1.5 font-sans text-[15px] font-medium tracking-normal text-[var(--color-text-secondary)]">{per}</small>}
       </p>
-      <Link href={planHref(plan, interval)} className={`${button(!pick)} my-6`}>
-        {plan.monthlyPrice ? `Choose ${plan.name}` : 'Start free'}
-      </Link>
+      {plan.monthlyPrice && !open ? (
+        <p className={waiting}>Opens after the beta</p>
+      ) : (
+        <Link href={planHref(plan, interval)} className={`${button(!pick)} my-6`}>
+          {plan.monthlyPrice ? `Choose ${plan.name}` : 'Start free'}
+        </Link>
+      )}
       <ul className="flex flex-col gap-[11px]">
         {lines.map((line) => (
           <li key={line} className="grid grid-cols-[18px_1fr] gap-2.5 text-[15px] leading-snug text-[var(--color-text-primary)]">
@@ -92,7 +102,8 @@ const yearlyNote = () => {
   return paid.map((plan) => `${plan.name} is ${usd(plan.yearlyPrice ?? 0)}`).join(' and ');
 };
 
-export function PricingTable() {
+/** @param checkoutOpen false during the beta: paid plans can't be bought yet */
+export function PricingTable({ checkoutOpen }: { checkoutOpen: boolean }) {
   const [interval, setBilling] = useState<BillingInterval>('month');
   const toggle = (value: BillingInterval, label: string, extra?: string) => (
     <button
@@ -113,11 +124,13 @@ export function PricingTable() {
       </div>
       <div className="mt-8 grid gap-5 min-[961px]:grid-cols-3">
         {PLAN_ORDER.map((id) => (
-          <PlanCard key={id} plan={PLANS[id]} interval={interval} />
+          <PlanCard key={id} plan={PLANS[id]} interval={interval} open={checkoutOpen} />
         ))}
       </div>
       <p className="mt-6 text-sm text-[var(--color-text-tertiary)]">
-        Prices are in US dollars, before sales tax. Yearly: {yearlyNote()}. Cancel any time from Settings.
+        {checkoutOpen
+          ? `Prices are in US dollars, before sales tax. Yearly: ${yearlyNote()}. Cancel any time from Settings.`
+          : `Auditely is in beta, so Pro and Agency open when it ends. Prices are in US dollars, before sales tax. Yearly: ${yearlyNote()}.`}
       </p>
     </div>
   );

@@ -190,7 +190,7 @@ export function FreeAuditHero({ enabled, sample, video }: FreeAuditHeroProps) {
                   <span className="grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface)] text-[var(--color-primary-600)]">
                     <PlayIcon size={14} />
                   </span>
-                  Watch the 45-second demo
+                  Watch the 1-minute demo
                 </a>
               )}
               <div ref={noteRef} aria-live="polite" className="max-w-[600px]">

@@ -63,7 +63,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - _vercel (Vercel's own paths: the analytics script and the visits it reports)
+     * - media/ (public/media: the landing page's walkthrough, for everyone, so no session check)
      */
-    "/((?!_next/static|_next/image|favicon.ico|_vercel).*)",
+    "/((?!_next/static|_next/image|favicon.ico|_vercel|media/).*)",
   ],
 };

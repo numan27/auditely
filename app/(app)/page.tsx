@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { Workspace } from '@/app/_shared/components/auditely/workspace/workspace';
 import { LandingPage } from '@/app/_shared/components/landing/landingPage';
-import { demoLinks } from '@/app/_shared/lib/demo/demoLinks';
+import { checkoutOpen } from '@/app/_shared/lib/billing/billingRules';
+import { RECORDED_WALKTHROUGH } from '@/app/_shared/lib/demo/walkthrough';
 import { freeAuditSetup } from '@/app/_shared/lib/freeAudit/freeAuditRules';
 import { SEO_FILES } from '@/app/_shared/lib/config/routes';
 import { SHARE_DESCRIPTION, SHARE_IMAGE_ALT, SHARE_TITLE } from '@/app/_shared/lib/seo/shareCopy';
@@ -28,9 +29,9 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const session = await getSession();
   if (!session) {
-    const { videoUrl, videoPlayerUrl } = demoLinks();
-    const video = videoUrl ? { url: videoUrl, playerUrl: videoPlayerUrl } : null;
-    return <LandingPage freeAuditOn={freeAuditSetup().state === 'on'} video={video} />;
+    return (
+      <LandingPage freeAuditOn={freeAuditSetup().state === 'on'} video={RECORDED_WALKTHROUGH} checkoutOpen={checkoutOpen()} />
+    );
   }
   return <Workspace />;
 }

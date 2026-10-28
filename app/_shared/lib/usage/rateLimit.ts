@@ -13,6 +13,8 @@ export const REWRITES_PER_HOUR = 10;
 export const CONNECTS_PER_HOUR = 10;
 /** Outreach from an account's own mailbox: enough for a working session, not for a blast */
 export const SENDS_PER_HOUR = 50;
+/** Feedback to the owner: an email each, so a stuck key can't fill the inbox */
+export const FEEDBACK_PER_HOUR = 10;
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -63,3 +65,8 @@ export const connectAllowed = (accountId: string, now: number = Date.now()): boo
 
 /** Whether this account may send another outreach email now */
 export const sendAllowed = (accountId: string, now: number = Date.now()): boolean => sendsPerHour(accountId, now);
+
+const feedbackPerHour = windowLimit({ limit: FEEDBACK_PER_HOUR, windowMs: HOUR_MS });
+
+/** Whether this account may send the owner another piece of feedback now */
+export const feedbackAllowed = (accountId: string, now: number = Date.now()): boolean => feedbackPerHour(accountId, now);

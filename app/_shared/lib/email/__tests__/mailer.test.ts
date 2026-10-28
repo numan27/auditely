@@ -203,6 +203,12 @@ describe('sendEmail through Resend', () => {
     expect(resend.send.mock.calls[0][0]).toMatchObject({ replyTo: 'contact@devartventures.com', bcc: 'log@bcc.hubspot.com' });
   });
 
+  it("replies to the email's own address over EMAIL_REPLY_TO, as feedback does", async () => {
+    vi.stubEnv('EMAIL_REPLY_TO', 'contact@devartventures.com');
+    await sendEmail({ ...email, replyTo: 'tester@example.com' });
+    expect(resend.send.mock.calls[0][0]).toMatchObject({ replyTo: 'tester@example.com' });
+  });
+
   // Resend names an inline image's id differently
   it('sends the designed email with its logo placed inside the message', async () => {
     const logo = { filename: 'logo.png', content: PDF, cid: 'devartventures-logo' };

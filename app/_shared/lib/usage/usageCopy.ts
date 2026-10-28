@@ -73,6 +73,16 @@ export function upgradeHint(limit: LimitReached): string | null {
   return null;
 }
 
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/** How a tester's "Ask for more" message starts during the beta, when nothing can be bought */
+export function askForMore(asked: LimitReached | Feature): string {
+  if (typeof asked === 'string') return `I'd like to try ${lowerFirst(FEATURE_NAMES[asked])} during the beta.`;
+  const many = NOUNS[asked.kind][1];
+  if (asked.limit === 0) return `I'd like to try ${many} during the beta.`;
+  return `I've run out of ${many} this month. Could I have more for the beta?`;
+}
+
 export function featureMessage(feature: Feature): string {
   const names = PLAN_ORDER.filter((id) => PLANS[id].features[feature]).map((id) => PLANS[id].name);
   return `${FEATURE_NAMES[feature]} comes with the ${joinNames(names)} plans.`;

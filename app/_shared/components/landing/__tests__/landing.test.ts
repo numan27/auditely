@@ -17,7 +17,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { LandingPage } from '@/app/_shared/components/landing/landingPage';
 import { FREE_PLAN_LINE, FreeAuditHero } from '@/app/_shared/components/landing/freeAuditHero';
 import { DemoSection } from '@/app/_shared/components/landing/demoSection';
-import { DemoWalkthrough, type WalkthroughLinks } from '@/app/_shared/components/landing/demoWalkthrough';
+import { DemoWalkthrough } from '@/app/_shared/components/landing/demoWalkthrough';
+import type { Walkthrough } from '@/app/_shared/lib/demo/walkthrough';
 import { HowItWorks } from '@/app/_shared/components/landing/howItWorks';
 import { ReportShowcase } from '@/app/_shared/components/landing/reportShowcase';
 import { FAQ, LandingFaq } from '@/app/_shared/components/landing/landingFaq';
@@ -49,13 +50,22 @@ const linkTo = (html: string, label: string) => html.match(new RegExp(`<a[^>]*>\
 const sample = landingSample(demoData);
 const leads = landingLeads(demoData);
 const search = searchLabel(demoData.query);
-const LOOM: WalkthroughLinks = { url: 'https://www.loom.com/share/abc123', playerUrl: 'https://www.loom.com/embed/abc123?autoplay=1' };
-const YOUTUBE: WalkthroughLinks = { url: 'https://youtu.be/abc123', playerUrl: null };
+const LOOM: Walkthrough = { kind: 'link', url: 'https://www.loom.com/share/abc123', playerUrl: 'https://www.loom.com/embed/abc123?autoplay=1' };
+const YOUTUBE: Walkthrough = { kind: 'link', url: 'https://youtu.be/abc123', playerUrl: null };
+const FILE: Walkthrough = {
+  kind: 'file',
+  src: '/media/walkthrough.mp4',
+  poster: '/media/walkthrough-poster.jpg',
+  chapters: [
+    { at: 0, title: 'Search', detail: 'A business type and a city.' },
+    { at: 27, title: 'Audit', detail: 'Six scores and the biggest issues.' },
+  ],
+};
 
 const hero = (enabled: boolean, video = false) => renderToStaticMarkup(createElement(FreeAuditHero, { enabled, sample, video }));
-const demo = (video: WalkthroughLinks | null) => renderToStaticMarkup(createElement(DemoSection, { leads, search, video }));
-const page = (freeAuditOn: boolean, video: WalkthroughLinks | null = null) =>
-  renderToStaticMarkup(createElement(LandingPage, { freeAuditOn, video }));
+const demo = (video: Walkthrough | null) => renderToStaticMarkup(createElement(DemoSection, { leads, search, video }));
+const page = (freeAuditOn: boolean, video: Walkthrough | null = null) =>
+  renderToStaticMarkup(createElement(LandingPage, { freeAuditOn, video, checkoutOpen: false }));
 
 describe('the hero', () => {
   it('says who it is for, with one field labelled Paste a website', () => {
@@ -87,8 +97,8 @@ describe('the hero', () => {
   });
 
   it('links to the walkthrough only when there is one', () => {
-    expect(hero(true, true)).toMatch(/<a[^>]*href="#demo-video"[^>]*>[\s\S]*?Watch the 45-second demo<\/a>/);
-    expect(text(hero(true, false))).not.toContain('Watch the 45-second demo');
+    expect(hero(true, true)).toMatch(/<a[^>]*href="#demo-video"[^>]*>[\s\S]*?Watch the 1-minute demo<\/a>/);
+    expect(text(hero(true, false))).not.toContain('Watch the 1-minute demo');
   });
 
   it('says Sign up to audit a website when free audits are off', () => {
@@ -140,16 +150,38 @@ describe('the demo section', () => {
     expect(demo(null)).not.toContain('tel:');
   });
 
-  it('adds a walkthrough tab only when there is a walkthrough', () => {
+  it('adds a walkthrough tab only when there is a walkthrough, and opens on it', () => {
     expect(demo(null)).not.toContain('Walkthrough');
     expect(demo(null)).not.toContain('id="demo-video"');
     const html = demo(LOOM);
     expect(html).toContain('id="demo-video"');
-    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>[\s\S]*?Sample search<\/button>/);
-    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>[\s\S]*?Walkthrough · 45 s<\/button>/);
-    // The search shows first; the video waits for its tab
-    expect(rows(html)).toHaveLength(leads.length);
+    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>[\s\S]*?Walkthrough · 1 min<\/button>/);
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>[\s\S]*?Sample search<\/button>/);
+    // The walkthrough shows first; the search waits for its tab, and Loom's player for a press
+    expect(rows(html)).toHaveLength(0);
     expect(html).not.toContain('<iframe');
+  });
+
+  it('plays the recorded walkthrough muted on a loop, with sound and pause buttons', () => {
+    const html = demo(FILE);
+    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>[\s\S]*?Walkthrough · 1 min<\/button>/);
+    const video = html.match(/<video[^>]*>/)?.[0] ?? '';
+    expect(video).toContain('src="/media/walkthrough.mp4"');
+    expect(video).toContain('poster="/media/walkthrough-poster.jpg"');
+    for (const flag of ['muted', 'loop', 'playsInline']) expect(video).toMatch(new RegExp(`\\s${flag}=""`, 'i'));
+    // It starts once it scrolls into view, so the page never downloads it up front
+    expect(video).toContain('preload="none"');
+    expect(video).not.toMatch(/\sautoplay/i);
+    expect(html).toMatch(/<button[^>]*aria-label="Turn sound on"/);
+    expect(html).toMatch(/<button[^>]*aria-label="Play the walkthrough"/);
+    expect(rows(html)).toHaveLength(0);
+  });
+
+  it("lists the walkthrough's chapters, each a jump to where it starts", () => {
+    const html = demo(FILE);
+    expect(html.match(/<button[^>]*data-chapter="\d+"/g)).toHaveLength(2);
+    expect(text(html)).toContain('0:00 Search A business type and a city.');
+    expect(text(html)).toContain('0:27 Audit Six scores and the biggest issues.');
   });
 });
 
@@ -157,6 +189,7 @@ describe('the walkthrough', () => {
   it("loads Loom's player only once the visitor presses play", () => {
     const html = renderToStaticMarkup(createElement(DemoWalkthrough, { video: LOOM }));
     expect(html).toMatch(/<button[^>]*aria-label="Play the walkthrough"/);
+    expect(text(html)).toContain('Auditely in a minute');
     expect(html).not.toContain('<iframe');
     expect(html).not.toContain('loom.com');
   });
@@ -294,7 +327,22 @@ describe('for agencies', () => {
 });
 
 describe('pricing', () => {
-  const html = renderToStaticMarkup(createElement(PricingTable));
+  const html = renderToStaticMarkup(createElement(PricingTable, { checkoutOpen: true }));
+  const beta = renderToStaticMarkup(createElement(PricingTable, { checkoutOpen: false }));
+
+  it('shows the prices during the beta, with the paid plans opening when it ends', () => {
+    expect(text(beta)).toContain('$24 a month');
+    expect(text(beta)).toContain('$59 a month');
+    expect(count(beta, /Opens after the beta/g)).toBe(2);
+    expect(beta).not.toContain('Choose Pro');
+    expect(beta).not.toContain('Choose Agency');
+    expect(beta).not.toContain('callbackUrl');
+    expect(linkTo(beta, 'Start free')).toContain('href="/signup"');
+    expect(text(beta)).toContain(
+      'Auditely is in beta, so Pro and Agency open when it ends. Prices are in US dollars, before sales tax. Yearly: Pro is $240 and Agency is $590.'
+    );
+    expect(text(beta)).not.toContain('Cancel any time');
+  });
 
   it('prices each plan from PLANS', () => {
     expect(planPrice(PLANS.pro, 'month')).toEqual({ amount: `$${PLANS.pro.monthlyPrice}`, per: 'a month' });
@@ -340,7 +388,7 @@ describe('pricing', () => {
     const plans = renderToStaticMarkup(
       createElement(PlansView, {
         summary: null,
-        billing: { ready: false, canBuy: true, subscription: null, interval: 'month', justSubscribed: false },
+        billing: { ready: false, open: true, canBuy: true, subscription: null, interval: 'month', justSubscribed: false },
       })
     );
     expect(PLAN_FEATURES.map((f) => f.label)).toContain('Audit a whole search at once');
@@ -383,11 +431,13 @@ describe('LandingPage', () => {
     expect(page(true)).not.toContain('#demo-video');
     expect(page(true, LOOM)).toContain('href="#demo-video"');
     expect(page(true, LOOM)).toContain('id="demo-video"');
+    expect(page(true, FILE)).toContain('href="#demo-video"');
+    expect(page(true, FILE)).toContain('<video');
   });
 
   it('never mentions DevArtVentures or signs as its owner', () => {
     for (const on of [true, false]) {
-      for (const video of [null, LOOM]) expect(page(on, video).match(/dev\s*art\s*ventures|numan/gi) ?? []).toEqual([]);
+      for (const video of [null, LOOM, FILE]) expect(page(on, video).match(/dev\s*art\s*ventures|numan/gi) ?? []).toEqual([]);
     }
   });
 });

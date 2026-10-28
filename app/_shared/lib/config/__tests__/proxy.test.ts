@@ -158,6 +158,11 @@ describe('which requests the proxy sees', () => {
     expect(runsOn('/_vercel/insights/view')).toBe(false);
   });
 
+  it('leaves the files in public/media to the CDN, without a session check', () => {
+    expect(runsOn('/media/walkthrough.mp4')).toBe(false);
+    expect(runsOn('/media/walkthrough-poster.jpg')).toBe(false);
+  });
+
   it('still runs on every page and API route', () => {
     for (const path of ['/', '/settings', '/report/abc', '/api/search', '/opengraph-image']) expect(runsOn(path), path).toBe(true);
   });

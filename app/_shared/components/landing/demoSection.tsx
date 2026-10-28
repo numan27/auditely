@@ -2,17 +2,18 @@
 
 // app/_shared/components/landing/demoSection.tsx
 
-// "01 · Live demo": the demo's real sample search on the landing page itself.
-// Every lead ranked weakest site first; picking one shows its scores, what
-// Auditely wrote and its PDF. With a recorded walkthrough, a second tab plays it,
-// and the hero's "Watch the demo" link (WALKTHROUGH_HASH) opens on it.
+// "01 · Live demo": the walkthrough first, when there is one, and the demo's real
+// sample search a tab away. The search ranks every lead weakest site first;
+// picking one shows its scores, what Auditely wrote and its PDF. The hero's
+// "Watch the demo" link (WALKTHROUGH_HASH) brings back the walkthrough and starts
+// it over with the sound on.
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
 import { PlayIcon, SearchIcon, StarIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ScoreRing, TONE_CHIP, toneOf } from '@/app/_shared/components/landing/scoreRing';
-import { DemoWalkthrough, type WalkthroughLinks } from '@/app/_shared/components/landing/demoWalkthrough';
+import { DemoWalkthrough } from '@/app/_shared/components/landing/demoWalkthrough';
 import {
   WALKTHROUGH_HASH,
   cardClasses,
@@ -23,17 +24,10 @@ import {
   wrapClasses,
 } from '@/app/_shared/components/landing/landingStyles';
 import type { LandingLead } from '@/app/_shared/lib/demo/landingDemo';
+import type { Walkthrough } from '@/app/_shared/lib/demo/walkthrough';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
 type Tab = 'search' | 'video';
-
-const watchHash = (onChange: () => void) => {
-  window.addEventListener('hashchange', onChange);
-  return () => window.removeEventListener('hashchange', onChange);
-};
-
-/** Whether the address asks for the walkthrough; never on the server */
-const useWalkthroughAsked = () => useSyncExternalStore(watchHash, () => window.location.hash === WALKTHROUGH_HASH, () => false);
 
 const segClasses = (on: boolean) =>
   `inline-flex h-10 items-center gap-2 rounded-[10px] px-4 text-sm font-semibold transition-colors ${
@@ -139,21 +133,27 @@ function LeadDetail({ lead, total }: { lead: LandingLead; total: number }) {
 interface DemoSectionProps {
   leads: LandingLead[];
   search: { niche: string; location: string };
-  video: WalkthroughLinks | null;
+  video: Walkthrough | null;
 }
 
 export function DemoSection({ leads, search, video }: DemoSectionProps) {
-  const asked = useWalkthroughAsked();
   const [picked, setPicked] = useState<Tab | null>(null);
   const [selected, setSelected] = useState(0);
-  const tab: Tab = video ? (picked ?? (asked ? 'video' : 'search')) : 'search';
+  // How many times the hero's link has asked for the walkthrough
+  const [soundAsk, setSoundAsk] = useState(0);
+  const tab: Tab = video ? (picked ?? 'video') : 'search';
   const lead = leads[selected] ?? leads[0];
 
-  // A later "Watch the demo" opens the walkthrough even after a tab was picked
+  // "Watch the demo" brings back the walkthrough, even after a tab was picked, and
+  // starts it over with sound; the address then reads #demo, so the next press is heard too
   useEffect(() => {
     const onHash = () => {
-      if (window.location.hash === WALKTHROUGH_HASH) setPicked('video');
+      if (window.location.hash !== WALKTHROUGH_HASH) return;
+      setPicked('video');
+      setSoundAsk((n) => n + 1);
+      window.history.replaceState(null, '', '#demo');
     };
+    onHash();
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -173,27 +173,34 @@ export function DemoSection({ leads, search, video }: DemoSectionProps) {
           <div>
             <p className={eyebrowClasses}>01 · Live demo</p>
             <h2 className={headingClasses}>A real search, start to finish.</h2>
-            <p className={subClasses}>
-              A search for “{search.niche.toLowerCase()}” in {search.location}: {leads.length} businesses found, every website
-              audited, weakest site first. Pick one to see what Auditely wrote.
-            </p>
+            {tab === 'video' ? (
+              <p className={subClasses}>
+                A search, an audit and the first email, start to finish, in about a minute. Turn the sound on to hear how it
+                works, or open the sample search to try it yourself.
+              </p>
+            ) : (
+              <p className={subClasses}>
+                A search for “{search.niche.toLowerCase()}” in {search.location}: {leads.length} businesses found, every website
+                audited, weakest site first. Pick one to see what Auditely wrote.
+              </p>
+            )}
           </div>
           {video && (
             <div role="group" aria-label="Demo" className="inline-flex gap-1 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-1">
+              <button type="button" aria-pressed={tab === 'video'} onClick={() => pick('video')} className={segClasses(tab === 'video')}>
+                <PlayIcon size={16} />
+                Walkthrough · 1 min
+              </button>
               <button type="button" aria-pressed={tab === 'search'} onClick={() => pick('search')} className={segClasses(tab === 'search')}>
                 <SearchIcon size={16} />
                 Sample search
-              </button>
-              <button type="button" aria-pressed={tab === 'video'} onClick={() => pick('video')} className={segClasses(tab === 'video')}>
-                <PlayIcon size={16} />
-                Walkthrough · 45 s
               </button>
             </div>
           )}
         </div>
 
         {tab === 'video' && video ? (
-          <DemoWalkthrough video={video} />
+          <DemoWalkthrough video={video} soundAsk={soundAsk} />
         ) : (
           <div className="mt-9">
             <SearchBar search={search} total={leads.length} />

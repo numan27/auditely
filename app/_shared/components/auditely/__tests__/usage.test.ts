@@ -37,7 +37,7 @@ describe('UsageMeter', () => {
 describe('UpgradeModal', () => {
   it('explains a limit and offers the next plan', () => {
     const html = renderToStaticMarkup(
-      createElement(UpgradeModal, { prompt: { limit: { kind: 'search', plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {} })
+      createElement(UpgradeModal, { prompt: { limit: { kind: 'search', plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {}, checkoutOpen: true })
     );
     expect(html).toContain('Monthly limit reached');
     expect(html).toContain('You&#x27;ve used this month&#x27;s search. You get another on Nov 1.');
@@ -55,6 +55,7 @@ describe('UpgradeModal', () => {
           onContinue() {},
         },
         onClose() {},
+        checkoutOpen: true,
       })
     );
     expect(html).not.toContain('See plans');
@@ -62,7 +63,7 @@ describe('UpgradeModal', () => {
   });
 
   it('explains a paid feature', () => {
-    const html = renderToStaticMarkup(createElement(UpgradeModal, { prompt: { feature: 'export' }, onClose() {} }));
+    const html = renderToStaticMarkup(createElement(UpgradeModal, { prompt: { feature: 'export' }, onClose() {}, checkoutOpen: true }));
     expect(html).toContain('Not in your plan');
     expect(html).toContain('Exporting to CSV and Google Sheets comes with the Pro and Agency plans.');
     expect(html).toContain('See plans');
@@ -70,10 +71,44 @@ describe('UpgradeModal', () => {
 
   it('says a kind the plan never had is not in it', () => {
     const html = renderToStaticMarkup(
-      createElement(UpgradeModal, { prompt: { limit: { kind: 'email_lookup', plan: 'free', limit: 0, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {} })
+      createElement(UpgradeModal, { prompt: { limit: { kind: 'email_lookup', plan: 'free', limit: 0, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {}, checkoutOpen: true })
     );
     expect(html).toContain('Not in your plan');
     expect(html).toContain('Email lookups aren&#x27;t part of the Free plan.');
     expect(html).toContain('Pro gives you 100 email lookups a month.');
+  });
+
+  it('during the beta, says paid plans open after it and offers to ask for more instead', () => {
+    const html = renderToStaticMarkup(
+      createElement(UpgradeModal, { prompt: { limit: { kind: 'audit', plan: 'free', limit: 2, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {}, checkoutOpen: false })
+    );
+    expect(html).toContain('You&#x27;ve used your 2 audits this month. They reset on Nov 1.');
+    expect(html).toContain('Pro gives you 250 audits a month.');
+    expect(html).toContain('Paid plans open after the beta. Until then, ask for more and we&#x27;ll raise your limit if we can.');
+    expect(html).toContain('Ask for more');
+    expect(html).not.toContain('See plans');
+    expect(html).not.toContain('href="/plans"');
+  });
+
+  it('during the beta, offers to ask to try a paid feature', () => {
+    const html = renderToStaticMarkup(createElement(UpgradeModal, { prompt: { feature: 'export' }, onClose() {}, checkoutOpen: false }));
+    expect(html).toContain('Ask to try it');
+    expect(html).not.toContain('See plans');
+  });
+
+  it('keeps the way on when a prompt has one, during the beta too', () => {
+    const html = renderToStaticMarkup(
+      createElement(UpgradeModal, {
+        prompt: {
+          limit: { kind: 'email_lookup', plan: 'free', limit: 0, resetsAt: '2026-11-01T00:00:00.000Z' },
+          continueLabel: 'Search the website only',
+          onContinue() {},
+        },
+        onClose() {},
+        checkoutOpen: false,
+      })
+    );
+    expect(html).toContain('Search the website only');
+    expect(html).toContain('Ask for more');
   });
 });

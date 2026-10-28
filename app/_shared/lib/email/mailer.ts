@@ -18,6 +18,8 @@ export interface OutgoingEmail {
   text: string;
   /** The designed version; `text` is what mail clients without HTML show */
   html?: string;
+  /** Where replies go, over EMAIL_REPLY_TO: a tester's own address on their feedback */
+  replyTo?: string;
   /** With a `cid`, an image placed inside the message (<img src="cid:…">) instead of listed as a file */
   attachments: { filename: string; content: Buffer; cid?: string }[];
 }
@@ -137,10 +139,12 @@ async function viaUserMailbox(email: OutgoingEmail, { settings, fromName }: User
 export async function sendEmail(email: OutgoingEmail, mailbox?: UserMailbox, lookup?: MailLookup): Promise<SendResult> {
   if (mailbox) return viaUserMailbox(email, mailbox, lookup);
 
-  const { FROM_EMAIL: from, SMTP_HOST, RESEND_API_KEY, EMAIL_REPLY_TO: replyTo, EMAIL_BCC: bcc } = process.env;
+  const { FROM_EMAIL: from, SMTP_HOST, RESEND_API_KEY, EMAIL_REPLY_TO, EMAIL_BCC: bcc } = process.env;
   const problem = emailSetupProblem();
   if (problem || !from) return { ok: false, status: 503, error: problem ?? NOT_SET_UP };
 
+  // The email's own reply-to (a tester's, on their feedback) wins over the owner's
+  const replyTo = email.replyTo || EMAIL_REPLY_TO;
   const message: EnvMessage = { from, ...email, ...(replyTo && { replyTo }), ...(bcc && { bcc }) };
   return SMTP_HOST ? viaSmtp(envTransport(), message, ENV_COPY) : viaResend(message, RESEND_API_KEY ?? '');
 }

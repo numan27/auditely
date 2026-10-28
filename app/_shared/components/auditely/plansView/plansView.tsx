@@ -12,6 +12,8 @@ import { PLAN_FEATURES, countOf, formatResetDate } from '@/app/_shared/lib/usage
 export interface PlansBilling {
   /** STRIPE_SECRET_KEY is set; without it the paid plans say "Coming soon", as today */
   ready: boolean;
+  /** Paid plans can be bought (checkoutOpen); during the beta they say when they open */
+  open: boolean;
   /** The owner never buys */
   canBuy: boolean;
   subscription: Subscription | null;
@@ -83,14 +85,21 @@ function Price({ plan, interval }: { plan: Plan; interval: BillingInterval | nul
 
 /** Checkout is open: Stripe is set up, the account can buy, has no plan, and isn't waiting on a payment */
 const isBuying = (billing: PlansBilling) =>
-  billing.ready && billing.canBuy && !billing.subscription && !billing.justSubscribed;
+  billing.ready && billing.open && billing.canBuy && !billing.subscription && !billing.justSubscribed;
 
-/** Buy it, manage it, or "Coming soon" until Stripe is set up; nothing for Free, the plan held, or the owner */
+/** During the beta: a buyer with nothing to manage sees when paid plans open */
+const waitingForBeta = (billing: PlansBilling) => !billing.open && billing.canBuy && !billing.subscription;
+
+const later = (text: string) => <p className="mt-auto pt-5 text-sm text-[var(--color-text-tertiary)]">{text}</p>;
+
+/**
+ * Buy it, manage it, or a note: "Opens after the beta" while checkout is closed,
+ * "Coming soon" until Stripe is set up. Nothing for Free, the plan held, or the owner.
+ */
 function PlanAction({ plan, current, billing }: { plan: Plan; current: boolean; billing: PlansBilling }) {
   if (!plan.monthlyPrice || !billing.canBuy) return null;
-  if (!billing.ready) {
-    return current ? null : <p className="mt-auto pt-5 text-sm text-[var(--color-text-tertiary)]">Coming soon</p>;
-  }
+  if (waitingForBeta(billing)) return current ? null : later('Opens after the beta');
+  if (!billing.ready) return current ? null : later('Coming soon');
   const { subscription } = billing;
   // Back from a payment Stripe hasn't confirmed yet: a second Checkout would buy a second plan
   if (!subscription && billing.justSubscribed) return null;
@@ -233,6 +242,12 @@ export function PlansView({ summary, billing }: { summary: UsageSummary | null; 
 
       <section className="mt-12">
         <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Compare plans</h2>
+        {waitingForBeta(billing) && (
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--color-text-secondary)]">
+            Auditely is in beta, and Pro and Agency open when it ends. Need more searches or audits before then? Ask through
+            Feedback at the top of the page.
+          </p>
+        )}
         {buying && <IntervalSwitch interval={billing.interval} />}
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {PLAN_ORDER.map((id) => (

@@ -2,19 +2,16 @@
 
 // app/_shared/components/landing/demoWalkthrough.tsx
 
-// The demo section's recorded walkthrough (DEMO_VIDEO_URL). A Loom video plays
-// right here: its player loads only once the visitor presses play. Any other
-// link opens in a new tab.
+// The demo section's walkthrough. The recording that ships with the site plays
+// right here, muted on a loop (WalkthroughPlayer). A Loom link plays here too,
+// its player loading only once the visitor presses play; any other link opens
+// in a new tab.
 
 import { useState } from 'react';
 import { ExternalLinkIcon, PlayIcon } from '@/app/_shared/components/ui/icons/icons';
 import motion from '@/app/_shared/components/landing/landingMotion.module.scss';
-
-export interface WalkthroughLinks {
-  url: string;
-  /** Loom's player for the link; null for anything else */
-  playerUrl: string | null;
-}
+import { WalkthroughPlayer } from '@/app/_shared/components/landing/walkthroughPlayer';
+import type { Walkthrough } from '@/app/_shared/lib/demo/walkthrough';
 
 const frame = 'relative mt-9 aspect-video overflow-hidden rounded-[20px] border border-[#1a2136] bg-[#0f1424]';
 const playClasses =
@@ -28,19 +25,31 @@ function Poster({ note }: { note: string }) {
         <span className={playClasses} aria-hidden>
           <PlayIcon size={28} />
         </span>
-        <span className="font-display text-2xl font-semibold tracking-tight text-white min-[601px]:text-[32px]">Auditely in 45 seconds</span>
+        <span className="font-display text-2xl font-semibold tracking-tight text-white min-[601px]:text-[32px]">Auditely in a minute</span>
         <span className="max-w-[460px] text-[15px] text-[#b9c1d6] min-[601px]:text-base">{note}</span>
       </span>
     </>
   );
 }
 
-export function DemoWalkthrough({ video }: { video: WalkthroughLinks }) {
+interface DemoWalkthroughProps {
+  video: Walkthrough;
+  /** Goes up each time the hero's link asks for the walkthrough: the recording starts over with sound */
+  soundAsk?: number;
+}
+
+export function DemoWalkthrough({ video, soundAsk = 0 }: DemoWalkthroughProps) {
+  if (video.kind === 'file') return <WalkthroughPlayer src={video.src} poster={video.poster} chapters={video.chapters} soundAsk={soundAsk} />;
+  return <LinkedWalkthrough url={video.url} playerUrl={video.playerUrl} />;
+}
+
+/** A walkthrough elsewhere: Loom's player (playerUrl) on a press, or a new tab */
+function LinkedWalkthrough({ url, playerUrl }: { url: string; playerUrl: string | null }) {
   const [playing, setPlaying] = useState(false);
 
-  if (!video.playerUrl) {
+  if (!playerUrl) {
     return (
-      <a href={video.url} target="_blank" rel="noopener noreferrer" className={`group block ${frame}`}>
+      <a href={url} target="_blank" rel="noopener noreferrer" className={`group block ${frame}`}>
         <Poster note="A search, an audit and a report, start to finish." />
         <span className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 text-sm text-[#b9c1d6]">
           Opens in a new tab <ExternalLinkIcon size={14} />
@@ -53,7 +62,7 @@ export function DemoWalkthrough({ video }: { video: WalkthroughLinks }) {
     return (
       <div className={frame}>
         <iframe
-          src={video.playerUrl}
+          src={playerUrl}
           title="Auditely walkthrough video"
           allow="autoplay; fullscreen; picture-in-picture"
           className="absolute inset-0 h-full w-full border-0"

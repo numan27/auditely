@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { connectAllowed, sendAllowed, windowLimit } from '@/app/_shared/lib/usage/rateLimit';
+import { connectAllowed, feedbackAllowed, sendAllowed, windowLimit } from '@/app/_shared/lib/usage/rateLimit';
 
 describe('windowLimit', () => {
   it('allows the limit within a window and refuses the next', () => {
@@ -42,5 +42,15 @@ describe('mailbox and HubSpot limits', () => {
     expect(sends.filter(Boolean)).toHaveLength(50);
     expect(sends[50]).toBe(false);
     expect(sendAllowed('send-b', 0)).toBe(true);
+  });
+});
+
+describe('feedback limit', () => {
+  it('lets an account send 10 messages an hour', () => {
+    const sent = Array.from({ length: 11 }, (_, i) => feedbackAllowed('feedback-a', i));
+    expect(sent.filter(Boolean)).toHaveLength(10);
+    expect(sent[10]).toBe(false);
+    expect(feedbackAllowed('feedback-b', 0)).toBe(true);
+    expect(feedbackAllowed('feedback-a', 60 * 60_000)).toBe(true);
   });
 });

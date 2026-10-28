@@ -55,6 +55,8 @@ export const API_ROUTES = {
   // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
   BILLING_CHECKOUT: '/api/billing/checkout',
   BILLING_PORTAL: '/api/billing/portal',
+  // A tester's note to the owner, from the header's Feedback button
+  FEEDBACK: '/api/feedback',
 } as const;
 
 // Called by other servers, not by the app: no session, each checks its own secret
@@ -72,6 +74,9 @@ export const BOTID_PATH = '/149e9513-01fa-4fb0-aad4-566afd725d1b';
 // What search engines read (app/robots.ts, app/sitemap.ts), and the image a shared
 // link shows (app/opengraph-image.tsx), which link previews fetch without an account
 export const SEO_FILES = { ROBOTS: '/robots.txt', SITEMAP: '/sitemap.xml', SHARE_IMAGE: '/opengraph-image' } as const;
+
+// Files in public/media, served straight from the CDN: the proxy doesn't run on them
+export const MEDIA_FILES = { WALKTHROUGH: '/media/walkthrough.mp4', WALKTHROUGH_POSTER: '/media/walkthrough-poster.jpg' } as const;
 
 // Everything needs a signed-in account except these; the sign-in and sign-up pages
 // run before there is a session, Terms, Privacy and the search engines' files are

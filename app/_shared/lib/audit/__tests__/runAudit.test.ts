@@ -145,7 +145,9 @@ describe('runAudit', () => {
     expect(row.checks.seo).toBeNull();
   });
 
-  it('still returns an audit for pathologically nested HTML', async () => {
+  // About the crash, not the speed: the page is parsed several times, and at this depth
+  // each parse takes a second or more on a busy machine, past the 5-second default
+  it('still returns an audit for pathologically nested HTML', { timeout: 30_000 }, async () => {
     const depth = 5000;
     const text = 'Smile Dental is a family dentist in Springfield offering cleanings and implants. '.repeat(4);
     const html = `<html><head><title>Smile Dental</title></head><body>${'<div>'.repeat(depth)}${text}${'</div>'.repeat(depth)}</body></html>`;

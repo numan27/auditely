@@ -7,10 +7,20 @@
 // it buys is in one portal, and an unpaid Checkout closes after an hour. Prices
 // exclude tax: Stripe Tax adds US sales tax from the billing address Checkout asks
 // for. The subscription carries the account's id, which is how the webhook finds
-// whose plan it is.
+// whose plan it is. During the beta (checkoutOpen) it turns everyone away before
+// Stripe is asked.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { INTERVALS, PAID_PLANS, fromPrice, lookupKey, type BillingInterval, type PaidPlanId } from '@/app/_shared/lib/billing/billingRules';
+import {
+  CHECKOUT_CLOSED,
+  INTERVALS,
+  PAID_PLANS,
+  checkoutOpen,
+  fromPrice,
+  lookupKey,
+  type BillingInterval,
+  type PaidPlanId,
+} from '@/app/_shared/lib/billing/billingRules';
 import { BILLING_NOT_SET_UP, customerFor, liveSubscriptionOf, priceIdFor, stripeClient } from '@/app/_shared/lib/billing/stripe';
 import { customerIdOf } from '@/app/_shared/lib/billing/subscription';
 import { syncSubscription } from '@/app/_shared/lib/billing/sync';
@@ -42,6 +52,7 @@ export async function POST(request: NextRequest) {
   if (!PAID_PLANS.includes(plan as PaidPlanId) || !INTERVALS.includes(interval as BillingInterval)) {
     return NextResponse.json({ error: 'Choose Pro or Agency, billed monthly or yearly.' }, { status: 400 });
   }
+  if (!checkoutOpen()) return NextResponse.json({ error: CHECKOUT_CLOSED }, { status: 503 });
   const stripe = stripeClient();
   if (!stripe) return NextResponse.json({ error: BILLING_NOT_SET_UP }, { status: 503 });
   if (account.subscription) return alreadyPaying(account.subscription.plan);

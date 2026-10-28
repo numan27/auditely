@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  CHECKOUT_CLOSED,
   INTERVALS,
   PAID_PLANS,
+  checkoutOpen,
   fromPrice,
   isLive,
   isLiveStatus,
@@ -88,5 +90,16 @@ describe('prices and products', () => {
       fromPrice({ product: 'auditely_pro', recurring: { interval: 'week' } }),
       fromPrice({ product: 'auditely_pro', recurring: null }),
     ]).toEqual([null, null, null, null]);
+  });
+});
+
+describe('checkout during the beta', () => {
+  it('stays closed until NEXT_PUBLIC_CHECKOUT_OPEN is "true"', () => {
+    expect([checkoutOpen(undefined), checkoutOpen(''), checkoutOpen('false'), checkoutOpen('1')]).toEqual([false, false, false, false]);
+    expect(checkoutOpen('true')).toBe(true);
+  });
+
+  it('says when paid plans open', () => {
+    expect(CHECKOUT_CLOSED).toBe('Paid plans open after the beta.');
   });
 });

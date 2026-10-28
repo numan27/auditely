@@ -12,6 +12,16 @@ export type BillingInterval = 'month' | 'year';
 export const PAID_PLANS: readonly PaidPlanId[] = ['pro', 'agency'];
 export const INTERVALS: readonly BillingInterval[] = ['month', 'year'];
 
+export const CHECKOUT_CLOSED = 'Paid plans open after the beta.';
+
+/**
+ * Whether Pro and Agency can be bought. During the beta they can't: their prices
+ * show, and the checkout route turns everyone away before Stripe is asked.
+ * NEXT_PUBLIC_CHECKOUT_OPEN=true opens it; it's read as written so the browser's
+ * copy has it too, and it takes a new deploy to change.
+ */
+export const checkoutOpen = (value: string | undefined = process.env.NEXT_PUBLIC_CHECKOUT_OPEN): boolean => value === 'true';
+
 export interface Subscription {
   plan: PaidPlanId;
   interval: BillingInterval;

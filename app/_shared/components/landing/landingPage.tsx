@@ -11,7 +11,6 @@ import { LandingFooter } from '@/app/_shared/components/landing/landingFooter';
 import { FreeAuditHero } from '@/app/_shared/components/landing/freeAuditHero';
 import { ProofStrip } from '@/app/_shared/components/landing/proofStrip';
 import { DemoSection } from '@/app/_shared/components/landing/demoSection';
-import type { WalkthroughLinks } from '@/app/_shared/components/landing/demoWalkthrough';
 import { HowItWorks } from '@/app/_shared/components/landing/howItWorks';
 import { ReportShowcase } from '@/app/_shared/components/landing/reportShowcase';
 import { LandingFaq } from '@/app/_shared/components/landing/landingFaq';
@@ -23,14 +22,17 @@ import { eyebrowClasses, headingClasses, sectionClasses, subClasses, wrapClasses
 import { PricingTable } from '@/app/_shared/components/landing/pricingTable';
 import { demoData } from '@/app/_shared/lib/demo/demoData';
 import { landingLeads, landingSample, searchLabel } from '@/app/_shared/lib/demo/landingDemo';
+import type { Walkthrough } from '@/app/_shared/lib/demo/walkthrough';
 
 interface LandingPageProps {
   freeAuditOn: boolean;
   /** The recorded walkthrough, when there is one: the hero links to it and the demo section plays it */
-  video: WalkthroughLinks | null;
+  video: Walkthrough | null;
+  /** False during the beta: the paid plans show their prices but can't be bought */
+  checkoutOpen: boolean;
 }
 
-export function LandingPage({ freeAuditOn, video }: LandingPageProps) {
+export function LandingPage({ freeAuditOn, video, checkoutOpen }: LandingPageProps) {
   const sample = landingSample(demoData);
   const leads = landingLeads(demoData);
   const search = searchLabel(demoData.query);
@@ -49,7 +51,7 @@ export function LandingPage({ freeAuditOn, video }: LandingPageProps) {
             <p className={eyebrowClasses}>04 · Pricing</p>
             <h2 className={headingClasses}>Start free. Upgrade when you need more.</h2>
             <p className={subClasses}>One new client pays for a year of Pro.</p>
-            <PricingTable />
+            <PricingTable checkoutOpen={checkoutOpen} />
           </div>
         </section>
 

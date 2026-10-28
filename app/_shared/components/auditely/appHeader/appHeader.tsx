@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GearIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
+import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
 import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
@@ -75,6 +76,8 @@ export function AppHeader() {
           {/* The demo has no allowances, requests or saved runs to hear about */}
           {!demo && <UsageMeter />}
           {!demo && <NotificationBell />}
+          {/* The beta's way to reach the owner; the demo has no account to reply to */}
+          {!demo && <FeedbackButton />}
           <ThemeToggle />
           {demo ? (
             <Link

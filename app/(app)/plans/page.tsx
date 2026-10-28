@@ -3,11 +3,12 @@
 // The account's plan, this month's usage and what each plan includes, with the
 // way to buy Pro or Agency (Stripe Checkout) or manage a plan already bought (the
 // billing portal). ?billing=yearly picks yearly prices; Checkout comes back with
-// ?subscribed=1.
+// ?subscribed=1. During the beta the prices show but nothing can be bought.
 
 import type { Metadata } from 'next';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { PlansView, type PlansBilling } from '@/app/_shared/components/auditely/plansView/plansView';
+import { checkoutOpen } from '@/app/_shared/lib/billing/billingRules';
 import { billingReady } from '@/app/_shared/lib/billing/stripe';
 import { getSession } from '@/app/_shared/lib/supabase/server';
 import { usageSummary } from '@/app/_shared/lib/usage/usage';
@@ -23,6 +24,7 @@ export default async function PlansPage({
   const summary = session ? await usageSummary(session.db, session.account) : null;
   const billing: PlansBilling = {
     ready: billingReady(),
+    open: checkoutOpen(),
     canBuy: !!session && !session.account.isOwner,
     subscription: session?.account.subscription ?? null,
     interval: params.billing === 'yearly' ? 'year' : 'month',

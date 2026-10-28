@@ -91,6 +91,19 @@ export const PlayIcon = (p: IconProps) => (
   <Icon {...p}><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></Icon>
 );
 
+export const PauseIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M8 5v14M16 5v14" /></Icon>
+);
+
+// Lucide's "volume-2" and "volume-x" (ISC licence)
+export const SoundOnIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M11 5 6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></Icon>
+);
+
+export const SoundOffIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M11 5 6 9H2v6h4l5 4V5z" /><path d="m22 9-6 6M16 9l6 6" /></Icon>
+);
+
 export const CopyIcon = (p: IconProps) => (
   <Icon {...p}><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></Icon>
 );

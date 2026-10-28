@@ -22,7 +22,9 @@ const yearly = {
   plan: 'pro', interval: 'year', status: 'active', anchor: '2026-03-14T09:30:00.000Z', periodEnd: '2027-03-14T09:30:00.000Z', endsAt: null,
 } as const;
 
-const base: PlansBilling = { ready: true, canBuy: true, subscription: null, interval: 'month', justSubscribed: false };
+const base: PlansBilling = { ready: true, open: true, canBuy: true, subscription: null, interval: 'month', justSubscribed: false };
+/** During the beta: prices on show, no Checkout */
+const closed: PlansBilling = { ...base, open: false };
 /** Before Stripe is set up, as the plans page was in Phase 3 */
 const notReady: PlansBilling = { ...base, ready: false };
 const free = freeSummary(0, 0);
@@ -126,6 +128,40 @@ describe('PlansView', () => {
     expect(owner).not.toContain('Choose');
     expect(owner).not.toContain('Coming soon');
     expect(owner).not.toContain('Manage billing');
+  });
+
+  it('shows the prices, and that paid plans open after the beta, while checkout is closed', () => {
+    const html = render(free, closed);
+    expect(html.match(/Opens after the beta/g)).toHaveLength(2);
+    expect(html).not.toContain('Choose');
+    expect(html).not.toContain('billing=yearly');
+    expect(html).not.toContain('Coming soon');
+    expect(html).toContain('$24 a month');
+    expect(html).toContain('or $240 a year');
+    expect(html).toContain(
+      'Auditely is in beta, and Pro and Agency open when it ends. Need more searches or audits before then? Ask through Feedback at the top of the page.'
+    );
+  });
+
+  it('says paid plans open after the beta even before Stripe is set up', () => {
+    const html = render(free, { ...notReady, open: false });
+    expect(html).toContain('Opens after the beta');
+    expect(html).not.toContain('Coming soon');
+  });
+
+  it('only offers Agency as opening later to a tester on Pro', () => {
+    expect(render(proSummary, closed).match(/Opens after the beta/g)).toHaveLength(1);
+  });
+
+  it('still lets a subscriber manage billing while checkout is closed', () => {
+    const html = render(proSummary, { ...closed, subscription: yearly });
+    expect(html).toContain('Manage billing');
+    expect(html).not.toContain('Opens after the beta');
+    expect(html).not.toContain('Auditely is in beta');
+  });
+
+  it('gives the owner no beta note', () => {
+    expect(render(ownerSummary, { ...closed, canBuy: false })).not.toContain('beta');
   });
 
   it('offers no second Checkout while a payment is being confirmed', () => {

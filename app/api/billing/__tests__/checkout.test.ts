@@ -45,6 +45,7 @@ const buy = (body: unknown) =>
   POST(new NextRequest('http://localhost/api/billing/checkout', { method: 'POST', body: JSON.stringify(body) }));
 
 beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
   fake.session = { db: {}, account: tester };
   fake.ready = true;
   fake.list.mockReset().mockResolvedValue({ data: [{ id: 'price_pro_y' }] });
@@ -56,9 +57,22 @@ beforeEach(() => {
   vi.mocked(syncSubscription).mockClear();
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe('POST /api/billing/checkout', () => {
+  it("doesn't reach Stripe while paid plans wait for the end of the beta", async () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+    const res = await buy({ plan: 'pro', interval: 'month' });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'Paid plans open after the beta.' });
+    expect(fake.list).not.toHaveBeenCalled();
+    expect(fake.customers.create).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('opens a taxed subscription Checkout for the account', async () => {
     const res = await buy({ plan: 'pro', interval: 'year' });
     expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/1' });

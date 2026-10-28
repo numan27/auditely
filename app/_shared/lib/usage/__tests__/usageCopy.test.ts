@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLANS, type LimitReached, type PlanId, type UsageSummary } from '@/app/_shared/lib/usage/plans';
-import { formatBillingDate, formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel } from '@/app/_shared/lib/usage/usageCopy';
+import { askForMore, formatBillingDate, formatResetDate, limitMessage, upgradeHint, featureMessage, meterLabel } from '@/app/_shared/lib/usage/usageCopy';
 
 const reached = (over: Partial<LimitReached> = {}): LimitReached =>
   ({ kind: 'search', plan: 'pro', limit: 25, resetsAt: '2026-11-14T00:00:00.000Z', ...over });
@@ -59,5 +59,18 @@ describe('featureMessage for per-user settings', () => {
     expect(featureMessage('mailbox')).toBe('Sending from your own mailbox comes with the Pro and Agency plans.');
     expect(featureMessage('hubspot')).toBe('The HubSpot handoff comes with the Pro and Agency plans.');
     expect(featureMessage('branding')).toBe('Your own branding on reports comes with the Pro and Agency plans.');
+  });
+});
+
+describe('askForMore', () => {
+  it('starts the feedback message a tester sends when they run out', () => {
+    expect(askForMore(reached({ kind: 'audit', plan: 'free', limit: 2 }))).toBe("I've run out of audits this month. Could I have more for the beta?");
+    expect(askForMore(reached({ kind: 'search', plan: 'free', limit: 1 }))).toBe("I've run out of searches this month. Could I have more for the beta?");
+    expect(askForMore(reached({ kind: 'email_lookup', plan: 'free', limit: 0 }))).toBe("I'd like to try email lookups during the beta.");
+  });
+
+  it('asks to try a paid feature', () => {
+    expect(askForMore('export')).toBe("I'd like to try exporting to CSV and Google Sheets during the beta.");
+    expect(askForMore('hubspot')).toBe("I'd like to try the HubSpot handoff during the beta.");
   });
 });
