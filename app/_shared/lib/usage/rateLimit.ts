@@ -17,6 +17,8 @@ export const SENDS_PER_HOUR = 50;
 export const FEEDBACK_PER_HOUR = 10;
 /** Contact form messages from one network: an email each, and anyone can send them */
 export const CONTACT_PER_HOUR = 5;
+/** Searches and audits one account is given back in a day: enough for sites that won't load and searches that find nothing, not for a loop of them */
+export const GIVE_BACKS_PER_DAY = 10;
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -77,3 +79,8 @@ const contactPerHour = windowLimit({ limit: CONTACT_PER_HOUR, windowMs: HOUR_MS 
 
 /** Whether this visitor's network may send the team another message now */
 export const contactAllowed = (ip: string, now: number = Date.now()): boolean => contactPerHour(ip, now);
+
+const giveBacksPerDay = windowLimit({ limit: GIVE_BACKS_PER_DAY, windowMs: DAY_MS });
+
+/** Whether this account may be given back another search or audit today */
+export const giveBackAllowed = (accountId: string, now: number = Date.now()): boolean => giveBacksPerDay(accountId, now);

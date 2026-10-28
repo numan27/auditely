@@ -202,12 +202,12 @@ describe('POST /api/search', () => {
     expect(meter.release).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the claim for a search that finds nothing', async () => {
+  it('gives the search back when it finds nothing', async () => {
     vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [] });
     const { status, json } = await post({ niche: 'dentist', location: 'austin' });
     expect(status).toBe(200);
     expect(json).toEqual({ search_id: 'search-1', businesses: [] });
-    expect(meter.release).not.toHaveBeenCalled();
+    expect(meter.release).toHaveBeenCalledTimes(1);
   });
 
   it('does not claim when a recent search is reused', async () => {

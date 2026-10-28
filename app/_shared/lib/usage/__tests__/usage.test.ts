@@ -20,6 +20,7 @@ vi.mock('@/app/_shared/lib/supabase/client', () => ({
 }));
 
 const { meterFor, usageSummary } = await import('@/app/_shared/lib/usage/usage');
+const { GIVE_BACKS_PER_DAY } = await import('@/app/_shared/lib/usage/rateLimit');
 
 const tester = { id: 'u2', email: 'tester@x.com', isOwner: false };
 // Signed up on Aug 21 at 08:00 UTC: now() falls in their second 30 days, Sep 20 to Oct 20
@@ -123,6 +124,18 @@ describe('meterFor', () => {
     const claim = await meterFor(tester, now).claim('audit');
     if (claim.ok) await claim.release();
     expect(deletes).toEqual([[['id', 'ev-9'], ['user_id', 'u2']]]);
+  });
+
+  it('gives back at most 10 claims a day, so sites that fail or searches that find nothing cannot run free in a loop', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    rpc.mockResolvedValue({ data: 'ev-loop', error: null });
+    const meter = meterFor({ ...tester, id: 'u-loop' }, now);
+    for (let i = 0; i < 11; i++) {
+      const claim = await meter.claim('audit');
+      if (claim.ok) await claim.release();
+    }
+    expect(deletes).toHaveLength(GIVE_BACKS_PER_DAY);
+    expect(GIVE_BACKS_PER_DAY).toBe(10);
   });
 });
 

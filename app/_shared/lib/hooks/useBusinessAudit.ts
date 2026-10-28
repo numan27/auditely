@@ -156,7 +156,6 @@ export function useBusinessAudit(
           }
           return fail(result.error || 'Audit failed');
         }
-        usage?.refresh();
         setAudit(result.audit);
         if (result.email) setEmail(result.email);
         if (force) setReport(undefined);
@@ -169,6 +168,9 @@ export function useBusinessAudit(
         generateReport(result.audit.id);
       } catch {
         fail('Audit failed');
+      } finally {
+        // The meter reads afresh whatever happened: a failed audit is usually given back, but not always
+        usage?.refresh();
       }
     },
     [audit, business.id, generateReport, onUpdate, request, usage]

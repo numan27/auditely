@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ search_id: existingSearch.id, businesses: businesses ?? [] });
   }
 
-  // A new search counts against the plan. It's given back when nothing gets saved;
-  // one that finds no places still counts, because the provider billed it.
+  // A new search counts against the plan. It's given back when nothing gets saved,
+  // and when it finds no places: an empty search shouldn't use up a Free account's
+  // one. The meter caps how many come back in a day, since the provider bills each.
   const claim = await meterFor(account).claim('search');
   if (!claim.ok) return refusal(claim);
 
@@ -102,6 +103,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to store businesses' }, { status: 500 });
     }
     businesses = data ?? [];
+  } else {
+    await claim.release();
   }
 
   return NextResponse.json({ search_id: newSearch.id, businesses });

@@ -129,8 +129,9 @@ export async function auditBusiness(
   // is nothing to compare.
   const direct = isUrlOnlySearch(business.searches);
 
-  // The audit counts from here: PageSpeed is called even when the site can't be
-  // audited. Only a result that can't be stored is given back.
+  // The audit counts from here. One that fails (the site won't load, or the audit
+  // breaks) or can't be stored is given back: a failed audit shouldn't use up a
+  // Free account's few. The meter caps how many come back in a day.
   const claim = await meter.claim('audit');
   if (!claim.ok) return { ok: false, status: claim.status, error: claim.error, limit: claim.limit };
 
@@ -151,6 +152,7 @@ export async function auditBusiness(
       { pageSpeedStore }
     );
   } catch (err) {
+    await claim.release();
     if (err instanceof AuditUnavailableError) {
       return { ok: false, status: 502, error: `Couldn't audit this site: ${err.message}` };
     }

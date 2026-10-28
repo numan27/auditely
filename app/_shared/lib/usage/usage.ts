@@ -2,8 +2,9 @@
 
 // Each account's allowances, counted in usage_events over its period (plans.ts usagePeriod). A costly call claims
 // its use first through claim_usage, which counts and records in one locked step,
-// so requests at once can't all slip under the limit; a call that fails before
-// doing the costly work gives the claim back. The owner is never counted. A user
+// so requests at once can't all slip under the limit; a call that fails, or a
+// search that finds nothing, gives the claim back (up to GIVE_BACKS_PER_DAY a day,
+// so a loop of them can't run free). The owner is never counted. A user
 // may read their own rows (the meter) but only the service role writes them.
 // Server-only.
 
@@ -12,6 +13,7 @@ import { serviceDb, type Db } from '@/app/_shared/lib/supabase/client';
 import type { Account } from '@/app/_shared/lib/auth/account';
 import { planFor, usagePeriod, USAGE_KINDS, type LimitReached, type UsageKind, type UsageSummary } from './plans';
 import { limitMessage } from './usageCopy';
+import { giveBackAllowed } from './rateLimit';
 
 const USAGE_MIGRATION = 'docs/migrations/2026-10-28-usage.sql';
 const UNAVAILABLE = "Couldn't check your allowance. Try again in a minute.";
@@ -68,6 +70,10 @@ export function meterFor(account: Account, now: () => Date = () => new Date()): 
     return {
       ok: true,
       release: async () => {
+        if (!giveBackAllowed(account.id, now().getTime())) {
+          console.warn(`[usage] Kept a ${kind}: ${account.id} was given back the most for today`);
+          return;
+        }
         const { error: releaseError } = await serviceDb.from('usage_events').delete().eq('id', id).eq('user_id', account.id);
         if (releaseError) console.error(`[usage] Failed to give back a ${kind}:`, releaseError.message);
       },

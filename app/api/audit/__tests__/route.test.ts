@@ -292,13 +292,21 @@ describe('POST /api/audit', () => {
       expect(runAudit).not.toHaveBeenCalled();
     });
 
-    it('keeps the claim when the site cannot be audited', async () => {
+    it('gives the audit back when the site cannot be audited', async () => {
       givenDb({ 'audits.select': [ok(null)] });
       vi.mocked(runAudit).mockRejectedValue(new AuditUnavailableError('Blocked (403)'));
       const { status } = await post({ business_id: 'biz-1' });
       expect(status).toBe(502);
       expect(meter.claim).toHaveBeenCalledOnce();
-      expect(meter.release).not.toHaveBeenCalled();
+      expect(meter.release).toHaveBeenCalledOnce();
+    });
+
+    it('gives the audit back when it fails unexpectedly', async () => {
+      givenDb({ 'audits.select': [ok(null)] });
+      vi.mocked(runAudit).mockRejectedValue(new Error('socket hang up'));
+      const { status } = await post({ business_id: 'biz-1' });
+      expect(status).toBe(500);
+      expect(meter.release).toHaveBeenCalledOnce();
     });
 
     it('gives the audit back when it cannot be stored', async () => {
