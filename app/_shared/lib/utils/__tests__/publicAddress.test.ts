@@ -20,6 +20,17 @@ describe('publicHost', () => {
     expect(await publicHost('93.184.216.34', none)).toBe('public');
   });
 
+  // NAT64 (64:ff9b::/96), IPv4-compatible (::/96) and 6to4 (2002::/16) addresses carry an
+  // IPv4 inside, which can be a private one
+  it('refuses an IPv6 address that carries an IPv4 inside', async () => {
+    const none = lookup({});
+    for (const address of ['64:ff9b::7f00:1', '64:ff9b::a9fe:a9fe', '::7f00:1', '::a00:5', '2002:7f00:1::1', '2002:a9fe:a9fe::']) {
+      expect(await publicHost(`[${address}]`, none)).toBe('private');
+    }
+    expect(await publicHost('[2606:4700:4700::1111]', none)).toBe('public');
+    expect(await publicHost('[::ffff:93.184.216.34]', none)).toBe('public');
+  });
+
   it('tells a missing name from a lookup that failed', async () => {
     expect(await publicHost('empty.example', lookup({ 'empty.example': [] }))).toBe('notFound');
     const failing: HostLookup = async () => {
