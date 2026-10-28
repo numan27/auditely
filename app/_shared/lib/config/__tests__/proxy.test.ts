@@ -164,6 +164,11 @@ describe('which requests the proxy sees', () => {
     expect(runsOn('/media/walkthrough-poster.jpg')).toBe(false);
   });
 
+  it("leaves Google's Maps logos in public/brand to the CDN, so the signed-out demo shows them", () => {
+    expect(runsOn('/brand/google-maps-logo-gray.svg')).toBe(false);
+    expect(runsOn('/brand/google-maps-logo-white.svg')).toBe(false);
+  });
+
   it('still runs on every page and API route', () => {
     for (const path of ['/', '/settings', '/report/abc', '/api/search', '/opengraph-image']) expect(runsOn(path), path).toBe(true);
   });

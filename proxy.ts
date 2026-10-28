@@ -64,7 +64,8 @@ export const config = {
      * - favicon.ico (favicon file)
      * - _vercel (Vercel's own paths: the analytics script and the visits it reports)
      * - media/ (public/media: the landing page's walkthrough, for everyone, so no session check)
+     * - brand/ (public/brand: Google's Maps logos, which the signed-out demo shows too)
      */
-    "/((?!_next/static|_next/image|favicon.ico|_vercel|media/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|_vercel|media/|brand/).*)",
   ],
 };

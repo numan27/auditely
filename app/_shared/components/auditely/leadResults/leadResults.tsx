@@ -7,6 +7,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { BulkAuditControl } from '@/app/_shared/components/auditely/bulkAuditControl/bulkAuditControl';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { GoogleMapsAttribution } from '@/app/_shared/components/auditely/googleMapsAttribution/googleMapsAttribution';
 import { LeadToolbar } from '@/app/_shared/components/auditely/leadToolbar/leadToolbar';
 import { useBulkAudit } from '@/app/_shared/lib/hooks/useBulkAudit';
 import { useLeadView } from '@/app/_shared/lib/hooks/useLeadView';
@@ -88,6 +89,8 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
           </span>
         )}
       </p>
+      {/* The businesses are Google Maps place data, so Google's notice sits above them */}
+      <GoogleMapsAttribution className="mt-3" />
 
       <div className="sticky top-14 z-30 -mx-4 mt-4 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
         <LeadToolbar
