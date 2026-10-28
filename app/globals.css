@@ -190,7 +190,8 @@ body {
     .container { max-width: 1536px; }
   }
 
-  /* Screen reader only */
+  /* Screen reader only: Tailwind's own sr-only. A copy here came after Tailwind's
+     utilities and beat not-sr-only, which kept the header's Feedback label hidden.
   .sr-only {
     position: absolute;
     width: 1px;
@@ -202,6 +203,7 @@ body {
     white-space: nowrap;
     border-width: 0;
   }
+  */
 
   /* Text truncate */
   .text-truncate {

@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { GearIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
-import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
+import { ProfileMenu } from '@/app/_shared/components/auditely/profileMenu/profileMenu';
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
@@ -15,7 +15,7 @@ import { parseWorkspacePath } from '@/app/_shared/lib/utils/workspacePath';
 import { NotificationBell } from '@/app/_shared/components/auditely/notificationBell/notificationBell';
 import { UsageMeter } from '@/app/_shared/components/auditely/usageMeter/usageMeter';
 
-// On a phone Settings is a gear, so the header fits at 360px
+// Below 1024px Settings is a gear and Saved searches is Saved, so the header fits from 360px
 const NAV: { href: string; label: string; short: string; icon?: typeof GearIcon }[] = [
   { href: ROUTES.HOME, label: 'Search', short: 'Search' },
   { href: ROUTES.SEARCHES, label: 'Saved searches', short: 'Saved' },
@@ -58,14 +58,14 @@ export function AppHeader() {
                   }`}
                 >
                   {item.icon ? (
-                    <span className="inline-flex h-5 items-center sm:hidden">
+                    <span className="inline-flex h-5 items-center lg:hidden">
                       <item.icon size={16} />
                       <span className="sr-only">{item.short}</span>
                     </span>
                   ) : (
-                    <span className="sm:hidden">{item.short}</span>
+                    <span className="lg:hidden">{item.short}</span>
                   )}
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
                 </Link>
               );
             })}
@@ -87,7 +87,7 @@ export function AppHeader() {
               Sign in
             </Link>
           ) : (
-            <LogoutButton />
+            <ProfileMenu />
           )}
         </div>
       </div>

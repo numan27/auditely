@@ -17,7 +17,7 @@ export function UsageMeter() {
     <Link
       href={ROUTES.PLANS}
       aria-label={label.text}
-      className={`hidden whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--color-bg-secondary)] sm:inline-flex ${
+      className={`hidden whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--color-bg-secondary)] md:inline-flex ${
         label.empty
           ? 'text-amber-700 dark:text-amber-400'
           : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'

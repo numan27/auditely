@@ -2,7 +2,7 @@
 
 'use client';
 
-// The header's Feedback button: an icon on a phone, the word from 640px up.
+// The header's Feedback button: an icon below 1024px, where the header is short of room, the word from there up.
 
 import { useState } from 'react';
 import { MailIcon } from '@/app/_shared/components/ui/icons/icons';
@@ -15,12 +15,13 @@ export function FeedbackButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] sm:px-2.5"
+        title="Feedback"
+        className="inline-flex h-9 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] lg:px-2.5"
       >
-        <span className="inline-flex sm:hidden" aria-hidden>
+        <span className="inline-flex lg:hidden" aria-hidden>
           <MailIcon size={16} />
         </span>
-        <span className="sr-only sm:not-sr-only">Feedback</span>
+        <span className="sr-only lg:not-sr-only">Feedback</span>
       </button>
       {open && <FeedbackModal onClose={() => setOpen(false)} />}
     </>

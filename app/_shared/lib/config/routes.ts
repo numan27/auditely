@@ -49,6 +49,8 @@ export const API_ROUTES = {
   USAGE: '/api/usage',
   // Settings: the profile reports are signed with, the mailbox and HubSpot connections, and the password
   SETTINGS_PROFILE: '/api/settings/profile',
+  // The saved logo as an image, for the header's profile menu
+  SETTINGS_PROFILE_LOGO: '/api/settings/profile/logo',
   SETTINGS_MAILBOX: '/api/settings/mailbox',
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
   SETTINGS_PASSWORD: '/api/settings/password',
