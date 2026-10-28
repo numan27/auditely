@@ -3,15 +3,19 @@
 // The account's profile and branding, its own mailbox and HubSpot, and its plan
 // with Manage billing. The profile is read as the user; only its fields go to the
 // browser, and what is connected goes as labels, never a password or token. The
-// subscription goes as its plan and dates, never a Stripe id.
+// subscription goes as its plan and dates, never a Stripe id. The owner also sees
+// today's free audits; nobody else's page reads them.
 
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { billingReady } from '@/app/_shared/lib/billing/stripe';
 import { SettingsView } from '@/app/_shared/components/auditely/settingsView/settingsView';
+import type { FreeAuditsSummary } from '@/app/_shared/components/auditely/settingsView/freeAuditsSection';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { dayStart, freeAuditSetup } from '@/app/_shared/lib/freeAudit/freeAuditRules';
+import { freeAuditsSince } from '@/app/_shared/lib/freeAudit/freeAuditStore';
 import { connectionsFor } from '@/app/_shared/lib/settings/connections';
 import { getSession } from '@/app/_shared/lib/supabase/server';
 
@@ -27,15 +31,27 @@ const FIELDS: (keyof ProfileFields)[] = [
   'booking_url',
 ];
 
+/** Whether free audits run, and today's, since midnight UTC */
+async function freeAuditsToday(): Promise<FreeAuditsSummary> {
+  const setup = freeAuditSetup();
+  return {
+    state: setup.state,
+    cap: setup.state === 'on' ? setup.config.dailyCap : null,
+    missing: setup.state === 'unavailable' ? setup.missing : [],
+    today: await freeAuditsSince(dayStart(new Date())),
+  };
+}
+
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) redirect(ROUTES.LOGIN);
   const { db, account } = session;
 
-  const [{ data, error }, connections] = await Promise.all([
+  const [{ data, error }, connections, freeAudits] = await Promise.all([
     // '*': before the settings migration the new columns aren't there, and read as blank
     db.from('profiles').select('*').eq('id', account.id).maybeSingle(),
     connectionsFor(account),
+    account.isOwner ? freeAuditsToday() : null,
   ]);
   if (error) console.error('[settings] Failed to read the profile:', error.message);
   const row = (data ?? {}) as Partial<Record<keyof ProfileFields, string | null>>;
@@ -54,6 +70,7 @@ export default async function SettingsPage() {
           email={account.email}
           subscription={account.subscription ?? null}
           billingReady={billingReady()}
+          freeAudits={freeAudits}
         />
       </main>
     </div>

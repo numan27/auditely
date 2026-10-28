@@ -3,13 +3,14 @@
 'use client';
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import { ToastProvider } from '@/app/_shared/components/ui/toast/toast';
 import { BillingButton } from '@/app/_shared/components/auditely/billing/billingButton';
 import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/connectedRow';
+import { FreeAuditsSection, type FreeAuditsSummary } from '@/app/_shared/components/auditely/settingsView/freeAuditsSection';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
 import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
+import { Section } from '@/app/_shared/components/auditely/settingsView/settingsSection';
 import { subscriptionNote } from '@/app/_shared/lib/billing/billingCopy';
 import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
@@ -29,6 +30,8 @@ export interface SettingsViewProps {
   subscription: Subscription | null;
   /** STRIPE_SECRET_KEY is set, so the billing portal can open */
   billingReady: boolean;
+  /** Today's free audits, for the owner only */
+  freeAudits: FreeAuditsSummary | null;
 }
 
 const PLANS_LINK = 'font-medium text-[var(--color-primary-600)] hover:underline';
@@ -38,25 +41,6 @@ function SeePlans() {
     <Link href={ROUTES.PLANS} className={PLANS_LINK}>
       See plans
     </Link>
-  );
-}
-
-/** One part of the page: what it is on the left, its form on the right */
-function Section({ id, title, lead, children }: { id: string; title: string; lead: ReactNode; children?: ReactNode }) {
-  return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className="grid scroll-mt-20 gap-6 border-t border-[var(--color-border)] py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-12"
-    >
-      <div>
-        <h2 id={`${id}-title`} className="font-display text-xl font-semibold text-[var(--color-text-primary)]">
-          {title}
-        </h2>
-        <div className="mt-2 space-y-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{lead}</div>
-      </div>
-      {children && <div className="max-w-xl">{children}</div>}
-    </section>
   );
 }
 
@@ -83,7 +67,7 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
 }
 
 /** The account's profile and branding, its mailbox and HubSpot, and its plan */
-export function SettingsView({ profile, connections, plan, email, subscription, billingReady }: SettingsViewProps) {
+export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits }: SettingsViewProps) {
   const paying = plan !== 'owner' && subscription;
   return (
     <ToastProvider position="bottom-right">
@@ -176,6 +160,8 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
           <BillingButton label="Manage billing" url={API_ROUTES.BILLING_PORTAL} body={{ returnTo: 'settings' }} variant="outline" />
         ) : null}
       </Section>
+
+      {freeAudits && <FreeAuditsSection freeAudits={freeAudits} />}
     </ToastProvider>
   );
 }

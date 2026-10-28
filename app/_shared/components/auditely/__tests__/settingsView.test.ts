@@ -52,6 +52,7 @@ const view = (over: {
       email: 'sam@acme.studio',
       subscription: over.subscription ?? null,
       billingReady: over.billingReady ?? false,
+      freeAudits: null,
     })
   );
 };
