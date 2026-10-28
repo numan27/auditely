@@ -30,6 +30,9 @@ address gets its account on its first sign-in, and Auditely itself refuses every
 
 ## 2. Google sign-in
 
+> Hidden in the app for the beta: sign-in shows only email even with Google turned on here. To offer
+> it, set `GOOGLE_SIGN_IN_HIDDEN` to `false` in `app/_shared/lib/auth/googleSignIn.ts` and deploy.
+
 1. Google Cloud console → APIs & Services → Credentials → Create credentials → OAuth client ID, type
    "Web application". If Google asks for a consent screen first, set one up: app name Auditely, your
    email as the support address, audience External.

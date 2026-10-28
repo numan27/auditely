@@ -60,6 +60,9 @@ arrives from `hello@<domain>`, not in spam, and opening it signs you in on `http
 
 ## 4. Google sign-in on the domain
 
+> Hidden in the app for the beta. Set `GOOGLE_SIGN_IN_HIDDEN` to `false` in
+> `app/_shared/lib/auth/googleSignIn.ts` first, or the button won't show.
+
 Google Cloud console → APIs & Services:
 
 - Credentials → your OAuth client → Authorized JavaScript origins: add `https://<domain>`. Leave the
