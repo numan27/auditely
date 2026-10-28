@@ -41,6 +41,10 @@ In the Stripe Dashboard, switch to test mode. Then go to Settings → Tax:
 
 Without registrations, Checkout still works but charges no tax.
 
+Then Settings → Billing → Revenue recovery → Retries: set "If all retries for a payment fail" to cancel the
+subscription. Stripe retries a failed renewal for a few weeks, and the account keeps its plan meanwhile.
+Without this, an account whose card never goes through keeps its paid plan unpaid, period after period.
+
 ## 3. Run the setup script
 
 Copy the test secret key from Developers → API keys. Add it to `.env.local` as
@@ -65,10 +69,10 @@ Stripe's events only reach production (`auditely.vercel.app`). A purchase on a P
 saved when Checkout returns to that deployment's `/plans/done`. Both environments still need all three
 variables.
 
-Copy the secret key again, and save it to a file without typing it into the terminal:
+Copy the secret key again, and save it to a file only you can read, without typing it into the terminal:
 
 ```sh
-pbpaste > ~/stripe-key.txt
+(umask 077; pbpaste > ~/stripe-key.txt)
 ```
 
 Then add each variable to Production and Preview. Production and Preview are separate commands, and both
@@ -108,9 +112,22 @@ In the Stripe Dashboard, Developers → Webhooks → the endpoint lists each eve
 ## 7. At launch: live mode
 
 Repeat steps 2 to 4 with the Dashboard in live mode and a live secret key. The script then creates the
-live products, prices, portal settings and webhook. In Vercel, replace the three variables rather than
-adding them: `vercel env rm` each one, then add it again.
+live products, prices, portal settings and webhook. Give it your domain's webhook address,
+`--webhook https://<domain>/api/stripe/webhook` (`docs/launch-setup.md` step 5). In Vercel, replace the
+three variables rather than adding them: `vercel env rm` each one, then add it again.
 
-Test-mode subscriptions don't exist in live mode. Before adding the live keys, clear them in the Supabase
-SQL Editor with `delete from public.subscriptions;`. Otherwise testers keep their test plan, and their
-test customer can't open a live Checkout.
+Four things differ from the test-mode run, in this order:
+
+1. **Before the live run, remove the `STRIPE_PORTAL_CONFIGURATION=…` line from `.env.local`.** The script
+   updates the portal settings that line names, and the test-mode ones don't exist in live mode, so it
+   stops with an error. Without the line it creates live ones and prints their `bpc_…` id; put that back
+   in `.env.local` and in Vercel.
+2. **Switch Production and Preview together.** They share one database, so a Preview still on test keys
+   would record test subscriptions next to live ones.
+3. **Once the live deploy is serving, clear the test subscriptions** in the Supabase SQL Editor with
+   `delete from public.subscriptions;`. Test-mode subscriptions don't exist in live mode: otherwise testers
+   keep their test plan, and their test customer can't open a live Checkout. Clearing them earlier lets
+   the test webhook write them back.
+4. **Delete the test-mode webhook endpoint.** In test mode, Developers → Webhooks → the endpoint → Delete
+   destination. Its events would otherwise keep reaching production, where the live signing secret
+   refuses them.

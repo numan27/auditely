@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { userDb } from '@/app/_shared/lib/supabase/server';
 import { canSignIn } from '@/app/_shared/lib/auth/account';
 import { ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/routes';
+import { FREE_AUDIT_COOKIE } from '@/app/_shared/lib/freeAudit/freeAuditRules';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,12 +30,15 @@ export async function POST(request: NextRequest) {
 
   const next = safeCallbackUrl(typeof body.callbackUrl === 'string' ? body.callbackUrl : undefined);
   const { origin } = new URL(request.url);
+  // The free audit rides in the link, so it's kept in whichever browser opens it
+  const freeAudit = request.cookies.get(FREE_AUDIT_COOKIE)?.value;
+  const keepParam = freeAudit ? `&keep=${encodeURIComponent(freeAudit)}` : '';
   const db = await userDb();
   const { error } = await db.auth.signInWithOtp({
     email,
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: `${origin}${ROUTES.AUTH_CALLBACK}?next=${encodeURIComponent(next)}`,
+      emailRedirectTo: `${origin}${ROUTES.AUTH_CALLBACK}?next=${encodeURIComponent(next)}${keepParam}`,
     },
   });
   if (error) {

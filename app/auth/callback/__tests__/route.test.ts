@@ -18,13 +18,17 @@ const auth = vi.hoisted(() => ({
   getClaims: vi.fn(),
   signOut: vi.fn(),
 }));
+const fakeDb = vi.hoisted(() => ({}));
+const keep = vi.hoisted(() => vi.fn());
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
 vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/_shared/lib/supabase/server')>()),
-  userDb: async () => ({ auth }),
+  userDb: async () => Object.assign(fakeDb, { auth }),
 }));
+vi.mock('@/app/_shared/lib/freeAudit/keepFreeAudit', () => ({ keepFreeAudit: keep }));
 
-const open = (query: string) => GET(new NextRequest(`https://auditely.app/auth/callback?${query}`));
+const open = (query: string, cookie?: string) =>
+  GET(new NextRequest(`https://auditely.app/auth/callback?${query}`, cookie ? { headers: { cookie } } : undefined));
 
 // Where the redirect leads: path and query on this site, or the whole URL off it
 const sentTo = (res: Response) => {
@@ -44,6 +48,8 @@ beforeEach(() => {
   auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
   auth.signOut.mockResolvedValue({ error: null });
   signedInAs('owner@example.com');
+  keep.mockReset();
+  keep.mockResolvedValue(false);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -108,5 +114,37 @@ describe('GET /auth/callback', () => {
 
     auth.getClaims.mockRejectedValue(new Error('network'));
     expect(sentTo(await open('code=c1'))).toBe('/login?error=link');
+  });
+
+  // The landing page's free audit, signed in the visitor's cookie
+  it('keeps the free audit from the cookie and opens the audit view', async () => {
+    keep.mockResolvedValue(true);
+    const res = await open('code=c1&next=%2F', 'auditely_free_audit=f1.sig');
+    expect(keep).toHaveBeenCalledWith(fakeDb, 'u1', 'f1.sig');
+    expect(sentTo(res)).toBe('/audit');
+  });
+
+  it("keeps it from the link's keep= when the link opens in another browser", async () => {
+    keep.mockResolvedValue(true);
+    const res = await open('next=%2F&keep=f1.sig&token_hash=h1&type=email');
+    expect(keep).toHaveBeenCalledWith(fakeDb, 'u1', 'f1.sig');
+    expect(sentTo(res)).toBe('/audit');
+  });
+
+  it('still goes where the user was headed when they were headed somewhere', async () => {
+    keep.mockResolvedValue(true);
+    expect(sentTo(await open('code=c1&next=%2Fplans', 'auditely_free_audit=f1.sig'))).toBe('/plans');
+  });
+
+  it('signs in as before when there is nothing to keep', async () => {
+    expect(sentTo(await open('code=c1'))).toBe('/');
+    expect(keep).not.toHaveBeenCalled();
+    expect(sentTo(await open('code=c1&next=%2F', 'auditely_free_audit=forged'))).toBe('/');
+  });
+
+  it('keeps nothing for someone who may not sign in', async () => {
+    signedInAs('stranger@example.com');
+    expect(sentTo(await open('code=c1&keep=f1.sig'))).toBe('/login?error=closed');
+    expect(keep).not.toHaveBeenCalled();
   });
 });

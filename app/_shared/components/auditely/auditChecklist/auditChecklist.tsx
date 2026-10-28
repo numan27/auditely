@@ -1,7 +1,7 @@
 // app/_shared/components/auditely/auditChecklist/auditChecklist.tsx
 
 import type { ReactNode } from 'react';
-import type { Audit } from '@/app/_shared/lib/types/auditely';
+import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 import type { Finding } from '@/app/_shared/lib/audit/types';
 import { siteReasonText, sortFindings } from '@/app/_shared/lib/audit/reportData';
 import { CheckIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
@@ -67,7 +67,7 @@ function FindingGroup({ title, score, findings }: FindingGroupProps) {
 }
 
 /** GEO / AEO / lead capture findings, plus HTML-based SEO basics when PageSpeed's SEO score is missing. */
-export function AuditChecklist({ audit }: { audit: Audit }) {
+export function AuditChecklist({ audit }: { audit: AuditFields }) {
   const { geo, aeo, seo, site, lead } = audit.checks ?? {};
   const showSeoBasics = audit.seo_score === null && !!seo;
   if (!geo && !aeo && !lead && !showSeoBasics) {

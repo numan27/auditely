@@ -2,9 +2,10 @@
 
 // Tests whether a site's own links lead anywhere. Only a clear "page not found"
 // (404 / 410) is broken; blocked, failing or slow links are unknown, so a
-// prospect is never told that a working link is broken.
+// prospect is never told that a working link is broken. A link that leads to a
+// private address is never requested, and is unknown too.
 
-import { USER_AGENT } from '@/app/_shared/lib/audit/siteFetch';
+import { publicFetch, USER_AGENT } from '@/app/_shared/lib/audit/siteFetch';
 
 export type LinkStatus = 'ok' | 'broken' | 'unknown';
 
@@ -25,9 +26,8 @@ export function linkStatus(httpStatus: number | null): LinkStatus {
 }
 
 async function requestStatus(url: string, method: 'HEAD' | 'GET'): Promise<number> {
-  const res = await fetch(url, {
+  const res = await publicFetch(url, {
     method,
-    redirect: 'follow',
     headers: { 'User-Agent': USER_AGENT },
     signal: AbortSignal.timeout(LINK_TIMEOUT_MS),
   });

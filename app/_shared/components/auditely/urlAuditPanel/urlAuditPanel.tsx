@@ -8,6 +8,24 @@ import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkelet
 import { UrlAuditForm } from '@/app/_shared/components/auditely/urlAuditForm/urlAuditForm';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUrlAudits } from '@/app/_shared/lib/hooks/useUrlAudits';
+import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
+
+/** Before the first audit: a new account's short invitation, or the fuller note for the owner and the demo */
+export function NoUrlAudits() {
+  const summary = useUsage()?.summary;
+  return (
+    <p className="mt-10 max-w-lg text-sm leading-relaxed text-[var(--color-text-tertiary)]">
+      {summary && summary.plan !== 'owner' ? (
+        <>Paste a prospect&apos;s website, or your own, to audit it. Audits you run show here.</>
+      ) : (
+        <>
+          Paste a prospect&apos;s website to see how it scores on speed, SEO, mobile, SSL and AI search, or use Find email
+          to get their email without a full audit. Every site you check here is saved in this list.
+        </>
+      )}
+    </p>
+  );
+}
 
 /** "Audit a website": audit any URL, with every site audited this way listed below */
 export function UrlAuditPanel() {
@@ -32,10 +50,7 @@ export function UrlAuditPanel() {
       {isLoading ? (
         <ResultsSkeleton label="Loading your website audits" count={2} />
       ) : businesses.length === 0 ? (
-        <p className="mt-10 max-w-lg text-sm leading-relaxed text-[var(--color-text-tertiary)]">
-          Paste a prospect&apos;s website to see how it scores on speed, SEO, mobile, SSL and AI search, or use Find email
-          to get their email without a full audit. Every site you check here is saved in this list.
-        </p>
+        <NoUrlAudits />
       ) : (
         <section className="mt-10" aria-labelledby="url-audits-title">
           <div className="flex items-baseline justify-between gap-4">

@@ -19,6 +19,15 @@ const FEATURE_NAMES: Record<Feature, string> = {
   hubspot: 'The HubSpot handoff',
 };
 
+/** The paid features as the plans page and the landing page's pricing list them */
+export const PLAN_FEATURES: { feature: Feature; label: string }[] = [
+  { feature: 'auditAll', label: 'Audit a whole search at once' },
+  { feature: 'branding', label: 'Your name and logo on reports' },
+  { feature: 'export', label: 'CSV and Google Sheets export' },
+  { feature: 'mailbox', label: 'Send from your mailbox' },
+  { feature: 'hubspot', label: 'HubSpot handoff' },
+];
+
 /** The meter's tie-break: audits first, then searches, then email lookups */
 const METER_ORDER: readonly UsageKind[] = ['audit', 'search', 'email_lookup'];
 

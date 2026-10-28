@@ -74,6 +74,9 @@ export interface Audit {
   created_at: string;
 }
 
+/** An audit's results without the row it's saved in, as a free audit carries them */
+export type AuditFields = Omit<Audit, 'id' | 'business_id' | 'created_at'>;
+
 export interface AiReport {
   id: string;
   audit_id: string;

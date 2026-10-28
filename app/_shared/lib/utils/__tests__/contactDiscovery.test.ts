@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { contactsUpdate, discoverContacts, emailLookupUpdate, type DiscoveredContacts } from '@/app/_shared/lib/utils/contactDiscovery';
 
+// No real DNS: every name is public except *.internal
+vi.mock('node:dns', () => ({
+  promises: {
+    lookup: async (host: string) => [{ address: host.endsWith('.internal') ? '10.0.0.5' : '93.184.216.34', family: 4 }],
+  },
+}));
+
 const found: DiscoveredContacts = {
   fetched: true,
   email: 'hello@smiledental.com',

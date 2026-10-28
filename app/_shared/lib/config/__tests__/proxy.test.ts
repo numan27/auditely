@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { proxy } from '@/proxy';
-import { API_ROUTES, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, BOTID_PATH, demoReportPath, INBOUND_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 
 // The Supabase session the proxy reads: who is signed in, and a refreshed cookie on
 // the response it hands back, so each test can see whether that cookie survives
@@ -50,6 +50,29 @@ describe('proxy', () => {
     expect(sentTo(await visit('/?load=abc'))).toBe(ROUTES.DEMO);
   });
 
+  it('shows a signed-out visitor the landing page once sign-ups are open', async () => {
+    vi.stubEnv('SIGNUPS_OPEN', 'true');
+    for (const path of [ROUTES.HOME, '/?ref=hn']) {
+      const res = await visit(path);
+      expect(sentTo(res), path).toBeNull();
+      expect(res.status, path).toBe(200);
+    }
+    expect(sentTo(await visit(ROUTES.SIGNUP))).toBeNull();
+    expect(sentTo(await visit(ROUTES.SIGNUP, STRANGER))).toBe(ROUTES.HOME);
+  });
+
+  it('still sends a signed-out visitor to the demo while sign-ups are closed', async () => {
+    expect(sentTo(await visit(ROUTES.HOME))).toBe(ROUTES.DEMO);
+    expect(sentTo(await visit(ROUTES.TERMS))).toBeNull();
+    expect(sentTo(await visit(ROUTES.PRIVACY))).toBeNull();
+  });
+
+  it("answers an API call without a session with 'Sign in to continue'", async () => {
+    const res = await visit(API_ROUTES.SEARCHES);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'Sign in to continue' });
+  });
+
   // Sign-ups are closed: a session for anyone off the list opens nothing
   it('treats a session for an email that may not sign in as logged out', async () => {
     expect(sentTo(await visit(ROUTES.HOME, STRANGER))).toBe(ROUTES.DEMO);
@@ -69,8 +92,16 @@ describe('proxy', () => {
   });
 
   it('still answers 401 to a logged-out call of any API route but the login', async () => {
-    for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH)) {
+    for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH && p !== API_ROUTES.FREE_AUDIT)) {
       expect((await visit(path)).status).toBe(401);
+    }
+  });
+
+  it('lets a signed-out visitor run the free audit and pass its bot check', async () => {
+    for (const path of [API_ROUTES.FREE_AUDIT, `${BOTID_PATH}/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js`]) {
+      const res = await visit(path);
+      expect(res.status).not.toBe(401);
+      expect(sentTo(res)).toBeNull();
     }
   });
 

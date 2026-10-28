@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { findEmail } from '@/app/_shared/lib/utils/emailFinder';
 
+// No real DNS: every name is public except *.internal
+vi.mock('node:dns', () => ({
+  promises: {
+    lookup: async (host: string) => [{ address: host.endsWith('.internal') ? '10.0.0.5' : '93.184.216.34', family: 4 }],
+  },
+}));
+
 describe('findEmail with prefetched homepage HTML', () => {
   const fetchMock = vi.fn();
   beforeEach(() => vi.stubGlobal('fetch', fetchMock));
@@ -123,5 +130,19 @@ describe('findEmail with prefetched homepage HTML', () => {
     const extra = fetchMock.mock.calls.map(([url]) => url as string).filter((url) => /page-|new-patients/.test(url));
     expect(extra).toHaveLength(8);
     expect(extra[0]).toBe('https://smiledental.com/new-patients');
+  });
+});
+
+describe('findEmail on private addresses', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it('never reads a page on a private address', async () => {
+    expect(await findEmail('http://intranet.internal/')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

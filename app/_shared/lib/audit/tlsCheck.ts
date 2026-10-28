@@ -3,8 +3,10 @@
 // Direct TLS handshake on port 443. Catches expired, self-signed and
 // wrong-host certificates that "is the URL https?" checks miss.
 
+import { isIP } from 'node:net';
 import tls from 'node:tls';
 import type { SslCheck } from '@/app/_shared/lib/audit/types';
+import { connectLookup, isPrivateAddress, lookupAll, type HostLookup } from '@/app/_shared/lib/utils/publicAddress';
 
 const TLS_TIMEOUT_MS = 8000;
 const DAY_MS = 86_400_000;
@@ -28,13 +30,21 @@ export function interpretTls(probe: TlsProbe, now: number): SslCheck {
   };
 }
 
-/** Resolves null when the handshake can't complete (timeout, refused, DNS). */
-export function probeTls(hostname: string): Promise<TlsProbe | null> {
+/**
+ * Resolves null when the handshake can't complete (timeout, refused, DNS), or
+ * when the host isn't on the public internet: a name is only connected to
+ * through a lookup that refuses its private addresses, and an address literal,
+ * which connects without one, is checked here.
+ */
+export function probeTls(hostname: string, lookup: HostLookup = lookupAll): Promise<TlsProbe | null> {
+  const literal = hostname.replace(/^\[(.*)\]$/, '$1');
+  if (isIP(literal) && isPrivateAddress(literal)) return Promise.resolve(null);
   return new Promise((resolve) => {
     const socket = tls.connect({
       host: hostname,
       port: 443,
       servername: hostname,
+      lookup: connectLookup(lookup),
       rejectUnauthorized: false, // we want to inspect bad certs, not throw
       timeout: TLS_TIMEOUT_MS,
     });

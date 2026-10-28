@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { checkLinks } from '@/app/_shared/lib/audit/linkCheck';
 
+// No real DNS: every name is public except *.internal
+vi.mock('node:dns', () => ({
+  promises: {
+    lookup: async (host: string) => [{ address: host.endsWith('.internal') ? '10.0.0.5' : '93.184.216.34', family: 4 }],
+  },
+}));
+
 describe('checkLinks', () => {
   const fetchMock = vi.fn();
   beforeEach(() => vi.stubGlobal('fetch', fetchMock));
@@ -58,5 +65,15 @@ describe('checkLinks', () => {
     expect(results).toHaveLength(30);
     expect(fetchMock).toHaveBeenCalledTimes(30);
     expect(peak).toBe(8);
+  });
+
+  it('reads a link that redirects somewhere private as unknown, not broken', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 302, headers: { location: 'http://metadata.internal/' } }));
+    expect(await checkLinks(['https://a.com/out', 'http://10.0.0.1/admin'])).toEqual([
+      { url: 'https://a.com/out', status: 'unknown' },
+      { url: 'http://10.0.0.1/admin', status: 'unknown' },
+    ]);
+    // Only a.com/out's first hop is ever requested
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
