@@ -202,7 +202,7 @@ describe('POST /api/free-audit', () => {
     audit.mockRejectedValue(new AuditUnavailableError('The site took too long to answer.'));
     const res = await POST(request({ website: 'example.com' }));
     expect((await res.json()).error).toBe(
-      "Couldn't audit example.com: The site took too long to answer. Check the address and try again. This didn't use your free audit."
+      "Couldn't audit example.com: the site took too long to answer. Check the address and try again. This didn't use your free audit."
     );
     expect(store.releaseFreeAudit).toHaveBeenCalledWith('f1');
   });

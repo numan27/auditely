@@ -118,8 +118,16 @@ describe('free audit copy', () => {
       "You've had your free audit, so here's the one you ran. Sign up free to keep it and run 5 audits a month."
     );
     expect(FREE_AUDIT_COPY.failed('example.com', 'The site took too long to answer.')).toBe(
-      "Couldn't audit example.com: The site took too long to answer. Check the address and try again. This didn't use your free audit."
+      "Couldn't audit example.com: the site took too long to answer. Check the address and try again. This didn't use your free audit."
     );
     expect(FREE_AUDIT_COPY.off).toBe('Sign up to audit a website.');
+  });
+
+  it("starts the reason in lower case after the colon, keeping a name's or an acronym's capitals", () => {
+    const reason = (why: string) => FREE_AUDIT_COPY.failed('example.com', why).split(': ')[1].split('. Check')[0];
+    expect(reason('Page timed out while loading')).toBe('page timed out while loading');
+    expect(reason('Blocked (bot challenge)')).toBe('blocked (bot challenge)');
+    expect(reason('PageSpeed returned no Lighthouse data')).toBe('PageSpeed returned no Lighthouse data');
+    expect(reason('HTTP 404')).toBe('HTTP 404');
   });
 });

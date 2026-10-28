@@ -22,6 +22,10 @@ export type FreeAuditResponse =
 
 const n = PLANS.free.limits.audit;
 
+/** A reason, as it reads after a colon: no full stop, and an ordinary first word in lower case ("PageSpeed" and "HTTP" stay) */
+const midSentence = (reason: string) =>
+  reason.trim().replace(/\.+$/, '').replace(/^[A-Z](?=[a-z]*(?:[\s(,]|$))/, (first) => first.toLowerCase());
+
 export const FREE_AUDIT_COPY = {
   again: `You've had your free audit, so here's the one you ran. Sign up free to keep it and run ${n} audits a month.`,
   visitor: `Someone on this network has already had the free audit. Sign up free to run ${n} audits a month.`,
@@ -33,7 +37,7 @@ export const FREE_AUDIT_COPY = {
   off: 'Sign up to audit a website.',
   unavailable: "Free audits aren't available right now. Sign up free to run your own.",
   failed: (host: string, reason: string) =>
-    `Couldn't audit ${host}: ${reason.trim().replace(/\.+$/, '')}. Check the address and try again. This didn't use your free audit.`,
+    `Couldn't audit ${host}: ${midSentence(reason)}. Check the address and try again. This didn't use your free audit.`,
   keepTitle: 'Keep this audit',
   keepText: `Sign up free and it's saved to your account, with a PDF to send and ${n} more audits every month.`,
   used: `Your free audit is used. Sign up free to run ${n} audits a month, or audit a whole city's businesses on Pro.`,
