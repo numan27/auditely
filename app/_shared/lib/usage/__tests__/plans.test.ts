@@ -37,7 +37,7 @@ describe('planFor', () => {
 
 describe('PLANS', () => {
   it('holds the spec allowances', () => {
-    expect(PLANS.free.limits).toEqual({ search: 1, audit: 1, email_lookup: 0 });
+    expect(PLANS.free.limits).toEqual({ search: 1, audit: 2, email_lookup: 0 });
     expect(PLANS.pro.limits).toEqual({ search: 25, audit: 250, email_lookup: 100 });
     expect(PLANS.agency.limits).toEqual({ search: 80, audit: 1000, email_lookup: 400 });
     expect([PLANS.pro.monthlyPrice, PLANS.pro.yearlyPrice, PLANS.agency.monthlyPrice, PLANS.agency.yearlyPrice]).toEqual([24, 240, 59, 590]);

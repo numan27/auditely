@@ -72,7 +72,7 @@ describe('the hero', () => {
     expect(text(html)).toContain('Audit it free');
     expect(text(html)).toContain('Your first audit needs no sign-up');
     expect(text(html)).toContain(FREE_PLAN_LINE);
-    expect(FREE_PLAN_LINE).toBe('Free plan: 1 audit and 1 search a month');
+    expect(FREE_PLAN_LINE).toBe('Free plan: 2 audits and 1 search a month');
     // Drawn, not pictured, and every drawing is hidden from screen readers
     expect(html).not.toContain('<img');
     expect(count(html, /<svg/g)).toBe(count(html, /<svg[^>]*aria-hidden/g));
@@ -309,7 +309,7 @@ describe('pricing', () => {
     expect(text(html)).toContain(
       'Prices are in US dollars, before sales tax. Yearly: Pro is $240 and Agency is $590. Cancel any time from Settings.'
     );
-    for (const line of ['1 search a month', '1 audit a month', '250 audits a month', '1,000 audits a month', '400 email lookups a month']) {
+    for (const line of ['1 search a month', '2 audits a month', '250 audits a month', '1,000 audits a month', '400 email lookups a month']) {
       expect(text(html)).toContain(line);
     }
     // Free has no email lookups, so it doesn't list them

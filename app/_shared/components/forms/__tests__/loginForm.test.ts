@@ -40,7 +40,7 @@ describe('LoginForm', () => {
   it('invites a new visitor to make a free account', () => {
     const html = render({ mode: 'signup', open: true });
     expect(text(html)).toContain('Create your Auditely account');
-    expect(text(html)).toContain("Free, with 1 search and 1 audit a month. We'll email you a link, or use Google.");
+    expect(text(html)).toContain("Free, with 1 search and 2 audits a month. We'll email you a link, or use Google.");
     expect(text(html)).toContain('Already have an account? Sign in');
     expect(html).toContain('href="/login"');
   });

@@ -74,7 +74,7 @@ describe('meterFor', () => {
   it('claims through claim_usage with the plan limit and the month start', async () => {
     rpc.mockResolvedValue({ data: 'ev-1', error: null });
     const claim = await meterFor(tester, now).claim('audit');
-    expect(rpc).toHaveBeenCalledWith('claim_usage', { p_user_id: 'u2', p_kind: 'audit', p_limit: 1, p_since: '2026-10-01T00:00:00.000Z' });
+    expect(rpc).toHaveBeenCalledWith('claim_usage', { p_user_id: 'u2', p_kind: 'audit', p_limit: 2, p_since: '2026-10-01T00:00:00.000Z' });
     expect(claim.ok).toBe(true);
   });
 
@@ -118,7 +118,7 @@ describe('usageSummary', () => {
   it('counts each limited kind with a head count, never a row list', async () => {
     const summary = await usageSummary(userDb({ search: 1, audit: 3 }), tester, new Date('2026-10-14T09:00:00Z'));
     expect(summary).toEqual({ plan: 'free', resetsAt: '2026-11-01T00:00:00.000Z',
-      usage: { search: { used: 1, limit: 1 }, audit: { used: 3, limit: 1 }, email_lookup: { used: 0, limit: 0 } } });
+      usage: { search: { used: 1, limit: 1 }, audit: { used: 3, limit: 2 }, email_lookup: { used: 0, limit: 0 } } });
     expect(selects).toEqual([['id', { count: 'exact', head: true }], ['id', { count: 'exact', head: true }]]);
     expect(filters).toContainEqual(['gte', 'created_at', '2026-10-01T00:00:00.000Z']);
     expect(filters).toContainEqual(['eq', 'user_id', 'u2']);
