@@ -2,14 +2,15 @@
 
 // Whose name is on an account's reports and emails. The owner's account keeps
 // today's DevArtVentures details wherever its profile is blank; a paid account
-// with a name or company gets its own; everyone else gets Auditely's neutral
-// brand, which invites the reader to try Auditely. The AI writes as the brand's
-// writer. No I/O: brand.ts reads the profile.
+// with a name or company gets its own, and so does every account during the beta,
+// while paid plans can't be bought; everyone else gets Auditely's neutral brand,
+// which invites the reader to try Auditely. The AI writes as the brand's writer.
+// No I/O: brand.ts reads the profile.
 
 import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
 import { AUDITELY_NAME, AUDITELY_URL } from '@/app/_shared/lib/config/site';
-import { planHas, type PlanId } from '@/app/_shared/lib/usage/plans';
+import { brandingOn, type PlanId } from '@/app/_shared/lib/usage/plans';
 
 export type BrandKind = 'owner' | 'account' | 'auditely';
 
@@ -132,7 +133,7 @@ export function resolveBrand(
   }
 
   const { display_name: person, company } = profile;
-  if (!planHas(plan, 'branding') || !input.profile || !(company || person)) return AUDITELY_BRAND;
+  if (!brandingOn(plan) || !input.profile || !(company || person)) return AUDITELY_BRAND;
 
   return {
     kind: 'account',

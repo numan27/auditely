@@ -87,12 +87,31 @@ describe('SettingsView', () => {
     expect(view({ plan: 'free' })).not.toContain('Disconnect');
   });
 
-  it('tells a Free account its reports carry Auditely’s name, with a link to the plans', () => {
+  it('tells a Free account its own name and logo go on its reports during the beta', () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+    const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
+    const free = text(view({ plan: 'free' }));
+    expect(free).toContain(
+      "Your name and company sign the AI's emails, and your logo, contact details and booking link go on your reports and emails."
+    );
+    expect(free).toContain('Every plan gets this during the beta. After it, it comes with Pro and Agency.');
+    expect(free).not.toContain("carry Auditely's name");
+    expect(text(view({ plan: 'pro' }))).not.toContain('during the beta');
+    vi.unstubAllEnvs();
+  });
+
+  it('tells a Free account its reports carry Auditely’s name after the beta, with a link to the plans', () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
     const html = view({ plan: 'free' });
+    expect(html).toContain(
+      'On Pro and Agency, your name, company, logo, contact details and booking link go on your reports and emails.'
+    );
+    expect(html).not.toContain('sign the AI');
     expect(html).toContain('On the Free plan, reports and emails carry Auditely&#x27;s name instead.');
     expect(html).toContain('href="/plans"');
     expect(html).toContain('You&#x27;re on the Free plan.');
     expect(view({ plan: 'pro' })).not.toContain('On the Free plan');
+    vi.unstubAllEnvs();
   });
 
   it('has the four sections the rest of the app links to', () => {

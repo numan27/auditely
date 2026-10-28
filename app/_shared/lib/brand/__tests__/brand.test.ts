@@ -69,9 +69,16 @@ describe('brandFor', () => {
     expect([brand.kind, brand.name, brand.logo?.contentType]).toEqual(['account', 'Acme', 'image/png']);
   });
 
-  it('gives a Free account Auditely’s brand, whatever its profile says', async () => {
+  it('gives a Free account Auditely’s brand after the beta, whatever its profile says', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
     db.row = { id: 'u4', email: 'free@x.com', company: 'Acme' };
     expect((await brandFor('u4')).kind).toBe('auditely');
+  });
+
+  it('gives a Free account its own brand during the beta', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+    db.row = { id: 'u4', email: 'free@x.com', company: 'Acme' };
+    expect(await brandFor('u4')).toMatchObject({ kind: 'account', name: 'Acme' });
   });
 
   it('gives a row from before accounts, or an account with no profile, Auditely’s brand', async () => {
@@ -91,6 +98,7 @@ describe('brandFor', () => {
   });
 
   it('brands as Free while the subscriptions table is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
     vi.spyOn(console, 'error').mockImplementation(() => {});
     db.row = { id: 'u2', email: 'sam@x.com', display_name: 'Sam', company: 'Acme' };
     db.subscriptionError = { message: 'relation "subscriptions" does not exist' };

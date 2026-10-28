@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { logoFromDataUrl, resolveBrand, type Profile } from '@/app/_shared/lib/brand/brandRules';
+import { brandingOn } from '@/app/_shared/lib/usage/plans';
+
+// Paid plans are closed while NEXT_PUBLIC_CHECKOUT_OPEN isn't 'true': the beta
+const afterTheBeta = () => vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
+const inTheBeta = () => vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+afterEach(() => vi.unstubAllEnvs());
 
 const contact = { name: 'Numan', phone: null, email: 'contact@devartventures.com', bookingUrl: 'https://calendly.com/devart-ventures/30min' };
 const blank: Profile = {
@@ -70,6 +76,7 @@ describe('resolveBrand', () => {
   });
 
   it('gives Free, a blank paid profile and no profile the Auditely brand, with nothing of DevArtVentures', () => {
+    afterTheBeta();
     const inputs = [
       { profile: { ...blank, company: 'Acme', logo_data_url: png }, isOwner: false, plan: 'free' as const },
       { profile: blank, isOwner: false, plan: 'pro' as const },
@@ -88,6 +95,35 @@ describe('resolveBrand', () => {
       });
       expect(JSON.stringify(b).toLowerCase()).not.toContain('devart');
     }
+  });
+});
+
+describe('branding in the beta', () => {
+  it("gives a Free account its own name, logo and contact while paid plans are closed", () => {
+    inTheBeta();
+    const p = { ...blank, display_name: 'Numan Khalil', company: 'My Tool', logo_data_url: png, contact_phone: '+92 300 1234567' };
+    const b = resolveBrand({ profile: p, isOwner: false, plan: 'free' }, contact);
+    expect(b).toMatchObject({
+      kind: 'account',
+      name: 'My Tool',
+      logo: { contentType: 'image/png', dataUrl: png },
+      contact: { name: 'Numan Khalil', phone: '+92 300 1234567', email: 'a@x.com', bookingUrl: null },
+      writer: { about: 'My Tool', signOff: 'Numan Khalil, My Tool' },
+    });
+  });
+
+  it('still gives a Free account with no name or company the Auditely brand', () => {
+    inTheBeta();
+    expect(resolveBrand({ profile: blank, isOwner: false, plan: 'free' }, contact).kind).toBe('auditely');
+    expect(resolveBrand({ profile: null, isOwner: false, plan: 'free' }, contact).kind).toBe('auditely');
+  });
+
+  it('is every plan’s during the beta, and the paid plans’ after it', () => {
+    expect(brandingOn('free', false)).toBe(true);
+    expect(brandingOn('free', true)).toBe(false);
+    expect(brandingOn('pro', true)).toBe(true);
+    expect(brandingOn('agency', true)).toBe(true);
+    expect(brandingOn('owner', true)).toBe(true);
   });
 });
 
