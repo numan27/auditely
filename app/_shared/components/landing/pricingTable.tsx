@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { CheckIcon } from '@/app/_shared/components/ui/icons/icons';
 import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
 import { cardClasses } from '@/app/_shared/components/landing/landingStyles';
+import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 import type { BillingInterval } from '@/app/_shared/lib/billing/billingRules';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { PLANS, PLAN_ORDER, USAGE_KINDS, type Plan, type PlanId } from '@/app/_shared/lib/usage/plans';
@@ -94,9 +95,7 @@ export function PricingTable() {
       type="button"
       aria-pressed={interval === value}
       onClick={() => setBilling(value)}
-      className={`min-h-10 rounded-full px-[18px] text-[15px] font-medium ${
-        interval === value ? 'bg-[var(--color-text-primary)] text-[var(--color-bg-primary)]' : 'text-[var(--color-text-secondary)]'
-      }`}
+      className={periodOptionClasses(interval === value)}
     >
       {label}
       {extra && <em className="ml-1.5 not-italic font-semibold text-emerald-600 dark:text-emerald-400">{extra}</em>}
@@ -104,7 +103,7 @@ export function PricingTable() {
   );
   return (
     <div>
-      <div role="group" aria-label="Billing period" className="mt-7 inline-flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+      <div role="group" aria-label="Billing period" className={`mt-7 ${periodTrackClasses}`}>
         {toggle('month', 'Monthly')}
         {toggle('year', 'Yearly', 'two months free')}
       </div>

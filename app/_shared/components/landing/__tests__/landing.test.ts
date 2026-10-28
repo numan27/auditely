@@ -22,6 +22,7 @@ import { PlansView } from '@/app/_shared/components/auditely/plansView/plansView
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { PLAN_FEATURES } from '@/app/_shared/lib/usage/usageCopy';
 import { sampleReportData } from '@/app/_shared/lib/demo/demoData';
+import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 
 // What a reader sees: the markup's text, entities decoded
 const text = (html: string) =>
@@ -136,6 +137,9 @@ describe('pricing', () => {
   it('offers monthly or yearly, two months free', () => {
     expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Monthly<\/button>/);
     expect(text(html)).toContain('Yearly two months free');
+    // The same pill as /plans
+    expect(html).toContain(periodTrackClasses);
+    expect(html).toContain(`class="${periodOptionClasses(true)}"`);
   });
 
   it('starts every plan at sign-up, and a paid one on the plans page after', () => {

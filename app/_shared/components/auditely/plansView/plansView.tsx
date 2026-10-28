@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { BillingButton } from '@/app/_shared/components/auditely/billing/billingButton';
+import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 import { CheckIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import type { BillingInterval, Subscription } from '@/app/_shared/lib/billing/billingRules';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
@@ -122,7 +123,7 @@ const INTERVAL_LINKS: { interval: BillingInterval; label: string; href: string }
 function IntervalSwitch({ interval }: { interval: BillingInterval }) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <div role="group" aria-label="Billing period" className="inline-flex rounded-lg border border-[var(--color-border)] p-0.5">
+      <div role="group" aria-label="Billing period" className={periodTrackClasses}>
         {INTERVAL_LINKS.map((option) => {
           const selected = option.interval === interval;
           return (
@@ -131,11 +132,7 @@ function IntervalSwitch({ interval }: { interval: BillingInterval }) {
               href={option.href}
               scroll={false}
               aria-current={selected ? 'true' : undefined}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                selected
-                  ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
+              className={periodOptionClasses(selected)}
             >
               {option.label}
             </Link>

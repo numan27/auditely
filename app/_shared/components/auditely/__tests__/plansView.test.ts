@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PlansView, type PlansBilling } from '@/app/_shared/components/auditely/plansView/plansView';
 import type { UsageSummary } from '@/app/_shared/lib/usage/plans';
+import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 
 const RESETS = '2026-11-01T00:00:00.000Z';
 const freeSummary = (search: number, audit: number): UsageSummary => ({
@@ -89,6 +90,13 @@ describe('PlansView', () => {
     expect(linkTo(html, 'Yearly')).not.toContain('aria-current');
     expect(html).toContain('Two months free with yearly billing.');
     expect(html).not.toContain('Coming soon');
+  });
+
+  it('offers monthly or yearly in the landing page’s pill', () => {
+    const html = render(free, base);
+    expect(html).toContain(`role="group" aria-label="Billing period" class="${periodTrackClasses}"`);
+    expect(linkTo(html, 'Monthly')).toContain(`class="${periodOptionClasses(true)}"`);
+    expect(linkTo(html, 'Yearly')).toContain(`class="${periodOptionClasses(false)}"`);
   });
 
   it('shows yearly prices when yearly is picked', () => {
