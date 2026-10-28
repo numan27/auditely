@@ -12,7 +12,7 @@ import type { UsageSummary } from '@/app/_shared/lib/usage/plans';
 const REFRESH_DEBOUNCE_MS = 1000;
 
 interface UsageProviderProps {
-  /** This month's usage, read on the server; null when it couldn't be */
+  /** The current allowance's usage, read on the server; null when it couldn't be */
   initial: UsageSummary | null;
   children: ReactNode;
 }

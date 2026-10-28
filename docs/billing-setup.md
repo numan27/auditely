@@ -8,7 +8,7 @@ downgrade, or a switch from yearly to monthly, waits for the end of the period a
 
 Stripe tells Auditely about every new, changed or cancelled subscription through a webhook, and that is
 what sets an account's plan. `PLAN_OVERRIDES` still gives testers a plan without paying, but a paid
-subscription comes first. Free allowances reset on the first of each month, UTC. A paid plan's
+subscription comes first. Free allowances renew every 30 days from sign-up. A paid plan's
 allowances reset each month on the day it was bought, yearly plans included.
 
 Until `STRIPE_SECRET_KEY` is set, the plans page says "Coming soon", as it does now. Sign-ups stay closed:

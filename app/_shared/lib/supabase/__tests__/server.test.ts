@@ -11,6 +11,9 @@ const fake = vi.hoisted(() => ({
   subscription: null as Record<string, unknown> | null,
   subscriptionError: null as { message: string } | null,
   subscriptionFilter: null as [string, string] | null,
+  joined: null as Record<string, unknown> | null,
+  joinedError: null as { message: string } | null,
+  joinedAsked: null as [string, string, string] | null,
 }));
 
 vi.mock('@supabase/ssr', () => ({
@@ -18,10 +21,14 @@ vi.mock('@supabase/ssr', () => ({
     fake.clientOptions = options;
     return {
       auth: { getClaims: async () => ({ data: fake.claims ? { claims: fake.claims } : null, error: null }) },
-      // The account's own subscriptions row, read as the user
-      from: () => ({
-        select: () => ({
+      // The account's own subscriptions and profiles rows, read as the user
+      from: (table: string) => ({
+        select: (columns: string) => ({
           eq: (column: string, value: string) => {
+            if (table === 'profiles') {
+              fake.joinedAsked = [columns, column, value];
+              return { maybeSingle: async () => ({ data: fake.joined, error: fake.joinedError }) };
+            }
             fake.subscriptionFilter = [column, value];
             return { maybeSingle: async () => ({ data: fake.subscription, error: fake.subscriptionError }) };
           },
@@ -60,6 +67,9 @@ beforeEach(() => {
   fake.subscription = null;
   fake.subscriptionError = null;
   fake.subscriptionFilter = null;
+  fake.joined = null;
+  fake.joinedError = null;
+  fake.joinedAsked = null;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -76,7 +86,25 @@ describe('userDb', () => {
 describe('getSession', () => {
   it('maps the claims to an account, owner by email', async () => {
     fake.claims = { sub: 'u1', email: 'Owner@Example.com' };
-    expect((await getSession())?.account).toEqual({ id: 'u1', email: 'owner@example.com', isOwner: true, subscription: null });
+    expect((await getSession())?.account).toEqual({ id: 'u1', email: 'owner@example.com', isOwner: true, subscription: null, joinedAt: null });
+  });
+
+  it('puts the day the account was made on it, which a Free allowance counts 30 days from', async () => {
+    fake.claims = { sub: 'u2', email: 'tester@x.com' };
+    vi.stubEnv('ALLOWED_EMAILS', 'tester@x.com');
+    fake.joined = { created_at: '2026-10-27T15:00:00+00:00' };
+    expect((await getSession())?.account.joinedAt).toBe('2026-10-27T15:00:00+00:00');
+    expect(fake.joinedAsked).toEqual(['created_at', 'id', 'u2']);
+  });
+
+  it('signs in without a sign-up date when the profile cannot be read', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fake.claims = { sub: 'u2', email: 'tester@x.com' };
+    vi.stubEnv('ALLOWED_EMAILS', 'tester@x.com');
+    fake.joinedError = { message: 'timeout' };
+    const session = await getSession();
+    expect(session?.account.id).toBe('u2');
+    expect(session?.account.joinedAt).toBeNull();
   });
 
   it("puts the account's live subscription on it, read as the user", async () => {

@@ -58,8 +58,8 @@ export function limitMessage(limit: LimitReached): string {
   const [one, many] = NOUNS[limit.kind];
   if (limit.limit === 0) return `${capitalize(many)} aren't part of the ${PLANS[limit.plan].name} plan.`;
   const date = formatResetDate(limit.resetsAt);
-  if (limit.limit === 1) return `You've used this month's ${one}. You get another on ${date}.`;
-  return `You've used your ${count(limit.limit)} ${many} this month. They reset on ${date}.`;
+  if (limit.limit === 1) return `You've used your ${one}. You get another on ${date}.`;
+  return `You've used your ${count(limit.limit)} ${many}. They reset on ${date}.`;
 }
 
 /** The first plan above this one that gives more of the kind, or null above Agency */
@@ -80,7 +80,7 @@ export function askForMore(asked: LimitReached | Feature): string {
   if (typeof asked === 'string') return `I'd like to try ${lowerFirst(FEATURE_NAMES[asked])} during the beta.`;
   const many = NOUNS[asked.kind][1];
   if (asked.limit === 0) return `I'd like to try ${many} during the beta.`;
-  return `I've run out of ${many} this month. Could I have more for the beta?`;
+  return `I've used all my ${many}. Could I have more for the beta?`;
 }
 
 export function featureMessage(feature: Feature): string {
@@ -99,7 +99,7 @@ export function meterLabel(summary: UsageSummary): { text: string; empty: boolea
   }
   if (!closest) return null;
   const [one, many] = NOUNS[closest.kind];
-  if (closest.left === 0) return { text: `No ${many} left this month`, empty: true };
+  if (closest.left === 0) return { text: `No ${many} left until ${formatResetDate(summary.resetsAt)}`, empty: true };
   const noun = closest.limit === 1 ? one : many;
-  return { text: `${count(closest.left)} of ${count(closest.limit)} ${noun} left this month`, empty: false };
+  return { text: `${count(closest.left)} of ${count(closest.limit)} ${noun} left`, empty: false };
 }

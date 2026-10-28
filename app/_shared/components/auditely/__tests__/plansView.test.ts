@@ -33,9 +33,9 @@ const render = (summary: UsageSummary | null, billing: PlansBilling) => renderTo
 const linkTo = (html: string, label: string) => html.match(new RegExp(`<a[^>]*>${label}</a>`))?.[0] ?? '';
 
 describe('PlansView', () => {
-  it('shows this month for a Free account and marks its plan', () => {
+  it('shows when a Free account\'s allowances reset and marks its plan', () => {
     const html = render(freeSummary(1, 2), notReady);
-    expect(html).toContain('Your plan: Free. This month&#x27;s allowances reset on Nov 1.');
+    expect(html).toContain('Your plan: Free. Your allowances reset on Nov 1.');
     expect(html).toContain('1 of 1 search used');
     expect(html).toContain('2 of 5 audits used');
     expect(html).not.toContain('email lookups used');
@@ -72,7 +72,7 @@ describe('PlansView', () => {
 
   it('says when usage could not be loaded', () =>
     expect(render(null, base)).toContain(
-      'Couldn&#x27;t load this month&#x27;s usage. Refresh the page to try again.'
+      'Couldn&#x27;t load your usage. Refresh the page to try again.'
     ));
 
   it('lists branding, mailbox and HubSpot as paid features', () => {

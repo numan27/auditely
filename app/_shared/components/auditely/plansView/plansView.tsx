@@ -32,9 +32,9 @@ const NONE: Record<UsageKind, string> = {
 const usd = (n: number) => `$${n.toLocaleString('en-US')}`;
 
 function lead(summary: UsageSummary | null): string {
-  if (!summary) return "Couldn't load this month's usage. Refresh the page to try again.";
+  if (!summary) return "Couldn't load your usage. Refresh the page to try again.";
   if (summary.plan === 'owner') return 'Your account has no limits.';
-  return `Your plan: ${PLANS[summary.plan].name}. This month's allowances reset on ${formatResetDate(summary.resetsAt)}.`;
+  return `Your plan: ${PLANS[summary.plan].name}. Your allowances reset on ${formatResetDate(summary.resetsAt)}.`;
 }
 
 function UsageRow({ kind, used, limit }: { kind: UsageKind; used: number; limit: number }) {
@@ -212,7 +212,7 @@ function PlanColumn({ plan, current, billing }: { plan: Plan; current: boolean; 
   );
 }
 
-/** The account's plan and this month's usage, beside what Free, Pro and Agency include and the way to buy them */
+/** The account's plan and its usage so far, beside what Free, Pro and Agency include and the way to buy them */
 export function PlansView({ summary, billing }: { summary: UsageSummary | null; billing: PlansBilling }) {
   const buying = isBuying(billing);
   const limited =
@@ -231,7 +231,7 @@ export function PlansView({ summary, billing }: { summary: UsageSummary | null; 
 
       {limited.length > 0 && (
         <section className="mt-10 max-w-md">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">This month</h2>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Used so far</h2>
           <ul className="mt-4 space-y-4">
             {limited.map((row) => (
               <UsageRow key={row.kind} {...row} />

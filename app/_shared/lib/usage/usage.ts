@@ -1,6 +1,6 @@
 // app/_shared/lib/usage/usage.ts
 
-// Each account's monthly allowances, counted in usage_events. A costly call claims
+// Each account's allowances, counted in usage_events over its period (plans.ts usagePeriod). A costly call claims
 // its use first through claim_usage, which counts and records in one locked step,
 // so requests at once can't all slip under the limit; a call that fails before
 // doing the costly work gives the claim back. The owner is never counted. A user
@@ -14,7 +14,7 @@ import { planFor, usagePeriod, USAGE_KINDS, type LimitReached, type UsageKind, t
 import { limitMessage } from './usageCopy';
 
 const USAGE_MIGRATION = 'docs/migrations/2026-10-28-usage.sql';
-const UNAVAILABLE = "Couldn't check this month's allowance. Try again in a minute.";
+const UNAVAILABLE = "Couldn't check your allowance. Try again in a minute.";
 
 export type Claim =
   | { ok: true; release: () => Promise<void> }
@@ -77,7 +77,7 @@ export function meterFor(account: Account, now: () => Date = () => new Date()): 
   return { claim, notOnPlan };
 }
 
-/** This month's use of each allowance, as the signed-in user sees it; null when it can't be counted */
+/** The current period's use of each allowance, as the signed-in user sees it; null when it can't be counted */
 export async function usageSummary(db: Db, account: Account, now: Date = new Date()): Promise<UsageSummary | null> {
   const plan = planFor(account);
   const { start, end } = usagePeriod(account, now);

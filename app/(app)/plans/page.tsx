@@ -1,6 +1,6 @@
 // app/(app)/plans/page.tsx
 
-// The account's plan, this month's usage and what each plan includes, with the
+// The account's plan, the current allowance's usage and what each plan includes, with the
 // way to buy Pro or Agency (Stripe Checkout) or manage a plan already bought (the
 // billing portal). ?billing=yearly picks yearly prices; Checkout comes back with
 // ?subscribed=1. During the beta the prices show but nothing can be bought.

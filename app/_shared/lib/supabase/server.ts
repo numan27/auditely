@@ -47,8 +47,18 @@ export async function getSession(): Promise<Session | null> {
   if (!claims?.sub || typeof claims.email !== 'string' || !claims.email) return null;
   const email = claims.email.trim().toLowerCase();
   if (!canSignIn(email)) return null;
-  const subscription = await subscriptionOf(db, claims.sub);
-  return { db, account: { id: claims.sub, email, isOwner: isOwnerEmail(email), subscription } };
+  const [subscription, joinedAt] = await Promise.all([subscriptionOf(db, claims.sub), joinedAtOf(db, claims.sub)]);
+  return { db, account: { id: claims.sub, email, isOwner: isOwnerEmail(email), subscription, joinedAt } };
+}
+
+/** When the account was made, from its own profile row; null when that can't be read, and usage then counts by the calendar month */
+async function joinedAtOf(db: Db, userId: string): Promise<string | null> {
+  const { data, error } = await db.from('profiles').select('created_at').eq('id', userId).maybeSingle();
+  if (error) {
+    console.error(`[auth] Read no sign-up date for ${userId}: run ${ACCOUNTS_MIGRATION} in Supabase (${error.message})`);
+    return null;
+  }
+  return (data?.created_at as string | undefined) ?? null;
 }
 
 /** The owner's user id, found by OWNER_EMAIL; null when the owner hasn't signed in yet */

@@ -40,6 +40,6 @@ export const FREE_AUDIT_COPY = {
   failed: (host: string, reason: string) =>
     `Couldn't audit ${host}: ${midSentence(reason)}. Check the address and try again. This didn't use your free audit.`,
   keepTitle: 'Keep this audit',
-  keepText: `Sign up free and it's saved to your account, with a PDF to send and ${audits} of your own every month.`,
+  keepText: `Sign up free and it's saved to your account, with a PDF to send and ${audits} of your own every 30 days.`,
   used: `Your free audit is used. Sign up free to run ${audits} a month, or audit a whole city's businesses on Pro.`,
 };

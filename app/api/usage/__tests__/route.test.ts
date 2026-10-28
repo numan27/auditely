@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/usage', () => {
-  it("answers this month's usage for the signed-in account", async () => {
+  it('answers the usage of the signed-in account\'s current allowance', async () => {
     usageSummary.mockResolvedValue(SUMMARY);
     const res = await GET();
     expect(res.status).toBe(200);
@@ -35,6 +35,6 @@ describe('GET /api/usage', () => {
     usageSummary.mockResolvedValue(null);
     const res = await GET();
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Couldn't load this month's usage." });
+    expect(await res.json()).toEqual({ error: "Couldn't load your usage." });
   });
 });

@@ -14,7 +14,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
-  // The plans and this month's allowances; Checkout comes back to /plans/done
+  // The plans and the current allowances; Checkout comes back to /plans/done
   PLANS: '/plans',
   PLANS_DONE: '/plans/done',
   // Private PDF report links (/report/{signed token}) — public, the token is the key

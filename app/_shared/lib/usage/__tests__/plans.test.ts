@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PLANS, parsePlanOverrides, planFor, calendarMonth, usagePeriod, planHas, exhausted, readLimit, type UsageSummary,
+  PLANS, parsePlanOverrides, planFor, calendarMonth, allowanceWindow, usagePeriod, planHas, exhausted, readLimit, type UsageSummary,
 } from '@/app/_shared/lib/usage/plans';
 
 const yearly = {
@@ -58,11 +58,34 @@ describe('calendarMonth', () => {
     expect(calendarMonth(new Date('2026-12-15T12:00:00Z')).end.toISOString()).toBe('2027-01-01T00:00:00.000Z'));
 });
 
+describe('allowanceWindow', () => {
+  const joined = new Date('2026-10-27T15:00:00Z');
+  const window = (now: string) => {
+    const { start, end } = allowanceWindow(joined, new Date(now));
+    return [start.toISOString(), end.toISOString()];
+  };
+  it('runs 30 days from the moment the account was made', () =>
+    expect(window('2026-10-28T09:00:00Z')).toEqual(['2026-10-27T15:00:00.000Z', '2026-11-26T15:00:00.000Z']));
+  it('starts the next 30 days the moment one ends', () =>
+    expect(window('2026-11-26T15:00:00Z')).toEqual(['2026-11-26T15:00:00.000Z', '2026-12-26T15:00:00.000Z']));
+  it('keeps counting in 30s, across months and years', () =>
+    expect(window('2027-01-10T00:00:00Z')).toEqual(['2026-12-26T15:00:00.000Z', '2027-01-25T15:00:00.000Z']));
+  it('is the first 30 days for a clock a little behind the sign-up', () =>
+    expect(window('2026-10-27T14:59:00Z')).toEqual(['2026-10-27T15:00:00.000Z', '2026-11-26T15:00:00.000Z']));
+});
+
 describe('usagePeriod', () => {
-  it('counts a paid plan from its anchor and Free by the calendar month', () => {
-    const now = new Date('2026-10-27T12:00:00Z');
-    expect(usagePeriod({ isOwner: false, subscription: yearly }, now).start.toISOString()).toBe('2026-10-14T09:30:00.000Z');
+  const now = new Date('2026-10-28T12:00:00Z');
+  it('counts a paid plan from its billing anchor, even with a sign-up date', () =>
+    expect(usagePeriod({ isOwner: false, subscription: yearly, joinedAt: '2026-10-27T15:00:00Z' }, now).start.toISOString())
+      .toBe('2026-10-14T09:30:00.000Z'));
+  it('counts Free in 30 days from sign-up, not to the end of the calendar month', () =>
+    expect(usagePeriod({ isOwner: false, subscription: null, joinedAt: '2026-10-27T15:00:00.000Z' }, now).end.toISOString())
+      .toBe('2026-11-26T15:00:00.000Z'));
+  it('falls back to the calendar month when the sign-up date is unknown or unreadable', () => {
     expect(usagePeriod({ isOwner: false, subscription: null }, now).start.toISOString()).toBe('2026-10-01T00:00:00.000Z');
+    expect(usagePeriod({ isOwner: false, subscription: null, joinedAt: null }, now).end.toISOString()).toBe('2026-11-01T00:00:00.000Z');
+    expect(usagePeriod({ isOwner: false, subscription: null, joinedAt: 'soon' }, now).end.toISOString()).toBe('2026-11-01T00:00:00.000Z');
   });
 });
 

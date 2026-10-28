@@ -19,12 +19,12 @@ const withUsage = (summary: UsageSummary | null, el: ReactElement) =>
 describe('UsageMeter', () => {
   it('shows what is left and links to the plans', () => {
     const html = withUsage(freeSummary(0, 2), createElement(UsageMeter));
-    expect(html).toContain('3 of 5 audits left this month');
+    expect(html).toContain('3 of 5 audits left');
     expect(html).toContain('href="/plans"');
   });
 
   it('warns when an allowance is used up', () =>
-    expect(withUsage(freeSummary(1, 0), createElement(UsageMeter))).toContain('No searches left this month'));
+    expect(withUsage(freeSummary(1, 0), createElement(UsageMeter))).toContain('No searches left until Nov 1'));
 
   it('shows no meter without limits or outside the app', () => {
     expect(withUsage(null, createElement(UsageMeter))).toBe('');
@@ -40,7 +40,7 @@ describe('UpgradeModal', () => {
       createElement(UpgradeModal, { prompt: { limit: { kind: 'search', plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {}, checkoutOpen: true })
     );
     expect(html).toContain('Monthly limit reached');
-    expect(html).toContain('You&#x27;ve used this month&#x27;s search. You get another on Nov 1.');
+    expect(html).toContain('You&#x27;ve used your search. You get another on Nov 1.');
     expect(html).toContain('Pro gives you 25 searches a month.');
     expect(html).toContain('See plans');
     expect(html).toContain('href="/plans"');
@@ -82,7 +82,7 @@ describe('UpgradeModal', () => {
     const html = renderToStaticMarkup(
       createElement(UpgradeModal, { prompt: { limit: { kind: 'audit', plan: 'free', limit: 2, resetsAt: '2026-11-01T00:00:00.000Z' } }, onClose() {}, checkoutOpen: false })
     );
-    expect(html).toContain('You&#x27;ve used your 2 audits this month. They reset on Nov 1.');
+    expect(html).toContain('You&#x27;ve used your 2 audits. They reset on Nov 1.');
     expect(html).toContain('Pro gives you 250 audits a month.');
     expect(html).toContain('Paid plans open after the beta. Until then, ask for more and we&#x27;ll raise your limit if we can.');
     expect(html).toContain('Ask for more');

@@ -8,7 +8,7 @@ import { ChevronRightIcon } from '@/app/_shared/components/ui/icons/icons';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
-import { countOf } from '@/app/_shared/lib/usage/usageCopy';
+import { countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 
 interface SavedSearch {
@@ -21,7 +21,7 @@ interface SavedSearch {
 const SHOWN = 6;
 
 /**
- * No saved searches yet: what to do first, and what this month's plan allows. The owner, with no limits,
+ * No saved searches yet: what to do first, and what the plan allows until it renews. The owner, with no limits,
  * and the demo, with no plan, keep the short note.
  */
 export function FirstSearch() {
@@ -46,7 +46,7 @@ export function FirstSearch() {
       </p>
       {search.limit !== null && audit.limit !== null && (
         <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">
-          {`Your ${PLANS[summary.plan].name} plan includes ${countOf('search', search.limit)} and ${countOf('audit', audit.limit)} this month.`}
+          {`Your ${PLANS[summary.plan].name} plan includes ${countOf('search', search.limit)} and ${countOf('audit', audit.limit)}. They renew on ${formatResetDate(summary.resetsAt)}.`}
         </p>
       )}
     </section>

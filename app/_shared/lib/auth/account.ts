@@ -13,6 +13,8 @@ export interface Account {
   isOwner: boolean;
   /** The live Stripe subscription; getSession fills it, and absent reads as none */
   subscription?: Subscription | null;
+  /** When the account was made (its profile row's created_at), which Free allowances count 30 days from; getSession fills it */
+  joinedAt?: string | null;
 }
 
 const normalize = (email: string) => email.trim().toLowerCase();

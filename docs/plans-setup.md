@@ -2,8 +2,8 @@
 
 Every account except yours (`OWNER_EMAIL`) now has a plan, and each plan has a monthly allowance of
 searches, audits and email lookups. Free is 1 search, 2 audits and no email lookups a month; Pro and
-Agency give more and add Audit all and exporting. Allowances reset on the first of each month, UTC. Your
-own account has no limits and is never counted.
+Agency give more and add Audit all and exporting. Free allowances renew every 30 days from the moment
+the account was made (its `profiles.created_at`). Your own account has no limits and is never counted.
 
 Nobody can buy a plan yet: payments come later, and `/plans` shows "Coming soon" until then. Until
 then you give testers a plan yourself (step 2).
@@ -12,7 +12,7 @@ then you give testers a plan yourself (step 2).
 
 Run it once `docs/migrations/2026-10-28-accounts.sql` has run (`docs/accounts-setup.md`, step 7). It can
 go before or after the deploy: your account doesn't use it, and the other accounts get "Couldn't check
-this month's allowance. Try again in a minute." until it has run.
+your allowance. Try again in a minute." until it has run.
 
 Supabase → SQL Editor → New query: paste all of `docs/migrations/2026-10-28-usage.sql` and run it.
 "Success. No rows returned" means it's done. It's safe to run again, and it runs as one transaction: an
@@ -49,5 +49,5 @@ Their header shows the full allowance again after a page refresh.
 ## Check it
 
 Sign in as a Free tester (an address in `ALLOWED_EMAILS` that isn't in `PLAN_OVERRIDES`), run one
-search, and the header says "No searches left this month". A second search answers "You've used this
-month's search. You get another on …" and offers the plans.
+search, and the header says "No searches left until …", 30 days after the account was made. A second
+search answers "You've used your search. You get another on …" and offers the plans.

@@ -3,8 +3,8 @@
 // The plans, their monthly allowances and what each one unlocks. The owner has
 // no limits and is never counted. A live Stripe subscription sets an account's
 // plan; PLAN_OVERRIDES (email:plan pairs) still gives testers one without paying.
-// Free allowances reset on the first of each calendar month, UTC; a paid plan's
-// every month from its billing anchor. Client-safe: no server imports.
+// Free allowances renew every 30 days from the moment the account was made; a
+// paid plan's every month from its billing anchor. Client-safe: no server imports.
 
 import type { Account } from '@/app/_shared/lib/auth/account';
 import { checkoutOpen, monthlyWindow } from '@/app/_shared/lib/billing/billingRules';
@@ -98,9 +98,28 @@ export function calendarMonth(now: Date): { start: Date; end: Date } {
   return { start: new Date(Date.UTC(year, month, 1)), end: new Date(Date.UTC(year, month + 1, 1)) };
 }
 
-/** The month an account's allowances are counted in: from its billing anchor when it pays, else the calendar month */
-export function usagePeriod(account: Pick<Account, 'isOwner' | 'subscription'>, now: Date): { start: Date; end: Date } {
-  return account.subscription ? monthlyWindow(new Date(account.subscription.anchor), now) : calendarMonth(now);
+/** How long a Free allowance lasts before it renews */
+export const ALLOWANCE_DAYS = 30;
+const ALLOWANCE_MS = ALLOWANCE_DAYS * 86_400_000;
+
+/** The run of 30 days from `joined` that `now` falls in; a clock behind the sign-up gets the first */
+export function allowanceWindow(joined: Date, now: Date): { start: Date; end: Date } {
+  const runs = Math.max(0, Math.floor((now.getTime() - joined.getTime()) / ALLOWANCE_MS));
+  const start = new Date(joined.getTime() + runs * ALLOWANCE_MS);
+  return { start, end: new Date(start.getTime() + ALLOWANCE_MS) };
+}
+
+/**
+ * The period an account's allowances are counted in: the billing month when it pays, else 30 days from its sign-up.
+ * Without a readable sign-up date, the calendar month.
+ */
+export function usagePeriod(
+  account: Pick<Account, 'isOwner' | 'subscription' | 'joinedAt'>,
+  now: Date
+): { start: Date; end: Date } {
+  if (account.subscription) return monthlyWindow(new Date(account.subscription.anchor), now);
+  const joined = account.joinedAt ? new Date(account.joinedAt) : null;
+  return joined && !Number.isNaN(joined.getTime()) ? allowanceWindow(joined, now) : calendarMonth(now);
 }
 
 export function planHas(plan: PlanId, feature: Feature): boolean {

@@ -46,7 +46,7 @@ describe('emailFinderNotice', () => {
 
   it('says the lookups ran out', () => {
     expect(emailFinderNotice('Acme', undefined, usedUp)).toBe(
-      "No email found for Acme, and no other contact details on its website. You've used your 100 email lookups this month. They reset on Nov 14."
+      "No email found for Acme, and no other contact details on its website. You've used your 100 email lookups. They reset on Nov 14."
     );
   });
 

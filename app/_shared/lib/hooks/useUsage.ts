@@ -13,7 +13,7 @@ export type UpgradePrompt = ({ limit: LimitReached } | { feature: Feature }) & {
 };
 
 export interface Usage {
-  /** This month's use of each allowance; null until it could be loaded */
+  /** The current period's use of each allowance; null until it could be loaded */
   summary: UsageSummary | null;
   /** Reads the usage again, at most once a second */
   refresh: () => void;

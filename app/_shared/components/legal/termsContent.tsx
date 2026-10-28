@@ -43,8 +43,9 @@ export function TermsContent() {
 
       <LegalSection title="Fair use and limits">
         <p>
-          Each plan comes with a monthly allowance of searches, audits and email lookups, shown on the Plans page.
-          Allowances reset each month and don&apos;t roll over.
+          Each plan comes with an allowance of searches, audits and email lookups, shown on the Plans page. Free
+          allowances renew every 30 days from the day you sign up, and a paid plan&apos;s with each billing month.
+          Unused allowances don&apos;t roll over.
         </p>
         <p>
           The free audit on our home page is one per visitor&apos;s network, and only so many run each day. We may slow

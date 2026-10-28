@@ -7,13 +7,16 @@ const reached = (over: Partial<LimitReached> = {}): LimitReached =>
 
 describe('limitMessage', () => {
   it('says how many were used and when they reset, in the spec words', () =>
-    expect(limitMessage(reached())).toBe("You've used your 25 searches this month. They reset on Nov 14."));
+    expect(limitMessage(reached())).toBe("You've used your 25 searches. They reset on Nov 14."));
   it('groups thousands', () =>
     expect(limitMessage(reached({ kind: 'audit', plan: 'agency', limit: 1000, resetsAt: '2026-12-01T00:00:00.000Z' })))
-      .toBe("You've used your 1,000 audits this month. They reset on Dec 1."));
+      .toBe("You've used your 1,000 audits. They reset on Dec 1."));
   it('reads naturally for an allowance of one', () =>
-    expect(limitMessage(reached({ plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' })))
-      .toBe("You've used this month's search. You get another on Nov 1."));
+    expect(limitMessage(reached({ plan: 'free', limit: 1, resetsAt: '2026-11-26T15:00:00.000Z' })))
+      .toBe("You've used your search. You get another on Nov 26."));
+  it('never calls the 30 days a month', () =>
+    expect(limitMessage(reached({ kind: 'audit', plan: 'free', limit: 2, resetsAt: '2026-11-26T15:00:00.000Z' })))
+      .toBe("You've used your 2 audits. They reset on Nov 26."));
   it('says when the plan never had any', () =>
     expect(limitMessage(reached({ kind: 'email_lookup', plan: 'free', limit: 0 }))).toBe("Email lookups aren't part of the Free plan."));
 });
@@ -46,11 +49,11 @@ describe('meterLabel', () => {
     usage: { search: { used: search, limit: PLANS[plan].limits.search }, audit: { used: audit, limit: PLANS[plan].limits.audit }, email_lookup: { used: 0, limit: PLANS[plan].limits.email_lookup } },
   });
   it('shows the allowance closest to running out, audits on a tie', () => {
-    expect(meterLabel(summary(0, 0))).toEqual({ text: '2 of 2 audits left this month', empty: false });
-    expect(meterLabel(summary(0, 50, 'pro'))).toEqual({ text: '200 of 250 audits left this month', empty: false });
+    expect(meterLabel(summary(0, 0))).toEqual({ text: '2 of 2 audits left', empty: false });
+    expect(meterLabel(summary(0, 50, 'pro'))).toEqual({ text: '200 of 250 audits left', empty: false });
   });
-  it('says none are left', () => expect(meterLabel(summary(1, 0))).toEqual({ text: 'No searches left this month', empty: true }));
-  it('never goes below zero', () => expect(meterLabel(summary(0, 9))?.text).toBe('No audits left this month'));
+  it('says none are left, and until when', () => expect(meterLabel(summary(1, 0))).toEqual({ text: 'No searches left until Nov 1', empty: true }));
+  it('never goes below zero', () => expect(meterLabel(summary(0, 9))?.text).toBe('No audits left until Nov 1'));
   it('shows nothing for an account without limits', () => expect(meterLabel(summary(3, 3, 'owner'))).toBeNull());
 });
 
@@ -64,8 +67,8 @@ describe('featureMessage for per-user settings', () => {
 
 describe('askForMore', () => {
   it('starts the feedback message a tester sends when they run out', () => {
-    expect(askForMore(reached({ kind: 'audit', plan: 'free', limit: 2 }))).toBe("I've run out of audits this month. Could I have more for the beta?");
-    expect(askForMore(reached({ kind: 'search', plan: 'free', limit: 1 }))).toBe("I've run out of searches this month. Could I have more for the beta?");
+    expect(askForMore(reached({ kind: 'audit', plan: 'free', limit: 2 }))).toBe("I've used all my audits. Could I have more for the beta?");
+    expect(askForMore(reached({ kind: 'search', plan: 'free', limit: 1 }))).toBe("I've used all my searches. Could I have more for the beta?");
     expect(askForMore(reached({ kind: 'email_lookup', plan: 'free', limit: 0 }))).toBe("I'd like to try email lookups during the beta.");
   });
 

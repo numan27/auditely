@@ -23,18 +23,18 @@ const OWNER_SEARCH = 'Enter a business type and a city.';
 const OWNER_URL = 'Paste a prospect\'s website to see how it scores';
 
 describe('the empty workspace', () => {
-  it("tells a new account what to do first, with this month's allowance", () => {
+  it('tells a new account what to do first, with its allowance and when it renews', () => {
     const search = withUsage(summary('free', 1, 2), createElement(FirstSearch));
     expect(search).toMatch(/<h2[^>]*>Find your first clients<\/h2>/);
     expect(text(search)).toContain(
       "Search a business type and a city, like dentist in Austin, TX. You'll get every local business we can find, with its website audited on request."
     );
-    expect(text(search)).toContain('Your Free plan includes 1 search and 2 audits this month.');
+    expect(text(search)).toContain('Your Free plan includes 1 search and 2 audits. They renew on Nov 1.');
     expect(text(withUsage(summary('pro', 25, 250), createElement(FirstSearch)))).toContain(
-      'Your Pro plan includes 25 searches and 250 audits this month.'
+      'Your Pro plan includes 25 searches and 250 audits. They renew on Nov 1.'
     );
     expect(text(withUsage(summary('agency', 80, 1000), createElement(FirstSearch)))).toContain(
-      'Your Agency plan includes 80 searches and 1,000 audits this month.'
+      'Your Agency plan includes 80 searches and 1,000 audits. They renew on Nov 1.'
     );
 
     const url = withUsage(summary('free', 1, 2), createElement(NoUrlAudits));

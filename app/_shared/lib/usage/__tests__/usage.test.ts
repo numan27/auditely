@@ -22,6 +22,8 @@ vi.mock('@/app/_shared/lib/supabase/client', () => ({
 const { meterFor, usageSummary } = await import('@/app/_shared/lib/usage/usage');
 
 const tester = { id: 'u2', email: 'tester@x.com', isOwner: false };
+// Signed up on Aug 21 at 08:00 UTC: now() falls in their second 30 days, Sep 20 to Oct 20
+const joined = { ...tester, joinedAt: '2026-08-21T08:00:00.000Z' };
 const owner = { id: 'u1', email: 'owner@x.com', isOwner: true };
 const now = () => new Date('2026-10-14T09:00:00Z');
 // Bought on Mar 14 at 09:30 UTC, yearly: now() is half an hour before this month's window opens
@@ -81,8 +83,18 @@ describe('meterFor', () => {
   it('refuses at the limit with the spec message and the limit', async () => {
     rpc.mockResolvedValue({ data: null, error: null });
     expect(await meterFor(tester, now).claim('search')).toEqual({
-      ok: false, status: 402, error: "You've used this month's search. You get another on Nov 1.",
+      ok: false, status: 402, error: "You've used your search. You get another on Nov 1.",
       limit: { kind: 'search', plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' },
+    });
+  });
+
+  it("counts a Free account's 30 days from its sign-up, and says when the next 30 start", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: null });
+    const claim = await meterFor(joined, now).claim('search');
+    expect(rpc).toHaveBeenCalledWith('claim_usage', { p_user_id: 'u2', p_kind: 'search', p_limit: 1, p_since: '2026-09-20T08:00:00.000Z' });
+    expect(claim).toMatchObject({
+      ok: false, error: "You've used your search. You get another on Oct 20.",
+      limit: { plan: 'free', resetsAt: '2026-10-20T08:00:00.000Z' },
     });
   });
 
@@ -103,7 +115,7 @@ describe('meterFor', () => {
 
   it('fails closed with a 503 when the ledger is missing', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'function claim_usage does not exist' } });
-    expect(await meterFor(tester, now).claim('search')).toEqual({ ok: false, status: 503, error: "Couldn't check this month's allowance. Try again in a minute." });
+    expect(await meterFor(tester, now).claim('search')).toEqual({ ok: false, status: 503, error: "Couldn't check your allowance. Try again in a minute." });
   });
 
   it('gives a claim back by deleting its own row', async () => {
@@ -128,6 +140,12 @@ describe('usageSummary', () => {
     const summary = await usageSummary(userDb({ search: 3 }), subscriber, now());
     expect(summary).toMatchObject({ plan: 'pro', resetsAt: '2026-10-14T09:30:00.000Z', usage: { search: { used: 3, limit: 25 } } });
     expect(filters).toContainEqual(['gte', 'created_at', '2026-09-14T09:30:00.000Z']);
+  });
+
+  it("summarises a Free account's 30 days from its sign-up", async () => {
+    const summary = await usageSummary(userDb({ audit: 1 }), joined, now());
+    expect(summary).toMatchObject({ plan: 'free', resetsAt: '2026-10-20T08:00:00.000Z', usage: { audit: { used: 1, limit: 2 } } });
+    expect(filters).toContainEqual(['gte', 'created_at', '2026-09-20T08:00:00.000Z']);
   });
 
   it('summarises the owner without a query', async () => {
