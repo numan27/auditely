@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { fetchSite, fetchPage, NotPublicError, publicFetch } from '@/app/_shared/lib/audit/siteFetch';
 import type { HostLookup } from '@/app/_shared/lib/utils/publicAddress';
 
@@ -236,5 +238,29 @@ describe('fetchSite and fetchPage on private addresses', () => {
       reason: 'it points to a private address',
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('publicFetch against a name whose answer changes after the check', () => {
+  // A real request to a server on this machine, reached as localhost
+  let server: Server;
+  let port = 0;
+  let requests = 0;
+  beforeEach(async () => {
+    requests = 0;
+    server = createServer((_req, res) => {
+      requests++;
+      res.end('internal');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    port = (server.address() as AddressInfo).port;
+  });
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it('never requests it when the name answers public to the check and private to the connection', async () => {
+    const answers = [['93.184.216.34'], ['127.0.0.1']];
+    const rebinding: HostLookup = async () => (answers.shift() ?? ['127.0.0.1']).map((address) => ({ address, family: 4 }));
+    await expect(publicFetch(`http://localhost:${port}/`, {}, rebinding)).rejects.toBeInstanceOf(NotPublicError);
+    expect(requests).toBe(0);
   });
 });

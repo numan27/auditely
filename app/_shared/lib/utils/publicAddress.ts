@@ -5,7 +5,7 @@
 // can point them at this server's own network or its cloud metadata. Server-only.
 
 import { promises as dns } from 'node:dns';
-import { BlockList, isIP } from 'node:net';
+import { BlockList, isIP, type LookupFunction } from 'node:net';
 
 /** dns.lookup with `all`, which a test replaces */
 export type HostLookup = (host: string) => Promise<{ address: string; family: number }[]>;
@@ -50,4 +50,30 @@ export async function publicHost(host: string, lookup: HostLookup = lookupAll): 
   }
   if (!addresses.length) return 'notFound';
   return addresses.some(({ address }) => isPrivateAddress(address)) ? 'private' : 'public';
+}
+
+/** The code a connection's lookup fails with for a name that has a private address */
+export const NOT_PUBLIC_CODE = 'ENOTPUBLIC';
+
+/**
+ * The lookup a net or tls connection makes for itself, refusing a name with any
+ * private address. The connection then goes to an address this checked, so a
+ * name can't answer public to an earlier check and private here.
+ */
+export function connectLookup(lookup: HostLookup = lookupAll): LookupFunction {
+  return (host, options, callback) => {
+    lookup(host).then(
+      (addresses) => {
+        if (addresses.some(({ address }) => isPrivateAddress(address))) {
+          callback(Object.assign(new Error(`${host} isn't a public address`), { code: NOT_PUBLIC_CODE }), '');
+          return;
+        }
+        const usable = options.family === 4 || options.family === 6 ? addresses.filter((a) => a.family === options.family) : addresses;
+        if (!usable.length) callback(Object.assign(new Error(`${host} wasn't found`), { code: 'ENOTFOUND' }), '');
+        else if (options.all) callback(null, usable);
+        else callback(null, usable[0].address, usable[0].family);
+      },
+      (err: NodeJS.ErrnoException) => callback(err, '')
+    );
+  };
 }

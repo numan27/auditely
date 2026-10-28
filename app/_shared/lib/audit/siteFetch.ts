@@ -3,8 +3,9 @@
 // Fetches a business homepage once (plus robots.txt) for the HTML analyzers
 // and the email finder.
 
+import { Agent } from 'undici';
 import { AUDITELY_URL } from '@/app/_shared/lib/config/site';
-import { lookupAll, publicHost, type HostLookup } from '@/app/_shared/lib/utils/publicAddress';
+import { NOT_PUBLIC_CODE, connectLookup, lookupAll, publicHost, type HostLookup } from '@/app/_shared/lib/utils/publicAddress';
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
@@ -50,9 +51,21 @@ export class NotPublicError extends Error {
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 const NOT_PUBLIC = 'it points to a private address';
 
+// Connections that look the name up again themselves and only go to a public
+// answer, one pool per lookup (a test passes its own)
+const agents = new WeakMap<HostLookup, Agent>();
+function pinnedAgent(lookup: HostLookup): Agent {
+  let agent = agents.get(lookup);
+  if (!agent) agents.set(lookup, (agent = new Agent({ connect: { lookup: connectLookup(lookup) } })));
+  return agent;
+}
+
+const refusedAsPrivate = (err: unknown) => (err as { cause?: { code?: string } }).cause?.code === NOT_PUBLIC_CODE;
+
 /**
  * fetch that follows redirects itself, checking every hop's host is public
- * before requesting it. The response's url is the last hop.
+ * before requesting it, and connecting only to an address that's public when
+ * it connects. The response's url is the last hop.
  */
 export async function publicFetch(
   url: string,
@@ -67,7 +80,13 @@ export async function publicFetch(
     if ((hop.protocol !== 'http:' && hop.protocol !== 'https:') || (await publicHost(hop.hostname, lookup)) !== 'public') {
       throw new NotPublicError(`${hop.hostname || hop.protocol} isn't a public address`);
     }
-    const res = await fetch(target, request);
+    let res: Response;
+    try {
+      res = await fetch(target, { ...request, dispatcher: pinnedAgent(lookup) } as RequestInit);
+    } catch (err) {
+      if (refusedAsPrivate(err)) throw new NotPublicError(`${hop.hostname} isn't a public address`);
+      throw err;
+    }
     const location = res.headers.get('location');
     if (!REDIRECTS.has(res.status) || !location) return res;
     await res.body?.cancel().catch(() => {});
