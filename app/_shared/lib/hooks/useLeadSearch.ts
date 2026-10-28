@@ -9,7 +9,7 @@ import { useBusinessList } from '@/app/_shared/lib/hooks/useBusinessList';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailDiscovery } from '@/app/_shared/lib/hooks/useEmailDiscovery';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
-import { requestSaved, requestSearch } from '@/app/_shared/lib/hooks/leadSearchRequests';
+import { requestSaved, requestSearch, type ExpiredSearch } from '@/app/_shared/lib/hooks/leadSearchRequests';
 import type { UrlAuditRemoval } from '@/app/_shared/lib/hooks/useUrlAudits';
 import { websiteFirst } from '@/app/_shared/lib/utils/businessOrder';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
@@ -43,6 +43,8 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
   // The saved search on screen (null: none, or the demo's sample)
   const [searchId, setSearchId] = useState<string | null>(null);
   const [removal, setRemoval] = useState<UrlAuditRemoval | null>(null);
+  // The saved search on screen is over 30 days old: its leads wait for it to run again
+  const [expired, setExpired] = useState<ExpiredSearch | null>(null);
   // Only the latest search or opened search may fill the list: back and forward can overtake one
   const latest = useRef(0);
 
@@ -53,6 +55,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
     setPending(null);
     setError(null);
     setHasSearched(false);
+    setExpired(null);
     setBusinesses([]);
     return ++latest.current;
   }, [setBusinesses]);
@@ -98,8 +101,9 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
       const result = await requestSaved(id);
       if (run !== latest.current) return;
       setIsSearching(false);
-      if (result.ok) show(result.businesses, result.search);
-      else setError(result.error);
+      if (!result.ok) return setError(result.error);
+      show(result.businesses, result.search);
+      setExpired(result.expired);
     },
     [start, show]
   );
@@ -111,6 +115,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
     setPending(null);
     setError(null);
     setHasSearched(false);
+    setExpired(null);
     setBusinesses([]);
     setQuery(null);
     setSearchId(null);
@@ -155,6 +160,7 @@ export function useLeadSearch({ onSearched }: { onSearched?: (searchId: string) 
     isSearching,
     pending,
     hasSearched,
+    expired,
     error,
     query,
     runKey,

@@ -9,6 +9,8 @@ export interface PlaceResult {
   /** Google rating and review count; left out by providers without reviews (Geoapify, OpenStreetMap) */
   rating?: number | null;
   reviewCount?: number | null;
+  /** Google's id for the place, the one detail its terms let Auditely keep for good */
+  placeId?: string | null;
 }
 
 export type PlacesSearchOutcome =

@@ -29,6 +29,8 @@ const ALLOWED = [
   'app/_shared/lib/freeAudit/freeAuditStore.ts',
   // The owner's numbers across every account (Settings → Growth, owner only)
   'app/_shared/lib/growth/growthStore.ts',
+  // The daily job that blanks Google's place details over 30 days old, across every account
+  'app/_shared/lib/places/placeDataErase.ts',
   'app/_shared/lib/secrets/userSecrets.ts',
   'app/_shared/lib/supabase/server.ts',
   'app/_shared/lib/usage/usage.ts',

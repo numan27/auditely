@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- A free audit requested on devartventures.com (the Requests tab):
   -- { source_id, name, business_type, main_concern, requested_at }; NULL otherwise
   request             JSONB,
+  -- Google's place id, kept for good as Google allows; its other details are kept 30 days
+  -- (docs/place-data-setup.md), and a search run again after that matches its rows by this id
+  place_id            TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -144,6 +147,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_request_source
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_searches_user         ON searches (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_businesses_user       ON businesses (user_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_search_place ON businesses (search_id, place_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user    ON notifications (user_id, created_at DESC);
 
 -- Row Level Security: each signed-in user reaches only their own rows. The app's

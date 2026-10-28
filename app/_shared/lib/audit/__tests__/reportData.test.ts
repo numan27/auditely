@@ -102,6 +102,12 @@ describe('buildPdfProps', () => {
   const business = { name: 'Smile Dental', website: null, address: '123 Main St', phone: null };
   const noReport = { summary: '', improvements: [] };
 
+  // Google's details are blanked after 30 days (placeDataErase.ts): a report link sent before still reads
+  it("names a business whose details were blanked by its website, or as the reader's own", () => {
+    expect(buildPdfProps(audit, { ...business, name: '', website: 'https://www.smile.com/home' }, noReport, contact).businessName).toBe('smile.com');
+    expect(buildPdfProps(audit, { name: '', website: null, address: '', phone: null }, noReport, contact).businessName).toBe('Your business');
+  });
+
   it('passes nulls through and drops non-string improvements', () => {
     const props = buildPdfProps(audit, business, { summary: 'Slow site.', improvements: ['Compress images', 42] }, contact);
     expect(props).toMatchObject({

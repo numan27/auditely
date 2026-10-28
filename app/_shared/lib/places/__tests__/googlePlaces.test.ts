@@ -42,7 +42,7 @@ describe('searchGooglePlaces', () => {
     fetchMock.mockReset();
   });
 
-  it("returns each place's Google rating and review count", async () => {
+  it("returns each place's Google rating, review count and place id", async () => {
     // Google leaves rating and userRatingCount out for a place nobody has reviewed
     fetchMock.mockImplementation(async () =>
       json({
@@ -57,8 +57,8 @@ describe('searchGooglePlaces', () => {
     expect(outcome).toEqual({
       ok: true,
       places: [
-        { name: 'Smile Dental', address: '1 Main St', website: null, phone: null, rating: 4.6, reviewCount: 123 },
-        { name: 'New Dental', address: '2 Main St', website: null, phone: null, rating: null, reviewCount: 0 },
+        { name: 'Smile Dental', address: '1 Main St', website: null, phone: null, rating: 4.6, reviewCount: 123, placeId: 'a' },
+        { name: 'New Dental', address: '2 Main St', website: null, phone: null, rating: null, reviewCount: 0, placeId: 'b' },
       ],
     });
     const mask: string = fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask'];

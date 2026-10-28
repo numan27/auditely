@@ -106,6 +106,16 @@ function pdfFindings(findings: Finding[] | undefined): PdfFinding[] {
 
 type ReportBusiness = { name: string; website: string | null; address: string; phone: string | null };
 
+/** The business's name, or its website's, once Google's details were blanked after 30 days (placeDataErase.ts) */
+function reportName({ name, website }: ReportBusiness): string {
+  if (name.trim()) return name;
+  try {
+    return new URL(website ?? '').hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return 'Your business';
+  }
+}
+
 /** What the PDF says about whose report it is */
 export function pdfBrand(brand: Brand): PdfBrand {
   return {
@@ -134,7 +144,7 @@ export function buildPdfProps(
     : [];
 
   return {
-    businessName: pdfText(business.name),
+    businessName: pdfText(reportName(business)),
     website: business.website ?? '',
     address: pdfText(business.address),
     phone: business.phone && pdfText(business.phone),

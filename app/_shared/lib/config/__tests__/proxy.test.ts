@@ -112,6 +112,12 @@ describe('proxy', () => {
     expect(sentTo(res)).toBeNull();
   });
 
+  it("lets Vercel's cron reach the daily place-data job without a session", async () => {
+    const res = await visit(INBOUND_ROUTES.PLACE_DATA_CRON);
+    expect(res.status).not.toBe(401);
+    expect(sentTo(res)).toBeNull();
+  });
+
   // The emailed link and Google land here before there is a session
   it('lets a logged-out visitor finish signing in', async () => {
     expect(sentTo(await visit(`${ROUTES.AUTH_CALLBACK}?token_hash=h1&type=email&next=%2F`))).toBeNull();

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { isUrlOnlySearch } from '@/app/_shared/lib/config/auditRequests';
+import { placeDataFresh } from '@/app/_shared/lib/places/placeData';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // More than one search returns; a longer request isn't from the app
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'search_id query parameter is required' }, { status: 400 });
   }
 
-  const searchQuery = db.from('searches').select('niche, location').eq('id', searchId).maybeSingle();
+  const searchQuery = db.from('searches').select('niche, location, created_at').eq('id', searchId).maybeSingle();
   const businessQuery = db
     .from('businesses')
     .select(`
@@ -44,7 +45,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Couldn't open this search. Try again in a minute." }, { status: 500 });
   }
 
-  return NextResponse.json({ search: search ?? null, businesses: businesses ?? [] });
+  if (!search) return NextResponse.json({ search: null, businesses: businesses ?? [] });
+  const { niche, location, created_at } = search;
+  const rows = businesses ?? [];
+
+  // Websites added by URL and audit requests aren't from Google, so they're kept as they are
+  if (isUrlOnlySearch(search)) return NextResponse.json({ search: { niche, location }, businesses: rows });
+
+  // Google's terms keep its place details 30 days. A search older than that shows
+  // how many leads it had until it's run again (/api/search refreshes it), and a
+  // refreshed one leaves out the leads Google didn't send again.
+  if (!placeDataFresh(created_at)) {
+    return NextResponse.json({ search: { niche, location }, expired: { count: rows.length }, businesses: [] });
+  }
+  return NextResponse.json({ search: { niche, location }, businesses: rows.filter((b) => placeDataFresh(b.created_at)) });
 }
 
 // Takes leads out of one saved search for good: their audits and reports go with

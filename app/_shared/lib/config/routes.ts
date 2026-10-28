@@ -75,6 +75,8 @@ export const INBOUND_ROUTES = {
   AUDIT_REQUEST: '/api/inbound/audit-request',
   // Stripe sends each subscription change here; its signature (STRIPE_WEBHOOK_SECRET) is the key
   STRIPE_WEBHOOK: '/api/stripe/webhook',
+  // Vercel's cron, once a day (vercel.json), with CRON_SECRET: Google's 30-day limit on place details
+  PLACE_DATA_CRON: '/api/cron/place-data',
 } as const;
 
 // BotID's challenge script and the calls it makes, which withBotId (next.config.ts)
@@ -93,7 +95,8 @@ export const MEDIA_FILES = { WALKTHROUGH: '/media/walkthrough.mp4', WALKTHROUGH_
 // are for everyone, /report/{token} is checked by its signature, /demo shows only
 // the sample checked into the repo, the free audit and the contact form check BotID
 // and their own limits,
-// the inbound route checks its secret, and Stripe's webhook checks Stripe's signature
+// the inbound route checks its secret, Stripe's webhook checks Stripe's signature,
+// and the daily place-data job checks CRON_SECRET
 export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   ROUTES.SIGNUP,
@@ -114,6 +117,7 @@ export const PUBLIC_ROUTES = [
   ROUTES.DEMO,
   INBOUND_ROUTES.AUDIT_REQUEST,
   INBOUND_ROUTES.STRIPE_WEBHOOK,
+  INBOUND_ROUTES.PLACE_DATA_CRON,
 ] as const;
 
 // Pages a logged-in user should be bounced away from (not the callback: a second

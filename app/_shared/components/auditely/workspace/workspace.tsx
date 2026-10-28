@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { AppHeader } from '@/app/_shared/components/auditely/appHeader/appHeader';
 import { DemoBanner } from '@/app/_shared/components/auditely/demoBanner/demoBanner';
 import { DemoVideoThumb } from '@/app/_shared/components/auditely/demoVideoThumb/demoVideoThumb';
+import { ExpiredSearch } from '@/app/_shared/components/auditely/expiredSearch/expiredSearch';
 import { LeadSearchForm } from '@/app/_shared/components/auditely/leadSearchForm/leadSearchForm';
 import { LeadResults } from '@/app/_shared/components/auditely/leadResults/leadResults';
 import { ModeTabs, panelId, tabId, type WorkspaceMode } from '@/app/_shared/components/auditely/modeTabs/modeTabs';
@@ -137,6 +138,9 @@ export function Workspace() {
             )
           ) : !leads.hasSearched ? (
             !leads.error && <RecentSearches onOpen={(searchId) => navigate(searchPath(searchId))} />
+          ) : leads.expired && leads.query ? (
+            // Over 30 days old: running it again refreshes this search in place
+            <ExpiredSearch count={leads.expired.count} onRefresh={() => leads.query && leads.search(leads.query.niche, leads.query.location)} />
           ) : leads.businesses.length === 0 ? (
             <div className="mt-10 rounded-2xl border border-dashed border-[var(--color-border-hover)] px-6 py-12 text-center">
               <p className="font-medium text-[var(--color-text-primary)]">No businesses found</p>

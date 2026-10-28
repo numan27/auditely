@@ -15,6 +15,8 @@ export interface SavedSearch {
   location: string;
   created_at: string;
   business_count: number;
+  /** Over 30 days old: Google's details are hidden until it's run again */
+  expired?: boolean;
 }
 
 export async function loadSavedSearches(): Promise<{ ok: true; searches: SavedSearch[] } | { ok: false; error: string }> {

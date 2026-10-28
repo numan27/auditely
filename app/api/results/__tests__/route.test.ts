@@ -42,6 +42,7 @@ vi.mock('@/app/_shared/lib/supabase/server', async (importOriginal) => ({
 }));
 
 const ok = (data: unknown): Result => ({ data, error: null });
+const daysAgo = (days: number) => new Date(Date.now() - days * 864e5).toISOString();
 const deletes = () => db.state.calls.filter((c) => c.op === 'delete');
 
 async function remove(body: unknown) {
@@ -62,16 +63,50 @@ describe('GET /api/results', () => {
   it("loads the search's businesses among this account's own, not just what Row Level Security lets through", async () => {
     session.current = { db: { from: db.from }, account: { id: 'user-2', email: 'tester@example.com', isOwner: false } };
     db.state.responses = {
-      'searches.select': [ok({ niche: 'dentists', location: 'austin' })],
-      'businesses.select': [ok([{ id: 'b1', audits: [] }])],
+      'searches.select': [ok({ niche: 'dentists', location: 'austin', created_at: daysAgo(3) })],
+      'businesses.select': [ok([{ id: 'b1', created_at: daysAgo(3), audits: [] }])],
     };
     const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
-    expect(await res.json()).toEqual({ search: { niche: 'dentists', location: 'austin' }, businesses: [{ id: 'b1', audits: [] }] });
+    expect(await res.json()).toEqual({
+      search: { niche: 'dentists', location: 'austin' },
+      businesses: [{ id: 'b1', created_at: expect.any(String), audits: [] }],
+    });
     const [businesses] = db.state.calls.filter((c) => c.table === 'businesses');
     expect(businesses.filters).toEqual([
       ['eq', 'search_id', SEARCH],
       ['eq', 'user_id', 'user-2'],
     ]);
+  });
+
+  // Google's terms keep its place details 30 days: an older search's leads wait for a refresh
+  it("hides an old search's leads, saying how many, until it's run again", async () => {
+    db.state.responses = {
+      'searches.select': [ok({ niche: 'dentists', location: 'austin', created_at: daysAgo(31) })],
+      'businesses.select': [ok([{ id: 'b1', created_at: daysAgo(31) }, { id: 'b2', created_at: daysAgo(31) }])],
+    };
+    const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
+    expect(await res.json()).toEqual({ search: { niche: 'dentists', location: 'austin' }, expired: { count: 2 }, businesses: [] });
+  });
+
+  it('shows only the leads whose details are under 30 days old', async () => {
+    // A refresh updates the places Google sent again; the ones it didn't stay old
+    db.state.responses = {
+      'searches.select': [ok({ niche: 'dentists', location: 'austin', created_at: daysAgo(1) })],
+      'businesses.select': [ok([{ id: 'fresh', created_at: daysAgo(1) }, { id: 'old', created_at: daysAgo(45) }])],
+    };
+    const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
+    expect((await res.json()).businesses.map((b: { id: string }) => b.id)).toEqual(['fresh']);
+  });
+
+  it('keeps every website added by URL, however old: none of it is from Google', async () => {
+    db.state.responses = {
+      'searches.select': [ok({ niche: 'website audits', location: 'added by url', created_at: daysAgo(90) })],
+      'businesses.select': [ok([{ id: 'site', created_at: daysAgo(90) }])],
+    };
+    const res = await GET(new NextRequest(`http://localhost/api/results?search_id=${SEARCH}`));
+    const json = await res.json();
+    expect(json.expired).toBeUndefined();
+    expect(json.businesses.map((b: { id: string }) => b.id)).toEqual(['site']);
   });
 
   it("says plainly when the businesses can't be loaded", async () => {

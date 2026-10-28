@@ -3,33 +3,47 @@ import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/search/route';
 import { searchPlaces } from '@/app/_shared/lib/places/searchPlaces';
 
-// Fake Supabase for a first-time search: no cached search (unless cachedSearch is
+// Fake Supabase for a first-time search: no saved search (unless cachedSearch is
 // set), then the search and business inserts succeed (unless searchInsertError or
-// businessInsertError is set). Every insert payload is recorded per table, and every
-// read and delete with its eq() filters and its gte() ranges.
+// businessInsertError is set). Every insert, upsert and update payload is recorded
+// per table, and every read and delete with its eq() filters and its gte() ranges.
 const db = vi.hoisted(() => {
   const inserts: Record<string, unknown> = {};
   const state = {
     businessInsertError: null as string | null,
+    businessUpsertError: null as string | null,
+    businessReadError: null as string | null,
     searchInsertError: null as string | null,
-    cachedSearch: null as { id: string } | null,
+    cachedSearch: null as { id: string; created_at: string } | null,
+    savedRows: [{ id: 'biz-cached' }] as unknown[],
+    upserts: [] as { table: string; payload: unknown }[],
+    updates: [] as { table: string; payload: unknown; filters: unknown[][] }[],
     reads: [] as { table: string; filters: unknown[][]; ranges: unknown[][] }[],
     deletes: [] as { table: string; filters: unknown[][] }[],
   };
   const from = (table: string) => {
     let payload: unknown;
-    let deleting = false;
+    let op = 'select';
     const filters: unknown[][] = [];
     const ranges: unknown[][] = [];
     const result = () => {
-      if (deleting) {
+      if (op === 'delete') {
         state.deletes.push({ table, filters });
         return { data: null, error: null };
       }
-      if (payload === undefined) {
-        state.reads.push({ table, filters, ranges }); // the cache lookup
+      if (op === 'update') {
+        state.updates.push({ table, payload, filters });
+        return { data: null, error: null };
+      }
+      if (op === 'upsert') {
+        state.upserts.push({ table, payload });
+        return { data: null, error: state.businessUpsertError ? { message: state.businessUpsertError } : null };
+      }
+      if (op === 'select') {
+        state.reads.push({ table, filters, ranges });
         if (table === 'searches') return { data: state.cachedSearch, error: null };
-        return { data: [{ id: 'biz-cached' }], error: null };
+        if (state.businessReadError) return { data: null, error: { message: state.businessReadError } };
+        return { data: state.savedRows, error: null };
       }
       if (table === 'searches' && state.searchInsertError) return { data: null, error: { message: state.searchInsertError } };
       if (table === 'businesses' && state.businessInsertError) return { data: null, error: { message: state.businessInsertError } };
@@ -37,15 +51,19 @@ const db = vi.hoisted(() => {
         ? { data: { id: 'search-1' }, error: null }
         : { data: (payload as object[]).map((row, i) => ({ id: `biz-${i}`, ...row })), error: null };
     };
+    const write = (kind: string) => (value: unknown) => {
+      op = kind;
+      payload = value;
+      if (kind === 'insert') inserts[table] = value;
+      return chain;
+    };
     const chain = {
       select: () => chain,
-      insert: (value: unknown) => {
-        payload = value;
-        inserts[table] = value;
-        return chain;
-      },
+      insert: write('insert'),
+      upsert: write('upsert'),
+      update: write('update'),
       delete: () => {
-        deleting = true;
+        op = 'delete';
         return chain;
       },
       eq: (column: string, value: unknown) => {
@@ -85,6 +103,7 @@ vi.mock('@/app/_shared/lib/usage/usage', async (importOriginal) => ({
 
 const freeSearchLimit = { kind: 'search', plan: 'free', limit: 1, resetsAt: '2026-11-01T00:00:00.000Z' };
 const ONE_PLACE = { ok: true as const, places: [{ name: 'Smile Dental', address: '1 Main St', website: null, phone: null }] };
+const daysAgo = (days: number) => new Date(Date.now() - days * 864e5).toISOString();
 
 async function post(body: Record<string, unknown>) {
   const res = await POST(new NextRequest('http://localhost/api/search', { method: 'POST', body: JSON.stringify(body) }));
@@ -95,8 +114,13 @@ beforeEach(() => {
   session.current = { db: { from: db.from }, account: { id: 'owner-1', email: 'owner@example.com', isOwner: true } };
   for (const key of Object.keys(db.inserts)) delete db.inserts[key];
   db.state.businessInsertError = null;
+  db.state.businessUpsertError = null;
+  db.state.businessReadError = null;
   db.state.searchInsertError = null;
   db.state.cachedSearch = null;
+  db.state.savedRows = [{ id: 'biz-cached' }];
+  db.state.upserts = [];
+  db.state.updates = [];
   db.state.reads = [];
   db.state.deletes = [];
   vi.mocked(searchPlaces).mockReset();
@@ -115,7 +139,7 @@ describe('POST /api/search', () => {
       {
         table: 'searches',
         filters: [['user_id', 'user-2'], ['niche', 'dentist'], ['location', 'austin']],
-        ranges: [['created_at', expect.any(String)]],
+        ranges: [],
       },
     ]);
   });
@@ -159,13 +183,80 @@ describe('POST /api/search', () => {
     expect(searchPlaces).not.toHaveBeenCalled();
   });
 
-  it('reuses only a search under 30 days old', async () => {
-    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [] });
-    await post({ niche: 'dentist', location: 'austin' });
-    expect(db.state.reads[0].ranges).toEqual([['created_at', expect.any(String)]]);
-    const since = db.state.reads[0].ranges[0][1] as string;
+  it('reuses a search under 30 days old, showing only its leads with details under 30 days old', async () => {
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(29) };
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
+    expect(status).toBe(200);
+    expect(json).toEqual({ search_id: 'search-old', businesses: [{ id: 'biz-cached' }] });
+    const leads = db.state.reads.find((r) => r.table === 'businesses');
+    expect(leads?.filters).toEqual([['search_id', 'search-old'], ['user_id', 'owner-1']]);
+    expect(leads?.ranges).toEqual([['created_at', expect.any(String)]]);
+    const since = leads?.ranges[0][1] as string;
     expect(Date.now() - Date.parse(since)).toBeGreaterThan(29.9 * 864e5);
     expect(Date.now() - Date.parse(since)).toBeLessThan(30.1 * 864e5);
+  });
+
+  it("refreshes a search over 30 days old from Google instead of saving another, so its leads keep their audits", async () => {
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(31) };
+    db.state.savedRows = [{ id: 'b-smile', place_id: null, name: 'Smile Dental', address: '1 Main St', website: null }];
+    vi.mocked(searchPlaces).mockResolvedValue({
+      ok: true,
+      places: [
+        { name: 'Smile Dental', address: '1 Main St', website: null, phone: '+1 512 555 0100', placeId: 'p1' },
+        { name: 'Bright Dental', address: '2 Main St', website: null, phone: null, placeId: 'p2' },
+      ],
+    });
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
+
+    expect(status).toBe(200);
+    expect(meter.claim).toHaveBeenCalledWith('search');
+    expect(meter.release).not.toHaveBeenCalled();
+    expect(db.inserts.searches).toBeUndefined();
+    expect(db.state.upserts).toEqual([
+      { table: 'businesses', payload: [expect.objectContaining({ id: 'b-smile', phone: '+1 512 555 0100', place_id: 'p1' })] },
+    ]);
+    expect(db.inserts.businesses).toEqual([expect.objectContaining({ search_id: 'search-old', name: 'Bright Dental', place_id: 'p2' })]);
+    expect(db.state.updates).toEqual([{ table: 'searches', payload: { created_at: expect.any(String) }, filters: [['id', 'search-old']] }]);
+    // The refreshed leads come back with their audits, as a saved search opens
+    expect(json.search_id).toBe('search-old');
+    expect(db.state.reads.filter((r) => r.table === 'businesses').at(-1)?.ranges).toEqual([['created_at', expect.any(String)]]);
+  });
+
+  it("keeps an old search's leads when Google finds nothing now, and gives the search back", async () => {
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(40) };
+    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [] });
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
+    expect(status).toBe(200);
+    expect(json).toEqual({ search_id: 'search-old', businesses: [] });
+    expect(meter.release).toHaveBeenCalledTimes(1);
+    expect(db.state.upserts).toEqual([]);
+    expect(db.state.updates).toEqual([]);
+  });
+
+  it("gives the search back when an old search can't be refreshed", async () => {
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(40) };
+    db.state.savedRows = [{ id: 'b-smile', place_id: 'p1', name: 'Smile Dental', address: '1 Main St', website: null }];
+    db.state.businessUpsertError = 'upsert failed';
+    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [{ ...ONE_PLACE.places[0], placeId: 'p1' }] });
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
+    expect(status).toBe(500);
+    expect(json.error).toBe("Couldn't save the search. Try again in a minute.");
+    expect(meter.release).toHaveBeenCalledTimes(1);
+    expect(db.state.updates).toEqual([]);
+  });
+
+  it("says so when a saved search's leads can't be loaded, instead of showing none", async () => {
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(2) };
+    db.state.businessReadError = 'timeout';
+    const { status, json } = await post({ niche: 'dentist', location: 'austin' });
+    expect(status).toBe(500);
+    expect(json.error).toBe("Couldn't open this search. Try again in a minute.");
+  });
+
+  it("saves Google's place id with each business of a new search", async () => {
+    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, places: [{ ...ONE_PLACE.places[0], placeId: 'p1' }] });
+    await post({ niche: 'dentist', location: 'austin' });
+    expect(db.inserts.businesses).toEqual([expect.objectContaining({ search_id: 'search-1', name: 'Smile Dental', place_id: 'p1' })]);
   });
 
   it('claims a search before calling Google', async () => {
@@ -219,7 +310,7 @@ describe('POST /api/search', () => {
   });
 
   it('does not claim when a recent search is reused', async () => {
-    db.state.cachedSearch = { id: 'search-old' };
+    db.state.cachedSearch = { id: 'search-old', created_at: daysAgo(1) };
     const { status, json } = await post({ niche: 'dentist', location: 'austin' });
     expect(status).toBe(200);
     expect(json).toEqual({ search_id: 'search-old', businesses: [{ id: 'biz-cached' }] });

@@ -21,7 +21,9 @@ export interface PdfBusiness {
 type PdfReport = { summary: string; improvements: unknown };
 
 export const pdfFileName = (businessName: string, variant: PdfVariant = 'full'): string => {
-  const name = variant === 'upwork' ? `${businessName} upwork` : businessName;
+  // A business whose Google details were blanked after 30 days has no name
+  const base = businessName.trim() || 'website';
+  const name = variant === 'upwork' ? `${base} upwork` : base;
   return `audit-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().replace(/-+/g, '-')}.pdf`;
 };
 

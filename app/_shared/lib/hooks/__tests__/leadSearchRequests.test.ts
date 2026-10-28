@@ -22,6 +22,14 @@ describe('requestSearch', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ niche: 'dentists', location: 'austin' });
   });
 
+  it("carries each lead's audit, as a saved search reused or refreshed comes back with them", async () => {
+    const audit = { id: 'a1', performance_score: 40 };
+    fetchMock.mockResolvedValue(Response.json({ search_id: 's1', businesses: [{ id: 'b1', audits: { ...audit, ai_reports: null } }] }));
+    const result = await requestSearch('dentists', 'austin');
+    if (!result.ok) throw new Error(result.error);
+    expect(result.businesses).toEqual([{ id: 'b1', audit, ai_report: undefined }]);
+  });
+
   it("passes on the server's reason", async () => {
     fetchMock.mockResolvedValue(Response.json({ error: "Couldn't search Google Maps just now. Try again in a minute." }, { status: 502 }));
     expect(await requestSearch('dentists', 'austin')).toEqual({
@@ -60,6 +68,18 @@ describe('requestSaved', () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.search).toEqual({ niche: 'dentists', location: 'austin' });
     expect(result.businesses.map((b) => b.id)).toEqual(['b1']);
+    expect(result.expired).toBeNull();
+  });
+
+  // Google's terms keep its place details 30 days
+  it('says how many leads an out-of-date search hides', async () => {
+    fetchMock.mockResolvedValue(Response.json({ search: { niche: 'dentists', location: 'austin' }, expired: { count: 7 }, businesses: [] }));
+    expect(await requestSaved('s1')).toEqual({
+      ok: true,
+      businesses: [],
+      search: { niche: 'dentists', location: 'austin' },
+      expired: { count: 7 },
+    });
   });
 
   it("says a deleted search isn't saved any more", async () => {

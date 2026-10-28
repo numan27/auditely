@@ -8,7 +8,7 @@ import { ChevronRightIcon, SearchIcon } from '@/app/_shared/components/ui/icons/
 import { LoadFailed } from '@/app/_shared/components/auditely/loadFailed/loadFailed';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { loadSavedSearches, type SavedSearch } from '@/app/_shared/lib/utils/savedSearches';
-import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
+import { searchCount, searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 import { searchPath } from '@/app/_shared/lib/utils/workspacePath';
 
 const formatDate = (iso: string) =>
@@ -96,7 +96,7 @@ export default function SearchesPage() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-[var(--color-text-primary)]">{searchTitle(search)}</span>
-                      <span className="text-sm text-[var(--color-text-tertiary)]">{search.business_count} businesses</span>
+                      <span className="text-sm text-[var(--color-text-tertiary)]">{searchCount(search)}</span>
                     </span>
                     <span className="hidden text-sm tabular-nums text-[var(--color-text-tertiary)] sm:block">
                       {formatDate(search.created_at)}

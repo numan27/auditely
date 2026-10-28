@@ -151,6 +151,7 @@ export async function searchGooglePlaces(
           // Google omits both for a place with no reviews
           rating: place.rating ?? null,
           reviewCount: place.userRatingCount ?? 0,
+          placeId: place.id,
         });
       }
     }

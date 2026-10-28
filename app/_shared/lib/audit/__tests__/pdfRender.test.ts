@@ -58,6 +58,11 @@ describe('pdfFileName', () => {
     expect(pdfFileName('Smile Dental & Co.')).toBe('audit-smile-dental-co-.pdf');
   });
 
+  it('still names the file when the business has no name', () => {
+    expect(pdfFileName('')).toBe('audit-website.pdf');
+    expect(pdfFileName('  ', 'upwork')).toBe('audit-website-upwork.pdf');
+  });
+
   it('marks the Upwork version, so the two downloads are told apart', () => {
     expect(pdfFileName('Smile Dental', 'upwork')).toBe('audit-smile-dental-upwork.pdf');
     expect(pdfFileName('Smile Dental & Co.', 'upwork')).toBe('audit-smile-dental-co-upwork.pdf');

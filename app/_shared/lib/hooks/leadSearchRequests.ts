@@ -29,17 +29,32 @@ export type SearchAnswer =
 export async function requestSearch(niche: string, location: string): Promise<SearchAnswer> {
   const { ok, data } = await postJson(API_ROUTES.SEARCH, { niche, location });
   if (!ok || !data) return { ok: false, error: reason(data, SEARCH_FAILED), limit: readLimit(data) };
-  const found = data as { businesses?: BusinessWithData[]; search_id?: unknown };
-  return { ok: true, businesses: found.businesses ?? [], searchId: typeof found.search_id === 'string' ? found.search_id : null };
+  // A saved search reused or refreshed comes back with its audits embedded
+  const found = data as { businesses?: BusinessRow[]; search_id?: unknown };
+  return {
+    ok: true,
+    businesses: (found.businesses ?? []).map((b) => withAuditData(b)),
+    searchId: typeof found.search_id === 'string' ? found.search_id : null,
+  };
 }
 
-export type SavedAnswer = { ok: true; businesses: BusinessWithData[]; search: SearchQuery } | Failure;
+/** A search over 30 days old: Google's details for its leads are hidden until it's run again */
+export type ExpiredSearch = { count: number };
+
+export type SavedAnswer =
+  | { ok: true; businesses: BusinessWithData[]; search: SearchQuery; expired: ExpiredSearch | null }
+  | Failure;
 
 export async function requestSaved(id: string): Promise<SavedAnswer> {
   const { ok, data } = await getJson(`${API_ROUTES.RESULTS}?search_id=${encodeURIComponent(id)}`);
   if (!ok || !data) return { ok: false, error: reason(data, OPEN_FAILED) };
-  const saved = data as { search?: SearchQuery | null; businesses?: BusinessRow[] };
+  const saved = data as { search?: SearchQuery | null; businesses?: BusinessRow[]; expired?: ExpiredSearch };
   // A search that was deleted (or never existed) has no record: say so instead of an empty list
   if (!saved.search) return { ok: false, error: GONE };
-  return { ok: true, businesses: (saved.businesses ?? []).map((b) => withAuditData(b)), search: saved.search };
+  return {
+    ok: true,
+    businesses: (saved.businesses ?? []).map((b) => withAuditData(b)),
+    search: saved.search,
+    expired: typeof saved.expired?.count === 'number' ? { count: saved.expired.count } : null,
+  };
 }

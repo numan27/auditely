@@ -9,10 +9,10 @@ import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
-import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
+import { searchCount, searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 import { loadSavedSearches, type SavedSearch as FullSavedSearch } from '@/app/_shared/lib/utils/savedSearches';
 
-type SavedSearch = Pick<FullSavedSearch, 'id' | 'niche' | 'location' | 'business_count'>;
+type SavedSearch = Pick<FullSavedSearch, 'id' | 'niche' | 'location' | 'business_count' | 'expired'>;
 
 const SHOWN = 6;
 
@@ -89,7 +89,7 @@ export function RecentSearches({ onOpen }: { onOpen: (searchId: string) => void 
                 <span className="block truncate text-sm font-medium text-[var(--color-text-primary)]">
                   {searchTitle(search)}
                 </span>
-                <span className="text-xs text-[var(--color-text-tertiary)]">{search.business_count} businesses</span>
+                <span className="text-xs text-[var(--color-text-tertiary)]">{searchCount(search)}</span>
               </span>
               <ChevronRightIcon
                 size={16}

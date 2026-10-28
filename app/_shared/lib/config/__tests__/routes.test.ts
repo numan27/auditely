@@ -73,6 +73,14 @@ describe('route access', () => {
     expect(isProtectedRoute('/api/stripe')).toBe(true);
   });
 
+  // Vercel's cron has no session: the route checks CRON_SECRET itself
+  it("lets the daily place-data job through without a session, and nothing else under /api/cron", () => {
+    expect(INBOUND_ROUTES.PLACE_DATA_CRON).toBe('/api/cron/place-data');
+    expect(isPublicRoute(INBOUND_ROUTES.PLACE_DATA_CRON)).toBe(true);
+    expect(isProtectedRoute('/api/cron')).toBe(true);
+    expect(isProtectedRoute('/api/cron/other')).toBe(true);
+  });
+
   // The sign-in link and Google both come back here before there is a session; a
   // signed-in user isn't bounced away, so a second sign-in still finishes
   it('keeps signup, Terms and Privacy public', () => {
