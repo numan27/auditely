@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const db = vi.hoisted(() => ({
   existing: null as unknown,
   error: null as { message: string } | null,
-  upsertError: null as { message: string } | null,
+  upsertError: null as { message: string; code?: string } | null,
   lookups: [] as unknown[][],
   upserts: [] as unknown[][],
 }));
@@ -83,6 +83,12 @@ describe('saveSubscription', () => {
     db.error = null;
     db.upsertError = { message: 'duplicate key' };
     await expect(saveSubscription(row)).rejects.toThrow('duplicate key');
+  });
+
+  it("acknowledges an event for an account that was deleted, since sending it again can't save it", async () => {
+    db.upsertError = { code: '23503', message: 'insert or update on table "subscriptions" violates foreign key constraint' };
+    expect(await saveSubscription({ ...row, status: 'canceled' })).toBe('unmatched');
+    expect(String(vi.mocked(console.error).mock.calls[0])).toContain("[billing] Subscription sub_1's account u2 was deleted");
   });
 });
 

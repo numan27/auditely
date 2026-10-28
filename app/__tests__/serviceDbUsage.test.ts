@@ -8,7 +8,8 @@
 // never read a ciphertext, even their own) and the subscription store (only Stripe,
 // never the user, writes a plan), the free audit store (no account may read
 // another visitor's free audit) and the growth store (the owner's counts across
-// every account, read only for the owner's Settings).
+// every account, read only for the owner's Settings), and deleting an account (only
+// the admin API can, and only ever for the signed-in account's own id).
 // Anywhere else it could hand one user another's data. The `Db` type carries no
 // access, so `import type { Db }` is fine anywhere.
 
@@ -21,6 +22,8 @@ const CLIENT = 'app/_shared/lib/supabase/client';
 
 const ALLOWED = [
   'app/_shared/lib/audit/pageSpeedStore.ts',
+  // Settings → Delete account, for the signed-in account's own id
+  'app/_shared/lib/auth/accountRemoval.ts',
   'app/_shared/lib/billing/subscriptionStore.ts',
   'app/_shared/lib/brand/brand.ts',
   'app/_shared/lib/freeAudit/freeAuditStore.ts',

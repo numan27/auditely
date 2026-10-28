@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type Stripe from 'stripe';
-import { billingReady, priceIdFor, stripeClient, testKeyAtLaunch } from '@/app/_shared/lib/billing/stripe';
+import { billingReady, cancelSubscriptions, findCustomer, priceIdFor, stripeClient, testKeyAtLaunch } from '@/app/_shared/lib/billing/stripe';
 
 const LAUNCHED = { VERCEL_ENV: 'production', SIGNUPS_OPEN: 'true' };
 
@@ -49,5 +49,44 @@ describe('stripe', () => {
     } finally {
       error.mockRestore();
     }
+  });
+});
+
+describe('findCustomer', () => {
+  it("finds the account's own customer under its email, and never makes one", async () => {
+    const list = vi.fn().mockResolvedValue({
+      data: [
+        { id: 'cus_other', metadata: { user_id: 'u9' } },
+        { id: 'cus_own', metadata: { user_id: 'u2' } },
+      ],
+    });
+    const create = vi.fn();
+    const stripe = { customers: { list, create } } as unknown as Stripe;
+    expect(await findCustomer(stripe, { id: 'u2', email: 'tester@x.com' })).toBe('cus_own');
+    expect(list).toHaveBeenCalledWith({ email: 'tester@x.com', limit: 100 });
+    expect(await findCustomer(stripe, { id: 'u3', email: 'tester@x.com' })).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('cancelSubscriptions', () => {
+  it('ends every subscription that could still bill, at once and with no refund', async () => {
+    const list = vi.fn().mockResolvedValue({
+      data: ['active', 'canceled', 'past_due', 'incomplete_expired', 'trialing', 'incomplete', 'unpaid', 'paused'].map(
+        (status, i) => ({ id: `sub_${i}`, status })
+      ),
+    });
+    const cancel = vi.fn().mockResolvedValue({});
+    const stripe = { subscriptions: { list, cancel } } as unknown as Stripe;
+    expect(await cancelSubscriptions(stripe, 'cus_1')).toBe(6);
+    expect(list).toHaveBeenCalledWith({ customer: 'cus_1', status: 'all', limit: 100 });
+    expect(cancel.mock.calls).toEqual([['sub_0'], ['sub_2'], ['sub_4'], ['sub_5'], ['sub_6'], ['sub_7']]);
+  });
+
+  it('cancels nothing for a customer with no subscription left', async () => {
+    const cancel = vi.fn();
+    const stripe = { subscriptions: { list: vi.fn().mockResolvedValue({ data: [{ id: 'sub_1', status: 'canceled' }] }), cancel } };
+    expect(await cancelSubscriptions(stripe as unknown as Stripe, 'cus_1')).toBe(0);
+    expect(cancel).not.toHaveBeenCalled();
   });
 });

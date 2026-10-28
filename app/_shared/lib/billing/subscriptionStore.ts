@@ -13,8 +13,14 @@ const TABLE = 'subscriptions';
 
 type Held = Pick<SubscriptionRow, 'stripe_subscription_id' | 'status'>;
 
-/** Saves the account's subscription; 'kept' when a different live one stays in place */
-export async function saveSubscription(row: SubscriptionRow): Promise<'saved' | 'kept'> {
+// Postgres's foreign key violation: the row names an account that no longer exists
+const NO_ACCOUNT = '23503';
+
+/**
+ * Saves the account's subscription; 'kept' when a different live one stays in place, and 'unmatched' when the
+ * account was deleted (its subscription is cancelled first, and Stripe's event for that arrives afterwards)
+ */
+export async function saveSubscription(row: SubscriptionRow): Promise<'saved' | 'kept' | 'unmatched'> {
   const { data, error } = await serviceDb.from(TABLE).select('stripe_subscription_id, status').eq('user_id', row.user_id).maybeSingle();
   if (error) throw new Error(`subscriptions: ${error.message}`);
   const held = data as Held | null;
@@ -25,6 +31,10 @@ export async function saveSubscription(row: SubscriptionRow): Promise<'saved' | 
   const { error: saveError } = await serviceDb
     .from(TABLE)
     .upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (saveError?.code === NO_ACCOUNT) {
+    console.error(`[billing] Subscription ${row.stripe_subscription_id}'s account ${row.user_id} was deleted, so it isn't saved`);
+    return 'unmatched';
+  }
   if (saveError) throw new Error(`subscriptions: ${saveError.message}`);
   return 'saved';
 }

@@ -51,13 +51,15 @@ export const API_ROUTES = {
   AUDIT_REQUESTS: '/api/audit-requests',
   NOTIFICATIONS: '/api/notifications',
   USAGE: '/api/usage',
-  // Settings: the profile reports are signed with, the mailbox and HubSpot connections, and the password
+  // Settings: the profile reports are signed with, the mailbox and HubSpot connections, the password, and
+  // deleting the account
   SETTINGS_PROFILE: '/api/settings/profile',
   // The saved logo as an image, for the header's profile menu
   SETTINGS_PROFILE_LOGO: '/api/settings/profile/logo',
   SETTINGS_MAILBOX: '/api/settings/mailbox',
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
   SETTINGS_PASSWORD: '/api/settings/password',
+  SETTINGS_ACCOUNT: '/api/settings/account',
   // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
   BILLING_CHECKOUT: '/api/billing/checkout',
   BILLING_PORTAL: '/api/billing/portal',

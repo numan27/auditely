@@ -7,7 +7,13 @@ const UNREACHABLE = "Couldn't reach Auditely. Check your connection and try agai
 
 export type SettingsAnswer = { ok: true } | { ok: false; error: string; field?: string };
 
-export async function sendSettings(url: string, method: 'PUT' | 'DELETE', body?: unknown): Promise<SettingsAnswer> {
+export async function sendSettings(
+  url: string,
+  method: 'PUT' | 'DELETE',
+  body?: unknown,
+  /** What to say when the answer has no reason in it */
+  fallback = "That didn't save. Try again."
+): Promise<SettingsAnswer> {
   try {
     const res = await fetch(url, {
       method,
@@ -18,7 +24,7 @@ export async function sendSettings(url: string, method: 'PUT' | 'DELETE', body?:
     const answer = (await res.json().catch(() => null)) as { error?: unknown; field?: unknown } | null;
     return {
       ok: false,
-      error: typeof answer?.error === 'string' ? answer.error : "That didn't save. Try again.",
+      error: typeof answer?.error === 'string' ? answer.error : fallback,
       field: typeof answer?.field === 'string' ? answer.field : undefined,
     };
   } catch {

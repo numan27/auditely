@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ToastProvider } from '@/app/_shared/components/ui/toast/toast';
 import { BillingButton } from '@/app/_shared/components/auditely/billing/billingButton';
 import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/connectedRow';
+import { DeleteAccountSection } from '@/app/_shared/components/auditely/settingsView/deleteAccountSection';
 import { FreeAuditsSection, type FreeAuditsSummary } from '@/app/_shared/components/auditely/settingsView/freeAuditsSection';
 import { GrowthSection } from '@/app/_shared/components/auditely/settingsView/growthSection';
 import type { GrowthCounts } from '@/app/_shared/lib/growth/funnel';
@@ -71,7 +72,7 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
   );
 }
 
-/** The account's profile and branding, its mailbox and HubSpot, its password, and its plan */
+/** The account's profile and branding, its mailbox and HubSpot, its password, its plan, and deleting it */
 export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits, growth }: SettingsViewProps) {
   const paying = plan !== 'owner' && subscription;
   return (
@@ -176,6 +177,9 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
           <BillingButton label="Manage billing" url={API_ROUTES.BILLING_PORTAL} body={{ returnTo: 'settings' }} variant="outline" />
         ) : null}
       </Section>
+
+      {/* The owner's account runs Auditely, so it can't be deleted */}
+      {plan !== 'owner' && <DeleteAccountSection email={email} subscribed={Boolean(subscription)} />}
 
       {freeAudits && <FreeAuditsSection freeAudits={freeAudits} />}
       {growth && <GrowthSection counts={growth.counts} />}

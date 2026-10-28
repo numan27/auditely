@@ -218,6 +218,22 @@ describe('SettingsView plan', () => {
   });
 });
 
+describe('SettingsView delete account', () => {
+  it('lets every account but the owner delete itself, last on the page', () => {
+    for (const plan of ['free', 'pro', 'agency'] as const) {
+      const html = view({ plan });
+      expect(html).toContain('id="delete-account"');
+      expect(html.indexOf('id="delete-account"')).toBeGreaterThan(html.indexOf('id="plan"'));
+    }
+    expect(view({ plan: 'owner' })).not.toContain('id="delete-account"');
+  });
+
+  it('tells a subscriber their subscription ends with no refund', () => {
+    expect(view({ plan: 'pro', subscription: yearly })).toContain('Your subscription ends straight away, with no refund.');
+    expect(view({ plan: 'free' })).not.toContain('no refund');
+  });
+});
+
 describe('AppHeader', () => {
   it('links to Settings from the header', () => {
     const html = renderToStaticMarkup(createElement(AppHeader));
