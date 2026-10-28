@@ -55,7 +55,7 @@ export function LandingPage({ freeAuditOn, video, checkoutOpen }: LandingPagePro
           </div>
         </section>
 
-        <LandingFaq />
+        <LandingFaq checkoutOpen={checkoutOpen} />
         <ClosingBand enabled={freeAuditOn} />
       </main>
       <LandingFooter />

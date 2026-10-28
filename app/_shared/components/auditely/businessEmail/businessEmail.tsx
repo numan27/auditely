@@ -12,6 +12,7 @@ import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
 import { exhausted, readLimit } from '@/app/_shared/lib/usage/plans';
 import { copyText } from '@/app/_shared/lib/utils/browserExport';
+import { postJson } from '@/app/_shared/lib/utils/jsonRequest';
 
 interface BusinessEmailProps {
   email: string | null;
@@ -20,6 +21,21 @@ interface BusinessEmailProps {
   /** What Verifalia said about this address, once "Send email" has checked it */
   check?: EmailCheck | null;
   onFound: (email: string) => void;
+}
+
+const SEARCH_FAILED = "The email search didn't finish.";
+
+export type FindAnswer = { ok: true; email: string | null; limited: boolean } | { ok: false; error: string };
+
+/** Searches for one business's email. A search that didn't finish is an error, never "none found". */
+export async function findEmail(businessId: string, apiFallback: boolean): Promise<FindAnswer> {
+  const { ok, data } = await postJson(API_ROUTES.FIND_EMAILS, { business_ids: [businessId], apiFallback });
+  const answer = data as { results?: { email?: string | null }[]; error?: unknown } | null;
+  if (!ok || !answer || !Array.isArray(answer.results)) {
+    return { ok: false, error: typeof answer?.error === 'string' ? answer.error : SEARCH_FAILED };
+  }
+  // The plan kept the search to the website: its email lookups have run out, or it has none
+  return { ok: true, email: answer.results[0]?.email ?? null, limited: readLimit(data) !== null };
 }
 
 const MARK_TONES: Record<CheckMark['tone'], string> = {
@@ -43,6 +59,8 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
   const [finding, setFinding] = useState(false);
   // After a search with no email: whether the plan kept it to the website
   const [notFound, setNotFound] = useState<{ limited: boolean } | null>(null);
+  // A search that didn't finish, and why
+  const [failed, setFailed] = useState<string | null>(null);
   const mark = check ? checkMark(check) : null;
 
   const copyEmail = async () => {
@@ -56,22 +74,13 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
   const search = async (apiFallback: boolean) => {
     setFinding(true);
     setNotFound(null);
-    try {
-      const res = await fetch(API_ROUTES.FIND_EMAILS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_ids: [businessId], apiFallback }),
-      });
-      const data = await res.json();
-      const found: string | null = data.results?.[0]?.email ?? null;
-      if (found) onFound(found);
-      else setNotFound({ limited: readLimit(data) !== null });
-    } catch {
-      setNotFound({ limited: false });
-    } finally {
-      setFinding(false);
-      usage?.refresh();
-    }
+    setFailed(null);
+    const answer = await findEmail(businessId, apiFallback);
+    setFinding(false);
+    usage?.refresh();
+    if (!answer.ok) return setFailed(answer.error);
+    if (answer.email) onFound(answer.email);
+    else setNotFound({ limited: answer.limited });
   };
 
   const handleFind = () => {
@@ -144,14 +153,21 @@ export function BusinessEmail({ email, website, businessId, check, onFound }: Bu
 
   return (
     <ContactLine icon={<MailIcon size={14} />}>
-      <button
-        type="button"
-        onClick={handleFind}
-        disabled={finding}
-        className="cursor-pointer font-medium text-[var(--color-primary-600)] hover:underline disabled:cursor-default disabled:opacity-60"
-      >
-        {finding ? 'Finding email…' : notFound ? 'No email found. Try again' : 'Find email'}
-      </button>
+      <span className="inline-flex flex-wrap items-center gap-x-1.5">
+        {failed && !finding && (
+          <span role="status" className="text-red-600 dark:text-red-400">
+            {failed}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleFind}
+          disabled={finding}
+          className="cursor-pointer font-medium text-[var(--color-primary-600)] hover:underline disabled:cursor-default disabled:opacity-60"
+        >
+          {finding ? 'Finding email…' : failed ? 'Try again' : notFound ? 'No email found. Try again' : 'Find email'}
+        </button>
+      </span>
     </ContactLine>
   );
 }

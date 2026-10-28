@@ -21,7 +21,7 @@ import { DemoWalkthrough } from '@/app/_shared/components/landing/demoWalkthroug
 import type { Walkthrough } from '@/app/_shared/lib/demo/walkthrough';
 import { HowItWorks } from '@/app/_shared/components/landing/howItWorks';
 import { ReportShowcase } from '@/app/_shared/components/landing/reportShowcase';
-import { FAQ, LandingFaq } from '@/app/_shared/components/landing/landingFaq';
+import { faqFor, LandingFaq } from '@/app/_shared/components/landing/landingFaq';
 import { ClosingBand } from '@/app/_shared/components/landing/closingBand';
 import { LandingHeader } from '@/app/_shared/components/landing/landingHeader';
 import { SampleReport } from '@/app/_shared/components/landing/sampleReport';
@@ -237,15 +237,41 @@ describe('what you send', () => {
 
 describe('questions', () => {
   it('folds five answers away, the first one open', () => {
-    const html = renderToStaticMarkup(createElement(LandingFaq));
+    const html = renderToStaticMarkup(createElement(LandingFaq, { checkoutOpen: true }));
+    const faq = faqFor(true);
     expect(html).toContain('id="faq"');
     expect(count(html, /<details/g)).toBe(5);
     expect(count(html, /<details[^>]*open=""/g)).toBe(1);
-    expect(html.indexOf('open=""')).toBeLessThan(html.indexOf(FAQ[1].question));
-    for (const { question, answer } of FAQ) {
+    expect(html.indexOf('open=""')).toBeLessThan(html.indexOf(faq[1].question));
+    for (const { question, answer } of faq) {
       expect(text(html)).toContain(question);
       expect(text(html)).toContain(answer);
     }
+  });
+
+  // Google sign-in is hidden for now (googleSignIn.ts): the answers offer only what works
+  it('asks only for an email to sign up', () => {
+    for (const open of [true, false]) {
+      expect(faqFor(open).map((q) => q.answer).join(' ')).not.toContain('Google account');
+    }
+    expect(faqFor(true).find((q) => q.question === 'Do I need a card to start?')?.answer).toBe('No. The Free plan needs only an email address.');
+  });
+
+  it('answers for the beta while nothing can be bought: branding for everyone, no cancelling, and where to send feedback', () => {
+    const html = renderToStaticMarkup(createElement(LandingFaq, { checkoutOpen: false }));
+    const answers = Object.fromEntries(faqFor(false).map((q) => [q.question, q.answer]));
+    expect(count(html, /<details/g)).toBe(5);
+    expect(answers['Will the reports carry my brand?']).toBe(
+      'Yes. During the beta every account can put its name, logo, contact details and booking link on its reports.'
+    );
+    expect(answers['Does Auditely send the emails?']).toBe(
+      'It writes a first email for each business, and you copy it and send it yourself. Sending from your own mailbox comes with Pro and Agency, which open after the beta.'
+    );
+    expect(answers['Do I need a card to start?']).toBe('No. Auditely is free during the beta, and you sign up with just an email address.');
+    expect(answers['Can I cancel any time?']).toBeUndefined();
+    expect(answers['What does the beta mean?']).toBe(
+      "Auditely is new, so you're among its first users. Everything is free while the beta runs, and Pro and Agency open when it ends. Tell us what works and what doesn't with the Feedback button in the app."
+    );
   });
 });
 
