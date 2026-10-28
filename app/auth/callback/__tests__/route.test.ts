@@ -124,6 +124,15 @@ describe('GET /auth/callback', () => {
     expect(sentTo(res)).toBe('/audit');
   });
 
+  it('clears the free-audit cookie once the audit is kept, and keeps it when it was not', async () => {
+    keep.mockResolvedValue(true);
+    const kept = await open('code=c1&next=%2F', 'auditely_free_audit=f1.sig');
+    expect(kept.headers.get('set-cookie')).toMatch(/auditely_free_audit=;[^,]*(Max-Age=0|Expires=Thu, 01 Jan 1970)/i);
+    keep.mockResolvedValue(false);
+    const notKept = await open('code=c1&next=%2F', 'auditely_free_audit=f1.sig');
+    expect(notKept.headers.get('set-cookie') ?? '').not.toContain('auditely_free_audit');
+  });
+
   it("keeps it from the link's keep= when the link opens in another browser", async () => {
     keep.mockResolvedValue(true);
     const res = await open('next=%2F&keep=f1.sig&token_hash=h1&type=email');

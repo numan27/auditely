@@ -5,7 +5,8 @@
 // opened anywhere else brings ?token_hash=&type=email. The new session must belong
 // to someone who may sign in, or it is signed straight back out. A visitor who ran
 // the landing page's free audit keeps it (from ?keep=, put in the emailed link, or
-// their cookie) and lands on it. Then the user goes to ?next=, kept on this site.
+// their cookie) and lands on it, and the cookie is cleared. Then the user goes to
+// ?next=, kept on this site.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { userDb } from '@/app/_shared/lib/supabase/server';
@@ -56,6 +57,9 @@ export async function GET(request: NextRequest) {
   const next = safeCallbackUrl(searchParams.get('next'));
   const keep = searchParams.get('keep') || request.cookies.get(FREE_AUDIT_COOKIE)?.value;
   const kept = keep ? await keepFreeAudit(signIn.db, signIn.userId, keep) : false;
-  // Kept, and not headed anywhere in particular: straight to the audit
-  return NextResponse.redirect(new URL(kept && next === ROUTES.HOME ? ROUTES.AUDIT : next, request.url));
+  // Kept, and not headed anywhere in particular: straight to the audit. The cookie's
+  // done its work once the audit is the account's; one that wasn't kept can try again
+  const res = NextResponse.redirect(new URL(kept && next === ROUTES.HOME ? ROUTES.AUDIT : next, request.url));
+  if (kept) res.cookies.delete(FREE_AUDIT_COOKIE);
+  return res;
 }
