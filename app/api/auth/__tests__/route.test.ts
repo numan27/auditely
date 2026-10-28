@@ -112,9 +112,10 @@ describe('POST /api/auth', () => {
 });
 
 describe('DELETE /api/auth', () => {
-  it('signs out', async () => {
+  it('signs out this browser only, leaving the account signed in on its other devices', async () => {
     const res = await DELETE();
     expect(auth.signOut).toHaveBeenCalledTimes(1);
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
   });

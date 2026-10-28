@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ sent: true });
 }
 
-// Sign out → clears the Supabase session cookies
+// Sign out → ends this browser's session and clears its cookies. Only this one:
+// the account stays signed in on its other devices.
 export async function DELETE() {
   const db = await userDb();
-  await db.auth.signOut();
+  await db.auth.signOut({ scope: 'local' });
   return NextResponse.json({ success: true });
 }
