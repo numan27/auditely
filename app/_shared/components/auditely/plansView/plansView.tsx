@@ -5,8 +5,8 @@ import { BillingButton } from '@/app/_shared/components/auditely/billing/billing
 import { CheckIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import type { BillingInterval, Subscription } from '@/app/_shared/lib/billing/billingRules';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
-import { PLANS, PLAN_ORDER, USAGE_KINDS, type Feature, type Plan, type UsageKind, type UsageSummary } from '@/app/_shared/lib/usage/plans';
-import { countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
+import { PLANS, PLAN_ORDER, USAGE_KINDS, type Plan, type UsageKind, type UsageSummary } from '@/app/_shared/lib/usage/plans';
+import { PLAN_FEATURES, countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
 
 export interface PlansBilling {
   /** STRIPE_SECRET_KEY is set; without it the paid plans say "Coming soon", as today */
@@ -19,14 +19,6 @@ export interface PlansBilling {
   /** Back from Checkout (/plans?subscribed=1) */
   justSubscribed: boolean;
 }
-
-const FEATURES: { feature: Feature; label: string }[] = [
-  { feature: 'auditAll', label: 'Audit all' },
-  { feature: 'export', label: 'CSV and Google Sheets export' },
-  { feature: 'branding', label: 'Your name and logo on reports' },
-  { feature: 'mailbox', label: 'Send from your mailbox' },
-  { feature: 'hubspot', label: 'HubSpot handoff' },
-];
 
 const NONE: Record<UsageKind, string> = {
   search: 'No searches',
@@ -192,7 +184,7 @@ function PlanColumn({ plan, current, billing }: { plan: Plan; current: boolean; 
       </ul>
 
       <ul className="mt-4 space-y-1.5 text-sm">
-        {FEATURES.map(({ feature, label }) => {
+        {PLAN_FEATURES.map(({ feature, label }) => {
           const included = plan.features[feature];
           return (
             <li
