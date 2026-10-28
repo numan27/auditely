@@ -25,6 +25,11 @@ export const emailLinkSchema = Yup.object().shape({
     .required('Enter your email address'),
 });
 
+// Sign-in schema (an email and the password set in Settings)
+export const passwordSignInSchema = emailLinkSchema.shape({
+  password: Yup.string().required('Enter your password'),
+});
+
 // Registration schema
 export const registerSchema = Yup.object().shape({
   name: Yup.string()
@@ -104,6 +109,7 @@ export const contactSchema = Yup.object().shape({
 // Types
 export type LoginFormValues = Yup.InferType<typeof loginSchema>;
 export type EmailLinkFormValues = Yup.InferType<typeof emailLinkSchema>;
+export type PasswordSignInFormValues = Yup.InferType<typeof passwordSignInSchema>;
 export type RegisterFormValues = Yup.InferType<typeof registerSchema>;
 export type ForgotPasswordFormValues = Yup.InferType<typeof forgotPasswordSchema>;
 export type ResetPasswordFormValues = Yup.InferType<typeof resetPasswordSchema>;

@@ -19,8 +19,9 @@ export function TermsContent() {
 
       <LegalSection title="Your account">
         <p>
-          You sign in with a link we email you, or with Google. Anyone who can open that email account can sign in as
-          you, so keep it safe. Use an email address that&apos;s yours and that works.
+          You sign in with a link we email you, with Google, or with a password you set in Settings. Anyone who can
+          open that email account can sign in as you, so keep it and your password safe. Use an email address
+          that&apos;s yours and that works.
         </p>
         <p>You must be at least 18 to make an account. An account is for one person: don&apos;t share it.</p>
       </LegalSection>

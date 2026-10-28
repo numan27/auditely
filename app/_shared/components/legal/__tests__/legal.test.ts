@@ -20,6 +20,17 @@ const headings = (html: string) => [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].m
 const terms = render(TermsContent);
 const privacy = render(PrivacyContent);
 
+describe('signing in', () => {
+  it('names every way to sign in, the password among them', () => {
+    expect(text(terms)).toContain(
+      'You sign in with a link we email you, with Google, or with a password you set in Settings. Anyone who can open that email account can sign in as you, so keep it and your password safe.'
+    );
+    expect(text(privacy)).toContain(
+      'how you sign in (an emailed link, Google, or a password you set, which Supabase keeps only as a one-way hash)'
+    );
+  });
+});
+
 describe('the Terms', () => {
   it('covers every section the Terms need, in order', () => {
     expect(headings(terms)).toEqual([

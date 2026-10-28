@@ -57,7 +57,9 @@ const view = (over: {
   );
 };
 
-const passwordInputs = (html: string) => html.match(/<input[^>]*type="password"[^>]*>/g) ?? [];
+// The mailbox password and HubSpot token fields; the account's own sign-in password has its section
+const withoutSignInPassword = (html: string) => html.replace(/<section id="password"[\s\S]*?<\/section>/, '');
+const passwordInputs = (html: string) => withoutSignInPassword(html).match(/<input[^>]*type="password"[^>]*>/g) ?? [];
 
 describe('SettingsView', () => {
   it('shows a Free account the plan notes in place of the mailbox and HubSpot forms', () => {
@@ -143,6 +145,16 @@ describe('SettingsView', () => {
     expect(html).toContain('value="smtp.gmail.com"');
     expect(html).toContain('Use an app password: Google Account › Security › App passwords.');
     expect(html).toContain('The From address, if it isn&#x27;t the email address');
+  });
+
+  it('lets every plan set a sign-in password, and never fills it in', () => {
+    for (const plan of ['free', 'pro', 'owner'] as const) {
+      const section = view({ plan }).match(/<section id="password"[\s\S]*?<\/section>/)?.[0] ?? '';
+      expect(section, plan).toMatch(/<h2[^>]*>Password<\/h2>/);
+      const inputs = section.match(/<input[^>]*type="password"[^>]*>/g) ?? [];
+      expect(inputs, plan).toHaveLength(2);
+      for (const input of inputs) expect(input).not.toMatch(/value="[^"]/);
+    }
   });
 
   it('never fills in a password or token', () => {

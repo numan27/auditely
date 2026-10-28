@@ -9,13 +9,20 @@ export const metadata: Metadata = {
 };
 
 interface LoginPageProps {
-  searchParams: Promise<{ callbackUrl?: string | string[]; error?: string | string[] }>;
+  searchParams: Promise<{ callbackUrl?: string | string[]; error?: string | string[]; method?: string | string[] }>;
 }
 
 // A repeated query parameter arrives as a list; the first one counts
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { callbackUrl, error } = await searchParams;
-  return <LoginForm callbackUrl={first(callbackUrl)} error={first(error)} open={signupsOpen()} />;
+  const { callbackUrl, error, method } = await searchParams;
+  return (
+    <LoginForm
+      callbackUrl={first(callbackUrl)}
+      error={first(error)}
+      open={signupsOpen()}
+      method={first(method) === 'password' ? 'password' : 'link'}
+    />
+  );
 }

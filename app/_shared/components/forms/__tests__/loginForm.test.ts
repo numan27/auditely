@@ -46,6 +46,30 @@ describe('LoginForm', () => {
     expect(html).toContain('href="/login"');
   });
 
+  it('offers a password instead of a link on the sign-in page, keeping where the visitor was headed', () => {
+    expect(render({ open: true })).toContain('href="/login?method=password"');
+    expect(render({})).toContain('href="/login?method=password"');
+    const html = render({ open: true, callbackUrl: '/plans' });
+    expect(text(html)).toContain('Sign in with a password instead');
+    expect(html).toContain('href="/login?method=password&amp;callbackUrl=%2Fplans"');
+  });
+
+  it('asks for the email and password, and says what to do about a forgotten one', () => {
+    const html = render({ open: true, method: 'password', callbackUrl: '/plans' });
+    expect(html).toMatch(/<input[^>]*type="password"[^>]*autoComplete="current-password"|<input[^>]*autoComplete="current-password"[^>]*type="password"/i);
+    expect(text(html)).toContain('Sign in with your email and password, or use Google.');
+    expect(text(html)).toContain('Sign in');
+    expect(text(html)).not.toContain('Email me a link');
+    expect(text(html)).toContain('Forgot your password? Email yourself a sign-in link, then set a new one in Settings.');
+    expect(html).toContain('href="/login?callbackUrl=%2Fplans"');
+  });
+
+  it('keeps sign-up to a link or Google', () => {
+    const html = render({ mode: 'signup', open: true, method: 'password' });
+    expect(html).not.toContain('type="password"');
+    expect(text(html)).not.toContain('password instead');
+  });
+
   it('asks a new visitor to agree to the Terms and Privacy Policy', () => {
     for (const props of [{ mode: 'signup', open: true }, { open: true }, {}] as Props[]) {
       const html = render(props);

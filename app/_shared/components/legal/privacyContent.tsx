@@ -17,7 +17,8 @@ export function PrivacyContent() {
       <LegalSection title="What we collect">
         <ul>
           <li>
-            <strong>Your account and profile:</strong> your email address, how you sign in (an emailed link or Google),
+            <strong>Your account and profile:</strong> your email address, how you sign in (an emailed link, Google, or a
+            password you set, which Supabase keeps only as a one-way hash),
             and what you add in Settings, such as your name, company, website, logo, contact details and booking link.
           </li>
           <li>

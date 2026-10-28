@@ -26,9 +26,11 @@ export const ROUTES = {
   AUTH_GOOGLE: '/auth/google',
 } as const;
 
-// API route paths. Only AUTH and FREE_AUDIT are public (see PUBLIC_ROUTES below).
+// API route paths. Only AUTH (and AUTH_PASSWORD under it) and FREE_AUDIT are public (see PUBLIC_ROUTES below).
 export const API_ROUTES = {
   AUTH: '/api/auth',
+  // Signing in with the password an account set in Settings, behind BotID
+  AUTH_PASSWORD: '/api/auth/password',
   // The landing page's free audit: one per visitor's network, behind BotID
   FREE_AUDIT: '/api/free-audit',
   AUDIT: '/api/audit',
@@ -45,10 +47,11 @@ export const API_ROUTES = {
   AUDIT_REQUESTS: '/api/audit-requests',
   NOTIFICATIONS: '/api/notifications',
   USAGE: '/api/usage',
-  // Settings: the profile reports are signed with, and the mailbox and HubSpot connections
+  // Settings: the profile reports are signed with, the mailbox and HubSpot connections, and the password
   SETTINGS_PROFILE: '/api/settings/profile',
   SETTINGS_MAILBOX: '/api/settings/mailbox',
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
+  SETTINGS_PASSWORD: '/api/settings/password',
   // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
   BILLING_CHECKOUT: '/api/billing/checkout',
   BILLING_PORTAL: '/api/billing/portal',

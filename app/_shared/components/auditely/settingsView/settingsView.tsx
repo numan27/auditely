@@ -9,6 +9,7 @@ import { ConnectedRow } from '@/app/_shared/components/auditely/settingsView/con
 import { FreeAuditsSection, type FreeAuditsSummary } from '@/app/_shared/components/auditely/settingsView/freeAuditsSection';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
+import { PasswordSection } from '@/app/_shared/components/auditely/settingsView/passwordSection';
 import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
 import { Section } from '@/app/_shared/components/auditely/settingsView/settingsSection';
 import { subscriptionNote } from '@/app/_shared/lib/billing/billingCopy';
@@ -66,7 +67,7 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
   );
 }
 
-/** The account's profile and branding, its mailbox and HubSpot, and its plan */
+/** The account's profile and branding, its mailbox and HubSpot, its password, and its plan */
 export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits }: SettingsViewProps) {
   const paying = plan !== 'owner' && subscription;
   return (
@@ -141,6 +142,8 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
           </>
         )}
       </Section>
+
+      <PasswordSection />
 
       <Section
         id="plan"

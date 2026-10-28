@@ -40,12 +40,12 @@ describe('route access', () => {
     expect(isHomeAlias(ROUTES.SEARCHES)).toBe(false);
   });
 
-  it('opens the demo and its reports, and no API route', () => {
+  it('opens the demo and its reports, and no API route but signing in and the free audit', () => {
     expect(isPublicRoute(ROUTES.DEMO)).toBe(true);
     expect(demoReportPath('demo-a1')).toBe('/demo/report/demo-a1');
     expect(isPublicRoute(demoReportPath('demo-a1'))).toBe(true);
     expect(isPublicRoute('/demos')).toBe(false);
-    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.FREE_AUDIT];
+    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT];
     for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(!open.includes(path));
     expect(isProtectedRoute('/api/autocomplete')).toBe(true);
   });

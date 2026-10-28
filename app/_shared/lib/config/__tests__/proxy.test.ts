@@ -91,8 +91,9 @@ describe('proxy', () => {
     expect(sentTo(await visit(`${ROUTES.REQUESTS}/r-42`))).toBe(`${ROUTES.LOGIN}?callbackUrl=%2Frequests%2Fr-42`);
   });
 
-  it('still answers 401 to a logged-out call of any API route but the login', async () => {
-    for (const path of Object.values(API_ROUTES).filter((p) => p !== API_ROUTES.AUTH && p !== API_ROUTES.FREE_AUDIT)) {
+  it('still answers 401 to a logged-out call of any API route but the sign-ins and the free audit', async () => {
+    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT];
+    for (const path of Object.values(API_ROUTES).filter((p) => !open.includes(p))) {
       expect((await visit(path)).status).toBe(401);
     }
   });
@@ -116,6 +117,9 @@ describe('proxy', () => {
     expect(sentTo(await visit(`${ROUTES.AUTH_CALLBACK}?token_hash=h1&type=email&next=%2F`))).toBeNull();
     expect(sentTo(await visit(`${ROUTES.AUTH_GOOGLE}?next=%2F`))).toBeNull();
     expect(sentTo(await visit(API_ROUTES.AUTH))).toBeNull();
+    const byPassword = await visit(API_ROUTES.AUTH_PASSWORD);
+    expect(byPassword.status).not.toBe(401);
+    expect(sentTo(byPassword)).toBeNull();
   });
 
   it('gives a logged-in user the real home page, and the demo when asked for', async () => {

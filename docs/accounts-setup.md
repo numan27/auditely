@@ -1,7 +1,7 @@
 # Accounts setup
 
-Auditely signs people in with Supabase Auth, by an emailed link or with Google, instead of the shared
-admin password. Each account sees only its own searches, leads, audits and notifications: Row Level
+Auditely signs people in with Supabase Auth, by an emailed link, with Google, or with a password the
+account sets in Settings, instead of the shared admin password. Each account sees only its own searches, leads, audits and notifications: Row Level
 Security in the database enforces that, whatever the code asks for. You (`OWNER_EMAIL`) keep all of
 today's data and the Requests tab. Sign-ups stay closed: only you and the addresses in `ALLOWED_EMAILS`
 can sign in.
@@ -73,7 +73,8 @@ Supabase → Authentication → SMTP Settings → enable custom SMTP:
 Supabase → Authentication → Users → Add user → Create new user:
 
 - Email: the address that will be `OWNER_EMAIL`
-- Password: any long random one. Auditely never asks for it: you sign in by link or with Google.
+- Password: any long random one. You won't use it: sign in by link or with Google, then set your own
+  in Settings → Password to sign in with a password from then on.
 - Tick "Auto Confirm User".
 
 The migration in step 7 gives today's data to this account. Sign in later with this same address, by
