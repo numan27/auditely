@@ -25,7 +25,8 @@ export async function autocompleteGoogleCities(input: string, apiKey: string): P
       body: JSON.stringify({
         input,
         includedPrimaryTypes: ['(cities)'],
-        includedRegionCodes: ['us'], // US-only results
+        // Cities anywhere: the beta's testers aren't all in the US
+        // includedRegionCodes: ['us'],
       }),
       signal: AbortSignal.timeout(4000),
     });
@@ -129,7 +130,8 @@ export async function searchGooglePlaces(
   const allFailed = searchResponses.every((r) => !r.ok);
   if (allFailed) {
     const firstError = searchResponses[0]?.data?.error?.status ?? searchResponses[0]?.status;
-    return { ok: false, status: 502, error: `Google Places error: ${firstError}` };
+    console.error('[search] Google Places error:', firstError);
+    return { ok: false, status: 502, error: "Couldn't search Google Maps just now. Try again in a minute." };
   }
 
   // Deduplicate across all sub-query results by place id

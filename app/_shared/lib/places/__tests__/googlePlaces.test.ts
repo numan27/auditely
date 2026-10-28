@@ -11,7 +11,7 @@ describe('autocompleteGoogleCities', () => {
     fetchMock.mockReset();
   });
 
-  it('asks Places (New) for US cities and returns their labels', async () => {
+  it('asks Places (New) for cities anywhere, not only in the US, and returns their labels', async () => {
     fetchMock.mockResolvedValue(
       json({
         suggestions: [
@@ -25,7 +25,7 @@ describe('autocompleteGoogleCities', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://places.googleapis.com/v1/places:autocomplete');
     expect(init.headers['X-Goog-Api-Key']).toBe('key');
-    expect(JSON.parse(init.body)).toMatchObject({ input: 'aus', includedPrimaryTypes: ['(cities)'], includedRegionCodes: ['us'] });
+    expect(JSON.parse(init.body)).toEqual({ input: 'aus', includedPrimaryTypes: ['(cities)'] });
   });
 
   it('returns nothing when Google errors', async () => {
@@ -63,5 +63,13 @@ describe('searchGooglePlaces', () => {
     });
     const mask: string = fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask'];
     expect(mask.split(',')).toEqual(expect.arrayContaining(['places.rating', 'places.userRatingCount']));
+  });
+
+  it("says in plain words when Google can't be searched, not Google's error code", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchMock.mockImplementation(async () => json({ error: { status: 'RESOURCE_EXHAUSTED' } }, 429));
+    expect(await searchGooglePlaces('dentist', 'austin', 'key')).toEqual({
+      ok: false, status: 502, error: "Couldn't search Google Maps just now. Try again in a minute.",
+    });
   });
 });
