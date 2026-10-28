@@ -1,0 +1,136 @@
+// app/_shared/components/auditely/pageLoader/pageLoader.module.scss
+
+// The loading screen: the needle sweeps the dial and the bright part of the arc
+// follows it (same time, same easing, so they stay together), rings go out
+// behind the tile, and a bar slides under the name. At rest, with no motion,
+// it's the mark with the dial read up to the needle.
+
+$sweep: 1.5s;
+$ease: cubic-bezier(0.45, 0, 0.25, 1);
+$pulse: 2.4s;
+
+// After a beat, so a page that loads at once never shows it
+.loader {
+  animation: appear 0.4s ease-out 0.2s both;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+}
+
+.mark {
+  position: relative;
+  filter: drop-shadow(0 10px 22px rgb(47 79 224 / 0.35));
+}
+
+// The tile's outline going out and fading, one after another
+.ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--color-primary-600);
+  border-radius: 29%;
+  opacity: 0;
+  animation: ring $pulse ease-out infinite;
+}
+
+.ringLate {
+  animation-delay: $pulse * 0.5;
+}
+
+@keyframes ring {
+  from {
+    opacity: 0.4;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.3;
+  }
+}
+
+// The needle turns about the dial's centre, from 70° left of upright to 70° right;
+// at rest it points as in the mark, 37° right
+.needle {
+  transform-box: view-box;
+  transform-origin: 12px 16px;
+  animation: sweep $sweep $ease infinite alternate;
+}
+
+@keyframes sweep {
+  from {
+    rotate: -107deg;
+  }
+  to {
+    rotate: 33deg;
+  }
+}
+
+// The arc read so far: 20° of the dial's 180° at the left end of the sweep, 160°
+// at the right, 127° at rest
+.reading {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0.294;
+  animation: read $sweep $ease infinite alternate;
+}
+
+@keyframes read {
+  from {
+    stroke-dashoffset: 0.889;
+  }
+  to {
+    stroke-dashoffset: 0.111;
+  }
+}
+
+.track {
+  position: relative;
+  display: block;
+  width: 120px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary-400), var(--color-primary-600));
+  animation: slide 1.4s $ease infinite;
+}
+
+@keyframes slide {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 250% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader,
+  .ring,
+  .needle,
+  .reading,
+  .bar {
+    animation: none;
+  }
+}
