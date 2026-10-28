@@ -12,7 +12,7 @@ import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss'
 import { cardClasses } from '@/app/_shared/components/landing/landingStyles';
 import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 import type { BillingInterval } from '@/app/_shared/lib/billing/billingRules';
-import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { ROUTES, plansPath } from '@/app/_shared/lib/config/routes';
 import { PLANS, PLAN_ORDER, USAGE_KINDS, type Plan, type PlanId } from '@/app/_shared/lib/usage/plans';
 import { PLAN_FEATURES, countOf } from '@/app/_shared/lib/usage/usageCopy';
 
@@ -30,6 +30,11 @@ const WHO: Partial<Record<PlanId, string>> = {
   pro: 'For freelancers',
   agency: 'For agencies',
 };
+
+/** Where a plan's button goes: sign-up, then a paid plan's prices on /plans, monthly or yearly as chosen here */
+export function planHref(plan: Plan, interval: BillingInterval): string {
+  return plan.monthlyPrice ? `${ROUTES.SIGNUP}?callbackUrl=${encodeURIComponent(plansPath(interval))}` : ROUTES.SIGNUP;
+}
 
 /** The one the cards point to */
 const PICK: PlanId = 'pro';
@@ -49,7 +54,6 @@ function extras(plan: Plan): string[] {
 function PlanCard({ plan, interval }: { plan: Plan; interval: BillingInterval }) {
   const { amount, per } = planPrice(plan, interval);
   const pick = plan.id === PICK;
-  const href = plan.monthlyPrice ? `${ROUTES.SIGNUP}?callbackUrl=${encodeURIComponent(ROUTES.PLANS)}` : ROUTES.SIGNUP;
   const lines = [
     ...USAGE_KINDS.flatMap((kind) => {
       const limit = plan.limits[kind];
@@ -68,7 +72,7 @@ function PlanCard({ plan, interval }: { plan: Plan; interval: BillingInterval })
         {amount}
         {per && <small className="ml-1.5 font-sans text-[15px] font-medium tracking-normal text-[var(--color-text-secondary)]">{per}</small>}
       </p>
-      <Link href={href} className={`${button(!pick)} my-6`}>
+      <Link href={planHref(plan, interval)} className={`${button(!pick)} my-6`}>
         {plan.monthlyPrice ? `Choose ${plan.name}` : 'Start free'}
       </Link>
       <ul className="flex flex-col gap-[11px]">

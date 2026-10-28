@@ -151,5 +151,8 @@ export const safeCallbackUrl = (value: string | null | undefined): string => {
   return `${url.pathname}${url.search}${url.hash}`;
 };
 
+/** The plans page with monthly or yearly prices chosen */
+export const plansPath = (interval: 'month' | 'year'): string => (interval === 'year' ? `${ROUTES.PLANS}?billing=yearly` : ROUTES.PLANS);
+
 /** A sample audit's PDF report in the demo */
 export const demoReportPath = (auditId: string): string => `${ROUTES.DEMO}/report/${encodeURIComponent(auditId)}`;

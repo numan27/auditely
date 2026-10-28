@@ -37,7 +37,7 @@ function FindingGroup({ title, score, findings }: FindingGroupProps) {
       <div className="mb-2.5 flex items-baseline justify-between gap-3">
         <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h4>
         {typeof score === 'number' && (
-          <span className="text-xs font-semibold tabular-nums text-[var(--color-text-tertiary)]">{score} / 100</span>
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-[var(--color-text-tertiary)]">{score} / 100</span>
         )}
       </div>
       <ul className="space-y-2">

@@ -17,7 +17,7 @@ import { LandingPage } from '@/app/_shared/components/landing/landingPage';
 import { FreeAuditHero } from '@/app/_shared/components/landing/freeAuditHero';
 import { SampleReport } from '@/app/_shared/components/landing/sampleReport';
 import { AgencySteps } from '@/app/_shared/components/landing/agencySteps';
-import { PricingTable, planPrice } from '@/app/_shared/components/landing/pricingTable';
+import { PricingTable, planHref, planPrice } from '@/app/_shared/components/landing/pricingTable';
 import { PlansView } from '@/app/_shared/components/auditely/plansView/plansView';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { PLAN_FEATURES } from '@/app/_shared/lib/usage/usageCopy';
@@ -84,6 +84,13 @@ describe('the sample report', () => {
     expect(text(html)).toContain('Add an online booking or appointment-request button.');
   });
 
+  // A narrow phone wrapped "85 / 100" onto two lines
+  it("keeps each checklist group's score on one line", () => {
+    const scores = html.match(/<span class="[^"]*">\d+ \/ 100<\/span>/g) ?? [];
+    expect(scores.length).toBeGreaterThan(0);
+    for (const score of scores) expect(score).toContain('whitespace-nowrap');
+  });
+
   it('leads to the search it came from', () => {
     expect(linkTo(html, 'See the sample search this came from')).toContain('href="/demo"');
     expect(html).toContain('href="https://www.houstondental.com/"');
@@ -146,6 +153,12 @@ describe('pricing', () => {
     expect(linkTo(html, 'Start free')).toContain('href="/signup"');
     expect(linkTo(html, 'Choose Pro')).toContain('href="/signup?callbackUrl=%2Fplans"');
     expect(linkTo(html, 'Choose Agency')).toContain('href="/signup?callbackUrl=%2Fplans"');
+  });
+
+  it('carries a yearly choice through sign-up to the plans page', () => {
+    expect(planHref(PLANS.pro, 'year')).toBe(`/signup?callbackUrl=${encodeURIComponent('/plans?billing=yearly')}`);
+    expect(planHref(PLANS.agency, 'month')).toBe('/signup?callbackUrl=%2Fplans');
+    expect(planHref(PLANS.free, 'year')).toBe('/signup');
   });
 
   it('uses the same feature labels as the plans page', () => {

@@ -5,7 +5,7 @@ import { BillingButton } from '@/app/_shared/components/auditely/billing/billing
 import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 import { CheckIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 import type { BillingInterval, Subscription } from '@/app/_shared/lib/billing/billingRules';
-import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
+import { API_ROUTES, plansPath } from '@/app/_shared/lib/config/routes';
 import { PLANS, PLAN_ORDER, USAGE_KINDS, type Plan, type UsageKind, type UsageSummary } from '@/app/_shared/lib/usage/plans';
 import { PLAN_FEATURES, countOf, formatResetDate } from '@/app/_shared/lib/usage/usageCopy';
 
@@ -115,8 +115,8 @@ function PlanAction({ plan, current, billing }: { plan: Plan; current: boolean; 
 }
 
 const INTERVAL_LINKS: { interval: BillingInterval; label: string; href: string }[] = [
-  { interval: 'month', label: 'Monthly', href: ROUTES.PLANS },
-  { interval: 'year', label: 'Yearly', href: `${ROUTES.PLANS}?billing=yearly` },
+  { interval: 'month', label: 'Monthly', href: plansPath('month') },
+  { interval: 'year', label: 'Yearly', href: plansPath('year') },
 ];
 
 /** Monthly or yearly, as links: the page reads the choice from its address */
