@@ -25,6 +25,12 @@ vi.mock('@/app/_shared/lib/audit/runAudit', async (orig) => ({
   runAudit: audit,
 }));
 vi.mock('@/app/_shared/lib/supabase/client', () => ({ serviceDb: {} }));
+// What after() is handed to finish once the response has gone
+const afterTasks = vi.hoisted(() => [] as (() => unknown)[]);
+vi.mock('next/server', async (orig) => ({
+  ...(await orig<typeof import('next/server')>()),
+  after: (task: () => unknown) => afterTasks.push(task),
+}));
 
 const { POST } = await import('@/app/api/free-audit/route');
 const { AuditUnavailableError } = await import('@/app/_shared/lib/audit/runAudit');
@@ -82,6 +88,7 @@ beforeEach(() => {
   store.findFreeAudit.mockResolvedValue(null);
   audit.mockReset();
   audit.mockResolvedValue({ row: ROW, email: null });
+  afterTasks.length = 0;
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => {
@@ -189,21 +196,20 @@ describe('POST /api/free-audit', () => {
     expect(audit).not.toHaveBeenCalled();
   });
 
-  it("releases the claim when the site can't be audited, and sets no cookie", async () => {
+  // A failure after the claim answers in the body: the headers, with the cookie, went out
+  // before the audit ran. Given back, the claim is gone, so that cookie finds nothing.
+  it("releases the claim when the site can't be audited", async () => {
     audit.mockRejectedValue(new AuditUnavailableError('The site took too long to answer.'));
     const res = await POST(request({ website: 'example.com' }));
-    expect(res.status).toBe(502);
     expect((await res.json()).error).toBe(
       "Couldn't audit example.com: The site took too long to answer. Check the address and try again. This didn't use your free audit."
     );
     expect(store.releaseFreeAudit).toHaveBeenCalledWith('f1');
-    expect(res.headers.get('set-cookie')).toBeNull();
   });
 
   it('releases the claim when the audit breaks on our side', async () => {
     audit.mockRejectedValue(new Error('cheerio exploded'));
     const res = await POST(request({ website: 'example.com' }));
-    expect(res.status).toBe(500);
     expect((await res.json()).error).toBe(FREE_AUDIT_COPY.failed('example.com', 'something went wrong on our side'));
     expect(store.releaseFreeAudit).toHaveBeenCalledWith('f1');
   });
@@ -211,10 +217,36 @@ describe('POST /api/free-audit', () => {
   it('releases the claim when saving fails', async () => {
     store.saveFreeAudit.mockRejectedValue(new Error('free_audits: down'));
     const res = await POST(request({ website: 'example.com' }));
-    expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ ok: false, reason: 'failed' });
     expect(store.releaseFreeAudit).toHaveBeenCalledWith('f1');
-    expect(res.headers.get('set-cookie')).toBeNull();
+  });
+
+  // An audit that hasn't finished yet, and the answer POST gives within a moment, or null
+  const unfinished = () => {
+    let finish!: () => void;
+    audit.mockReturnValue(new Promise((resolve) => (finish = () => resolve({ row: ROW, email: null }))));
+    return () => finish();
+  };
+  const soon = <T,>(promise: Promise<T>) => Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), 200))]);
+
+  it('sends the cookie before the audit finishes, so a visitor who leaves mid-audit still has it', async () => {
+    const finish = unfinished();
+    const res = await soon(POST(request({ website: 'example.com' })));
+    expect(res?.headers.get('set-cookie')).toContain(`${FREE_AUDIT_COOKIE}=f1.`);
+    expect(store.saveFreeAudit).not.toHaveBeenCalled();
+    finish();
+    expect(await res!.json()).toMatchObject({ ok: true, again: false, result: { host: 'example.com' } });
+    expect(store.saveFreeAudit).toHaveBeenCalledWith('f1', ROW, REPORT);
+  });
+
+  it('finishes and saves the audit after the visitor has left', async () => {
+    const finish = unfinished();
+    const res = await soon(POST(request({ website: 'example.com' })));
+    await res!.body!.cancel();
+    finish();
+    await Promise.all(afterTasks.map((task) => task()));
+    expect(store.saveFreeAudit).toHaveBeenCalledWith('f1', ROW, REPORT);
+    expect(store.releaseFreeAudit).not.toHaveBeenCalled();
   });
 
   it('saves the audit and sets a signed, httpOnly cookie for the window', async () => {

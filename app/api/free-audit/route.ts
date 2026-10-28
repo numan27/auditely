@@ -6,8 +6,13 @@
 // public internet; this visitor's network hasn't had one in the window and
 // the day isn't full. Only then does the audit run. An audit that fails is
 // given back, so it doesn't use the visitor's free one.
+//
+// The cookie goes out with the headers, before the audit runs, and the answer
+// follows in the body once it's done. A visitor who leaves mid-audit still has
+// their cookie, and after() finishes and saves the audit without them. A claim
+// that's given back is gone, so its cookie finds nothing.
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { checkBotId } from 'botid/server';
 import { AuditUnavailableError, runAudit } from '@/app/_shared/lib/audit/runAudit';
 import { pageSpeedStore } from '@/app/_shared/lib/audit/pageSpeedStore';
@@ -111,6 +116,21 @@ export async function POST(request: NextRequest) {
   }
   if (!claim.ok) return refuse(429, claim.reason, FREE_AUDIT_COPY[claim.reason]);
 
+  const work = finishFreeAudit(claim.id, website, host, now).catch((err) => {
+    console.error(`[free-audit] Couldn't finish ${claim.id}: ${message(err)}`);
+    return failed(host, OUR_SIDE);
+  });
+  after(() => work);
+
+  const res = new NextResponse(streamJson(work), { headers: { 'content-type': 'application/json' } });
+  res.cookies.set(FREE_AUDIT_COOKIE, await signFreeAuditCookie(claim.id, config.secret), freeAuditCookieOptions(config.windowDays));
+  return res;
+}
+
+const failed = (host: string, why: string): FreeAuditResponse => ({ ok: false, reason: 'failed', error: FREE_AUDIT_COPY.failed(host, why) });
+
+/** Runs and saves the claimed audit, or gives the claim back */
+async function finishFreeAudit(claimId: string, website: string, host: string, now: Date): Promise<FreeAuditResponse> {
   let row: AuditRow;
   try {
     // No email search: the visitor is auditing a site, not finding a lead
@@ -119,26 +139,36 @@ export async function POST(request: NextRequest) {
       { pageSpeedStore }
     ));
   } catch (err) {
-    await releaseFreeAudit(claim.id);
-    if (err instanceof AuditUnavailableError) return refuse(502, 'failed', FREE_AUDIT_COPY.failed(host, err.message));
+    await releaseFreeAudit(claimId);
+    if (err instanceof AuditUnavailableError) return failed(host, err.message);
     console.error(`[free-audit] Audit of ${host} failed: ${message(err)}`);
-    return refuse(500, 'failed', FREE_AUDIT_COPY.failed(host, OUR_SIDE));
+    return failed(host, OUR_SIDE);
   }
 
   const report = await writeFreeReport(row, website);
   try {
-    await saveFreeAudit(claim.id, row, report);
+    await saveFreeAudit(claimId, row, report);
   } catch (err) {
-    await releaseFreeAudit(claim.id);
-    console.error(`[free-audit] Couldn't save ${claim.id}: ${message(err)}`);
-    return refuse(500, 'failed', FREE_AUDIT_COPY.failed(host, OUR_SIDE));
+    await releaseFreeAudit(claimId);
+    console.error(`[free-audit] Couldn't save ${claimId}: ${message(err)}`);
+    return failed(host, OUR_SIDE);
   }
+  return { ok: true, result: view(website, now.toISOString(), row, report), again: false };
+}
 
-  const res = NextResponse.json<FreeAuditResponse>({
-    ok: true,
-    result: view(website, now.toISOString(), row, report),
-    again: false,
+/** A space at once, so the headers and cookie go out, then the answer once it's ready */
+function streamJson(answer: Promise<FreeAuditResponse>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(' '));
+      const body = await answer;
+      try {
+        controller.enqueue(encoder.encode(JSON.stringify(body)));
+        controller.close();
+      } catch {
+        // The visitor left; the audit was still saved
+      }
+    },
   });
-  res.cookies.set(FREE_AUDIT_COOKIE, await signFreeAuditCookie(claim.id, config.secret), freeAuditCookieOptions(config.windowDays));
-  return res;
 }
