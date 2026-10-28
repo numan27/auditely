@@ -25,6 +25,8 @@ export const ROUTES = {
   DEMO: '/demo',
   // Sign-in: the emailed link and Google come back to the callback; /auth/google starts Google
   AUTH_CALLBACK: '/auth/callback',
+  // The emailed link's Continue, which posts it to the callback (an email scanner only opens it)
+  AUTH_CONTINUE: '/auth/continue',
   AUTH_GOOGLE: '/auth/google',
 } as const;
 
@@ -104,6 +106,7 @@ export const PUBLIC_ROUTES = [
   API_ROUTES.CONTACT,
   BOTID_PATH,
   ROUTES.AUTH_CALLBACK,
+  ROUTES.AUTH_CONTINUE,
   ROUTES.AUTH_GOOGLE,
   ROUTES.REPORT,
   ROUTES.DEMO,

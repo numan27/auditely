@@ -54,7 +54,9 @@ Supabase → Authentication → Email Templates. In both **"Magic Link"** and **
 
 For example: `<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Sign in to Auditely</a>`.
 
-The link then works in any browser or on a phone, not only in the browser that asked for it. Both
+The link then works in any browser or on a phone, not only in the browser that asked for it. It opens a
+"Finish signing in" page whose Continue signs in: email security scanners (Outlook's Safe Links and
+others) open links before the person does, and opening the link alone doesn't use it up. Both
 templates need it: the first time an invited address signs in it has no account yet, so Supabase sends
 "Confirm signup" instead of "Magic Link".
 

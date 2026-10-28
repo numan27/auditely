@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET } from '@/app/auth/callback/route';
+import { GET, POST } from '@/app/auth/callback/route';
 
 // Fake Supabase Auth, as userDb() hands it to the route
 const auth = vi.hoisted(() => ({
@@ -29,6 +29,20 @@ vi.mock('@/app/_shared/lib/freeAudit/keepFreeAudit', () => ({ keepFreeAudit: kee
 
 const open = (query: string, cookie?: string) =>
   GET(new NextRequest(`https://auditely.app/auth/callback?${query}`, cookie ? { headers: { cookie } } : undefined));
+
+// Continue on /auth/continue: the emailed link's details, posted from this site
+const press = (fields: Record<string, string>, { cookie, origin = 'https://auditely.app' }: { cookie?: string; origin?: string | null } = {}) =>
+  POST(
+    new NextRequest('https://auditely.app/auth/callback', {
+      method: 'POST',
+      body: new URLSearchParams(fields),
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        ...(origin && { origin }),
+        ...(cookie && { cookie }),
+      },
+    })
+  );
 
 // Where the redirect leads: path and query on this site, or the whole URL off it
 const sentTo = (res: Response) => {
@@ -64,18 +78,38 @@ describe('GET /auth/callback', () => {
     expect(sentTo(res)).toBe('/search/abc');
   });
 
-  // The emailed link, opened without the browser that asked for it
-  it('verifies a token hash from the link, wherever it is opened', async () => {
-    const res = await open('next=%2Fsearches&token_hash=h1&type=email');
+  // Email scanners (Outlook's Safe Links and others) open links before the person does
+  it("doesn't use up the emailed link on opening it, and asks to continue", async () => {
+    const res = await open('next=%2Fsearches&keep=f1.sig&token_hash=h1&type=email');
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+    expect(sentTo(res)).toBe('/auth/continue?next=%2Fsearches&keep=f1.sig&token_hash=h1&type=email');
+  });
+
+  // The emailed link, continued in whatever browser opened it
+  it('verifies the token hash when Continue is pressed', async () => {
+    const res = await press({ next: '/searches', token_hash: 'h1', type: 'email' });
     expect(auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'h1', type: 'email' });
     expect(auth.exchangeCodeForSession).not.toHaveBeenCalled();
+    // A form's answer: the browser then asks for the page
+    expect(res.status).toBe(303);
     expect(sentTo(res)).toBe('/searches');
+  });
+
+  it("refuses a Continue pressed on someone else's site", async () => {
+    expect(sentTo(await press({ token_hash: 'h1', type: 'email' }, { origin: 'https://evil.com' }))).toBe('/login?error=link');
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('refuses a Continue with nothing to sign in with', async () => {
+    expect(sentTo(await press({ next: '/searches' }))).toBe('/login?error=link');
+    expect(sentTo(await press({ token_hash: 'h1', type: 'recovery' }))).toBe('/login?error=link');
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
   });
 
   it('keeps the return address on the site', async () => {
     expect(sentTo(await open('code=c1&next=https%3A%2F%2Fevil.com'))).toBe('/');
     expect(sentTo(await open('code=c1&next=%2F%2Fevil.com'))).toBe('/');
-    expect(sentTo(await open('token_hash=h1&type=email&next=%2F%09%2Fevil.com'))).toBe('/');
+    expect(sentTo(await press({ token_hash: 'h1', type: 'email', next: '/\t/evil.com' }))).toBe('/');
     expect(sentTo(await open('code=c1'))).toBe('/');
   });
 
@@ -98,7 +132,7 @@ describe('GET /auth/callback', () => {
     expect(sentTo(await open('code=c1&next=%2Fsearches'))).toBe('/login?error=link');
 
     auth.verifyOtp.mockResolvedValue({ data: {}, error: { message: 'Token has expired or is invalid', status: 403 } });
-    expect(sentTo(await open('token_hash=h1&type=email'))).toBe('/login?error=link');
+    expect(sentTo(await press({ token_hash: 'h1', type: 'email' }))).toBe('/login?error=link');
   });
 
   it('sends a link with nothing to sign in with back to the login', async () => {
@@ -135,7 +169,7 @@ describe('GET /auth/callback', () => {
 
   it("keeps it from the link's keep= when the link opens in another browser", async () => {
     keep.mockResolvedValue(true);
-    const res = await open('next=%2F&keep=f1.sig&token_hash=h1&type=email');
+    const res = await press({ next: '/', keep: 'f1.sig', token_hash: 'h1', type: 'email' });
     expect(keep).toHaveBeenCalledWith(fakeDb, 'u1', 'f1.sig');
     expect(sentTo(res)).toBe('/audit');
   });

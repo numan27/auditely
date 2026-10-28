@@ -115,6 +115,7 @@ describe('proxy', () => {
   // The emailed link and Google land here before there is a session
   it('lets a logged-out visitor finish signing in', async () => {
     expect(sentTo(await visit(`${ROUTES.AUTH_CALLBACK}?token_hash=h1&type=email&next=%2F`))).toBeNull();
+    expect(sentTo(await visit(`${ROUTES.AUTH_CONTINUE}?token_hash=h1&type=email&next=%2F`))).toBeNull();
     expect(sentTo(await visit(`${ROUTES.AUTH_GOOGLE}?next=%2F`))).toBeNull();
     expect(sentTo(await visit(API_ROUTES.AUTH))).toBeNull();
     const byPassword = await visit(API_ROUTES.AUTH_PASSWORD);
