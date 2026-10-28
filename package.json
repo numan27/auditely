@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.13.6",
+    "botid": "^1.5.11",
     "cheerio": "^1.2.0",
     "formik": "^2.4.9",
     "groq-sdk": "^1.2.0",
@@ -31,6 +32,7 @@
     "resend": "^6.12.3",
     "sass": "^1.97.3",
     "stripe": "23.0.1",
+    "undici": "^7.30.1",
     "verifalia": "^5.0.0",
     "yup": "^1.7.1"
   },

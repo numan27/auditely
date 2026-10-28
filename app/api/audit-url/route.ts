@@ -8,27 +8,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Db } from '@/app/_shared/lib/supabase/client';
 import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
 import { DIRECT_AUDIT_SEARCH } from '@/app/_shared/lib/config/directAudits';
+import { directSearchId } from '@/app/_shared/lib/audit/directSearch';
 import { normalizeWebsiteUrl, websiteKey } from '@/app/_shared/lib/utils/websiteUrl';
 import { BUSINESS_WITH_AUDIT, withAuditData, type BusinessRow } from '@/app/_shared/lib/utils/businessRows';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // More than the list will hold; a longer request isn't from the app
 const MAX_REMOVED = 500;
-
-// This account's reserved search. The user_id filter is a second lock: Row Level
-// Security already shows only its own searches.
-async function findDirectSearchId(db: Db, userId: string): Promise<string | null> {
-  const { data } = await db
-    .from('searches')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('niche', DIRECT_AUDIT_SEARCH.niche)
-    .eq('location', DIRECT_AUDIT_SEARCH.location)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
-}
 
 async function loadBusiness(db: Db, id: string) {
   const { data } = await db.from('businesses').select(BUSINESS_WITH_AUDIT).eq('id', id).single();
@@ -40,7 +26,7 @@ export async function GET() {
   if (!session) return unauthorized();
   const { db, account } = session;
 
-  const searchId = await findDirectSearchId(db, account.id);
+  const searchId = await directSearchId(db, account.id);
   if (!searchId) return NextResponse.json({ businesses: [] });
 
   const { data, error } = await db
@@ -65,7 +51,7 @@ export async function POST(request: NextRequest) {
   const parsed = normalizeWebsiteUrl(typeof body.url === 'string' ? body.url : '');
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  let searchId = await findDirectSearchId(db, account.id);
+  let searchId = await directSearchId(db, account.id);
   if (!searchId) {
     const { data, error } = await db.from('searches').insert(DIRECT_AUDIT_SEARCH).select('id').single();
     if (error || !data) {
@@ -112,7 +98,7 @@ export async function DELETE(request: NextRequest) {
     ids.every((id) => typeof id === 'string' && UUID.test(id));
   if (!valid) return NextResponse.json({ error: 'Choose the websites to remove' }, { status: 400 });
 
-  const searchId = await findDirectSearchId(db, account.id);
+  const searchId = await directSearchId(db, account.id);
   if (!searchId) return NextResponse.json({ removed: [] });
 
   const { data, error } = await db

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseEmails, isOwnerEmail, canSignIn } from '@/app/_shared/lib/auth/account';
+import { parseEmails, isOwnerEmail, canSignIn, signupsOpen } from '@/app/_shared/lib/auth/account';
 
 const env = (over: Record<string, string> = {}) =>
   ({ OWNER_EMAIL: 'Owner@Example.com', ALLOWED_EMAILS: ' tester@x.com, ,Other@Y.com ', ...over }) as unknown as NodeJS.ProcessEnv;
@@ -23,5 +23,11 @@ describe('sign-in rules', () => {
     expect(canSignIn('stranger@z.com', env())).toBe(false);
     expect(canSignIn('stranger@z.com', env({ SIGNUPS_OPEN: 'yes' }))).toBe(false);
     expect(canSignIn('stranger@z.com', env({ SIGNUPS_OPEN: 'true' }))).toBe(true);
+  });
+
+  it('opens sign-ups only when SIGNUPS_OPEN is exactly "true"', () => {
+    expect(signupsOpen(env({ SIGNUPS_OPEN: 'true' }))).toBe(true);
+    for (const value of ['', 'yes', 'TRUE', ' true', '1']) expect(signupsOpen(env({ SIGNUPS_OPEN: value })), value).toBe(false);
+    expect(signupsOpen(env())).toBe(false);
   });
 });

@@ -5,7 +5,7 @@
 // lookups (Hunter, Snov…) live in emailApis.ts.
 
 import { FREE_MAIL_DOMAINS, isValidBusinessEmail } from '@/app/_shared/lib/utils/emailValidation';
-import { readCapped } from '@/app/_shared/lib/audit/siteFetch';
+import { publicFetch, readCapped } from '@/app/_shared/lib/audit/siteFetch';
 import { pageKey, sameSiteLinks } from '@/app/_shared/lib/audit/siteLinks';
 
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -118,10 +118,10 @@ function pickBestEmail(emails: string[], targetDomain: string): string | null {
 
 async function fetchPage(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
+    // Never a page, or a redirect, on a private address
+    const res = await publicFetch(url, {
       signal: AbortSignal.timeout(10000),
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Auditely/1.0)' },
-      redirect: 'follow',
     });
     if (!res.ok) {
       await res.body?.cancel().catch(() => {});

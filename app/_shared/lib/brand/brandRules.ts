@@ -64,6 +64,9 @@ export const OWNER_BRAND = {
 const OWNER_CALL = 'a free 30-minute call';
 const CALL = 'a free call';
 
+/** Auditely's own neutral voice: accounts without a brand of their own, and free audits */
+export const AUDITELY_WRITER: ReportWriter = { about: 'a web consultant', signOff: '[Your name]' };
+
 const AUDITELY_BRAND: Brand = {
   kind: 'auditely',
   name: AUDITELY_NAME,
@@ -73,7 +76,7 @@ const AUDITELY_BRAND: Brand = {
   logo: null,
   contact: null,
   call: CALL,
-  writer: { about: 'a web consultant', signOff: '[Your name]' },
+  writer: AUDITELY_WRITER,
 };
 
 const BLANK: Omit<Profile, 'email'> = {

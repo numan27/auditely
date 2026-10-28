@@ -4,9 +4,11 @@
 // and each account's one Stripe customer. Without the key billing isn't set up: Checkout and the portal say so, and
 // every account stays on Free or its PLAN_OVERRIDES plan. Prices are found by
 // their lookup key (auditely_pro_monthly, …), so no price id lives in the code.
-// Server-only: the key never reaches the browser.
+// Once sign-ups open in production, a test key turns billing off rather than
+// take test payments from real customers. Server-only: the key never reaches the browser.
 
 import Stripe from 'stripe';
+import { signupsOpen } from '@/app/_shared/lib/auth/account';
 import { isLiveStatus, lookupKey, type BillingInterval, type PaidPlanId } from '@/app/_shared/lib/billing/billingRules';
 
 export const BILLING_NOT_SET_UP = "Billing isn't set up yet. Try again later.";
@@ -15,10 +17,27 @@ type StripeEnv = Record<string, string | undefined>;
 
 const clients = new Map<string, Stripe>();
 
-/** The client for STRIPE_SECRET_KEY, one per key; null without a key */
+/** Production has opened sign-ups, but STRIPE_SECRET_KEY is still a test-mode key */
+export function testKeyAtLaunch(env: StripeEnv = process.env): boolean {
+  const key = env.STRIPE_SECRET_KEY?.trim() ?? '';
+  return env.VERCEL_ENV === 'production' && signupsOpen(env as NodeJS.ProcessEnv) && key.startsWith('sk_test_');
+}
+
+let saidTestKey = false;
+
+/** The client for STRIPE_SECRET_KEY, one per key; null without a key, or with a test key at launch */
 export function stripeClient(env: StripeEnv = process.env): Stripe | null {
   const key = env.STRIPE_SECRET_KEY?.trim();
   if (!key) return null;
+  if (testKeyAtLaunch(env)) {
+    if (!saidTestKey) {
+      saidTestKey = true;
+      console.error(
+        '[billing] STRIPE_SECRET_KEY is a test key while sign-ups are open in production. Billing is off until the live key is set.'
+      );
+    }
+    return null;
+  }
   let client = clients.get(key);
   if (!client) {
     client = new Stripe(key);

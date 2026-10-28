@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchSite, fetchPage } from '@/app/_shared/lib/audit/siteFetch';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { fetchSite, fetchPage, NotPublicError, publicFetch } from '@/app/_shared/lib/audit/siteFetch';
+import type { HostLookup } from '@/app/_shared/lib/utils/publicAddress';
+
+// No real DNS: every name is public except *.internal
+vi.mock('node:dns', () => ({
+  promises: {
+    lookup: async (host: string) => [{ address: host.endsWith('.internal') ? '10.0.0.5' : '93.184.216.34', family: 4 }],
+  },
+}));
 
 // Response.url can't be set via the constructor; define it to simulate redirects
 function page(body: string, url: string, init: ResponseInit = {}): Response {
@@ -137,5 +147,120 @@ describe('fetchPage', () => {
       html: null,
       reason: 'Page unreachable',
     });
+  });
+});
+
+describe('publicFetch', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  const lookup = (map: Record<string, string[]>): HostLookup => async (host) => {
+    if (!map[host]) throw Object.assign(new Error('nx'), { code: 'ENOTFOUND' });
+    return map[host].map((address) => ({ address, family: address.includes(':') ? 6 : 4 }));
+  };
+  const redirect = (status: number, location: string) => new Response(null, { status, headers: { location } });
+  const PUBLIC = ['93.184.216.34'];
+
+  it('never requests a redirect hop that points to a private address', async () => {
+    fetchMock.mockResolvedValueOnce(redirect(302, 'http://metadata.internal/latest'));
+    await expect(
+      publicFetch('https://example.com/', {}, lookup({ 'example.com': PUBLIC, 'metadata.internal': ['169.254.169.254'] }))
+    ).rejects.toBeInstanceOf(NotPublicError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a private address literal without requesting it', async () => {
+    for (const url of ['http://127.0.0.1/', 'http://[::1]:8080/', 'http://169.254.169.254/latest']) {
+      await expect(publicFetch(url, {}, lookup({}))).rejects.toBeInstanceOf(NotPublicError);
+    }
+    await expect(publicFetch('file:///etc/passwd', {}, lookup({}))).rejects.toBeInstanceOf(NotPublicError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('follows public redirects and returns the last hop', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url === 'https://example.com/' ? redirect(301, 'https://www.example.com/') : page('<p>hi</p>', url)
+    );
+    const res = await publicFetch('https://example.com/', {}, lookup({ 'example.com': PUBLIC, 'www.example.com': PUBLIC }));
+    expect(res.status).toBe(200);
+    expect(res.url).toBe('https://www.example.com/');
+    expect(fetchMock.mock.calls.map(([url, init]) => [url, (init as RequestInit).redirect])).toEqual([
+      ['https://example.com/', 'manual'],
+      ['https://www.example.com/', 'manual'],
+    ]);
+  });
+
+  it('resolves a relative Location against the hop, and makes a 303 a GET', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url === 'https://example.com/old' ? redirect(303, '/new') : page('<p>hi</p>', url)
+    );
+    await publicFetch('https://example.com/old', { method: 'HEAD' }, lookup({ 'example.com': PUBLIC }));
+    const [, second] = fetchMock.mock.calls;
+    expect(second[0]).toBe('https://example.com/new');
+    expect((second[1] as RequestInit).method).toBe('GET');
+  });
+
+  it('stops after five redirects', async () => {
+    let n = 0;
+    fetchMock.mockImplementation(async () => redirect(302, `https://example.com/${++n}`));
+    await expect(publicFetch('https://example.com/', {}, lookup({ 'example.com': PUBLIC }))).rejects.toThrow('Too many redirects');
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('fetchSite and fetchPage on private addresses', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => vi.stubGlobal('fetch', fetchMock));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it('reports a site that points to a private address as not answering, without requesting it', async () => {
+    expect(await fetchSite('http://intranet.internal/')).toMatchObject({ ok: false, reason: 'it points to a private address' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('treats a homepage that redirects somewhere private the same', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 302, headers: { location: 'http://metadata.internal/' } }));
+    expect(await fetchSite('https://acme.com/')).toMatchObject({ ok: false, reason: 'it points to a private address' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('never reads a key page on a private address', async () => {
+    expect(await fetchPage('http://admin.internal/contact')).toMatchObject({
+      ok: false,
+      html: null,
+      reason: 'it points to a private address',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('publicFetch against a name whose answer changes after the check', () => {
+  // A real request to a server on this machine, reached as localhost
+  let server: Server;
+  let port = 0;
+  let requests = 0;
+  beforeEach(async () => {
+    requests = 0;
+    server = createServer((_req, res) => {
+      requests++;
+      res.end('internal');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    port = (server.address() as AddressInfo).port;
+  });
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it('never requests it when the name answers public to the check and private to the connection', async () => {
+    const answers = [['93.184.216.34'], ['127.0.0.1']];
+    const rebinding: HostLookup = async () => (answers.shift() ?? ['127.0.0.1']).map((address) => ({ address, family: 4 }));
+    await expect(publicFetch(`http://localhost:${port}/`, {}, rebinding)).rejects.toBeInstanceOf(NotPublicError);
+    expect(requests).toBe(0);
   });
 });

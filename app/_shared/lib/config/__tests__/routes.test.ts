@@ -7,6 +7,7 @@ import {
   isHomeAlias,
   isProtectedRoute,
   isPublicRoute,
+  BOTID_PATH,
   ROUTES,
   safeCallbackUrl,
 } from '@/app/_shared/lib/config/routes';
@@ -18,6 +19,18 @@ describe('route access', () => {
     expect(isProtectedRoute('/api/crm')).toBe(true);
     expect(isProtectedRoute('/api/pdf')).toBe(true);
     expect(isProtectedRoute(ROUTES.DASHBOARD)).toBe(true);
+  });
+
+  it('lets a visitor reach the free audit without signing in', () => {
+    expect(isPublicRoute(API_ROUTES.FREE_AUDIT)).toBe(true);
+    expect(API_ROUTES.FREE_AUDIT).toBe('/api/free-audit');
+    expect(isPublicRoute('/api/free-audits')).toBe(false);
+  });
+
+  // withBotId (next.config.ts) rewrites BotID's challenge script and its calls to Vercel
+  it("lets BotID's challenge through, so a signed-out visitor can pass it", () => {
+    expect(isPublicRoute(`${BOTID_PATH}/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js`)).toBe(true);
+    expect(BOTID_PATH).toBe('/149e9513-01fa-4fb0-aad4-566afd725d1b');
   });
 
   it('treats /home as another address for the home page, and nothing else', () => {
@@ -32,7 +45,8 @@ describe('route access', () => {
     expect(demoReportPath('demo-a1')).toBe('/demo/report/demo-a1');
     expect(isPublicRoute(demoReportPath('demo-a1'))).toBe(true);
     expect(isPublicRoute('/demos')).toBe(false);
-    for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(path !== API_ROUTES.AUTH);
+    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.FREE_AUDIT];
+    for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(!open.includes(path));
     expect(isProtectedRoute('/api/autocomplete')).toBe(true);
   });
 
@@ -59,6 +73,20 @@ describe('route access', () => {
 
   // The sign-in link and Google both come back here before there is a session; a
   // signed-in user isn't bounced away, so a second sign-in still finishes
+  it('keeps signup, Terms and Privacy public', () => {
+    expect([ROUTES.SIGNUP, ROUTES.TERMS, ROUTES.PRIVACY]).toEqual(['/signup', '/terms', '/privacy']);
+    for (const path of [ROUTES.SIGNUP, ROUTES.TERMS, ROUTES.PRIVACY]) expect(isPublicRoute(path), path).toBe(true);
+    // A signed-in user is sent home from the sign-up page, as from the login
+    expect(isAuthRoute(ROUTES.SIGNUP)).toBe(true);
+    expect(isAuthRoute(ROUTES.TERMS)).toBe(false);
+  });
+
+  // Search engines read these without an account
+  it('lets anyone read robots.txt and the sitemap', () => {
+    expect(isPublicRoute('/robots.txt')).toBe(true);
+    expect(isPublicRoute('/sitemap.xml')).toBe(true);
+  });
+
   it('opens the sign-in callback and the Google start without a login', () => {
     expect(ROUTES.AUTH_CALLBACK).toBe('/auth/callback');
     expect(ROUTES.AUTH_GOOGLE).toBe('/auth/google');

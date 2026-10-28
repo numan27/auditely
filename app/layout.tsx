@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/app/_shared/components/providers/ThemeProvider";
 import { StoreProvider } from "@/app/_shared/components/providers/StoreProvider";
+import { AUDITELY_URL } from "@/app/_shared/lib/config/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,9 +21,12 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
+// Nothing is indexed unless its page says so: the landing, signup, login, Terms and Privacy do
 export const metadata: Metadata = {
-  title: "Auditely",
-  description: "Internal lead generation and website audit tool.",
+  title: { default: "Auditely", template: "%s | Auditely" },
+  description:
+    "Audit any website in about a minute: speed, SEO, mobile, SSL and AI-search readiness, explained in plain English.",
+  metadataBase: new URL(AUDITELY_URL),
   robots: {
     index: false,
     follow: false,

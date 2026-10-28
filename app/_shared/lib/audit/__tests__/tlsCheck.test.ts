@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { checkTls, interpretTls } from '@/app/_shared/lib/audit/tlsCheck';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { EventEmitter } from 'node:events';
+import tls from 'node:tls';
+import type { LookupFunction } from 'node:net';
+import { checkTls, interpretTls, probeTls } from '@/app/_shared/lib/audit/tlsCheck';
 
 const NOW = Date.parse('2026-09-23T00:00:00Z');
 
@@ -34,6 +37,33 @@ describe('interpretTls', () => {
       daysToExpiry: null,
       issuer: null,
     });
+  });
+});
+
+describe('probeTls on private addresses', () => {
+  // A handshake that never gets anywhere, so nothing leaves this machine
+  const deadSocket = () => {
+    const socket = Object.assign(new EventEmitter(), { destroy: () => {} });
+    setTimeout(() => socket.emit('error', new Error('no network in tests')));
+    return socket as unknown as tls.TLSSocket;
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('never connects to a private address literal', async () => {
+    const connect = vi.spyOn(tls, 'connect').mockImplementation(deadSocket);
+    expect(await probeTls('10.0.0.5')).toBeNull();
+    expect(await probeTls('[::1]')).toBeNull();
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('connects to a name only through a lookup that refuses its private addresses', async () => {
+    const connect = vi.spyOn(tls, 'connect').mockImplementation(deadSocket);
+    const metadata = async () => [{ address: '169.254.169.254', family: 4 }];
+    expect(await probeTls('rebind.example', metadata)).toBeNull();
+    const { lookup } = connect.mock.calls[0][0] as { lookup?: LookupFunction };
+    expect(lookup).toBeTypeOf('function');
+    const code = await new Promise((resolve) => lookup!('rebind.example', { all: true }, (err) => resolve(err?.code)));
+    expect(code).toBe('ENOTPUBLIC');
   });
 });
 

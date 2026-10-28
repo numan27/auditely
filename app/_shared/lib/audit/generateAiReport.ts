@@ -6,8 +6,8 @@
 // business. Used by "Run audit" once the audit is in (api/generate) and by free
 // audits requested on devartventures.com (api/inbound/audit-request). Server-only.
 
-import Groq from 'groq-sdk';
 import type { Db } from '@/app/_shared/lib/supabase/client';
+import { groqComplete } from '@/app/_shared/lib/audit/groqComplete';
 import { rankedProblems } from '@/app/_shared/lib/audit/impact';
 import { InvalidReplyError, reportFixes, writeReport, type WrittenReport } from '@/app/_shared/lib/audit/aiReport';
 import { BRAND_UNAVAILABLE, BrandUnavailable, brandFor } from '@/app/_shared/lib/brand/brand';
@@ -53,8 +53,6 @@ export async function generateAiReport(db: Db, auditId: string, options: { rewri
     return { ok: false, status: 503, error: 'GROQ_API_KEY is not configured' };
   }
 
-  const groq = new Groq({ apiKey });
-
   const biz = audit.businesses as { name: string; website: string | null; user_id: string | null } | null;
   if (!biz) {
     return { ok: false, status: 404, error: 'Business not found' };
@@ -72,21 +70,7 @@ export async function generateAiReport(db: Db, auditId: string, options: { rewri
 
   // The model only sees the impact library's facts; the fixes come from the library
   const problems = rankedProblems(audit);
-  const complete = async (prompt: string): Promise<string> => {
-    const completion = await groq.chat.completions.create({
-      // llama-3.3-70b-versatile is no longer served by Groq (model_not_found)
-      model: 'openai/gpt-oss-120b',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-      // gpt-oss reasons before answering and those tokens count against
-      // max_tokens: at default effort it used up to ~1.5k and got cut off
-      // mid-JSON (json_validate_failed). Low effort uses ~50; 4096 is headroom.
-      reasoning_effort: 'low',
-      max_tokens: 4096,
-    });
-    return completion.choices[0]?.message?.content ?? '{}';
-  };
+  const complete = groqComplete(apiKey);
 
   let written: WrittenReport;
   try {
