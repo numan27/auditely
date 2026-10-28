@@ -27,7 +27,9 @@ Check "Auditely" for trademarks before buying the domain: search the USPTO's tra
 name now, while nothing public uses it.
 
 Then buy the domain, and add it in Vercel → the Auditely project → Settings → Domains → Add. Vercel shows
-the DNS records to set at your registrar. Then set Auditely's address, for Production and Preview:
+the DNS records to set at your registrar. Point them straight at Vercel: don't put a proxying CDN in front
+(such as Cloudflare with its proxy on). Vercel would then see the CDN's address instead of each visitor's,
+so every visitor would share one free audit, and BotID would lose the signals it reads. Then set Auditely's address, for Production and Preview:
 
 ```sh
 printf %s https://<domain> | vercel env add SITE_URL production --no-sensitive
