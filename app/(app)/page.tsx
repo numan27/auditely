@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Workspace } from '@/app/_shared/components/auditely/workspace/workspace';
 import { LandingPage } from '@/app/_shared/components/landing/landingPage';
+import { demoLinks } from '@/app/_shared/lib/demo/demoLinks';
 import { freeAuditSetup } from '@/app/_shared/lib/freeAudit/freeAuditRules';
 import { getSession } from '@/app/_shared/lib/supabase/server';
 
@@ -12,6 +13,10 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const session = await getSession();
-  if (!session) return <LandingPage freeAuditOn={freeAuditSetup().state === 'on'} />;
+  if (!session) {
+    const { videoUrl, videoPlayerUrl } = demoLinks();
+    const video = videoUrl ? { url: videoUrl, playerUrl: videoPlayerUrl } : null;
+    return <LandingPage freeAuditOn={freeAuditSetup().state === 'on'} video={video} />;
+  }
   return <Workspace />;
 }

@@ -11,6 +11,11 @@ describe('the demo capture (demoData.json)', () => {
     expect(findUnmasked(demoData)).toEqual([]);
   });
 
+  // The demo is public: it reads as anyone's account, not the owner's
+  it("never names DevArtVentures or signs as its owner", () => {
+    expect(JSON.stringify(demoData).match(/dev\s*art\s*ventures|numan/gi) ?? []).toEqual([]);
+  });
+
   it('carries no outreach history', () => {
     for (const b of samples) {
       expect([b.hubspot_company_id ?? null, b.crm_sent_at ?? null, b.emailed_at ?? null]).toEqual([null, null, null]);

@@ -1,0 +1,69 @@
+// app/_shared/components/landing/landingMotion.module.scss
+
+// The landing page's motion and its dotted backdrops. Every animation stops for a
+// visitor who asked for less motion.
+
+// Dots fading out from behind the hero's picture
+.dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--color-border-hover) 1.1px, transparent 1.3px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 60% 70% at 78% 40%, #000 15%, transparent 72%);
+}
+
+// The same on the closing band's ink, fading down from the top
+.dotsInk {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgb(255 255 255 / 0.09) 1.1px, transparent 1.3px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 90% at 50% 0%, #000 10%, transparent 70%);
+}
+
+// A score ring filling up to its score
+.ring {
+  animation: ring 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes ring {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
+
+// A line of a scene coming in
+.rise {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+// The open scene's tab filling up until the next scene
+.bar {
+  animation: bar 4.6s linear both;
+}
+
+@keyframes bar {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring,
+  .rise,
+  .bar {
+    animation: none;
+  }
+}

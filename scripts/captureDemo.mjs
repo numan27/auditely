@@ -6,8 +6,9 @@
 //   node --env-file=.env.local scripts/captureDemo.mjs                        lists what can be captured
 //   node --env-file=.env.local scripts/captureDemo.mjs <search_id> <domain>   writes the file
 //
-// Emails and phone numbers are masked, outreach history is cleared and database
-// ids are replaced, so nothing in the file leads back to a row. Read the file
+// Emails and phone numbers are masked, outreach history is cleared, the emails'
+// sign-off is a placeholder and database ids are replaced, so nothing in the file
+// leads back to a row or to the owner. Read the file
 // through once before committing it.
 
 import { writeFileSync } from 'node:fs';
@@ -15,6 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 import { CURRENT_ENGINE_VERSION } from '../app/_shared/lib/audit/types.ts';
 import { DIRECT_AUDIT_SEARCH } from '../app/_shared/lib/config/directAudits.ts';
 import { findUnmasked, maskDeep, maskEmail, maskPhone } from '../app/_shared/lib/demo/mask.ts';
+import { unbrandSignOff } from '../app/_shared/lib/demo/unbrand.ts';
 
 // The sample is sent with the page, so it stays small
 const LEADS = 10;
@@ -100,6 +102,8 @@ function sample(source, key) {
   if (site?.phones) site.phones = site.phones.map(maskPhone);
   business.ai_report.id = `demo-r${key}`;
   business.ai_report.audit_id = business.audit.id;
+  // Signed as an account without a brand, not as the owner
+  business.ai_report.cold_email = unbrandSignOff(business.ai_report.cold_email);
   // Whatever else mentions a contact: finding details, page titles, the AI's text
   return maskDeep(business);
 }

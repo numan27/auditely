@@ -6,6 +6,9 @@
 
 import type { FreeAuditReason, FreeAuditResponse, FreeAuditView } from '@/app/_shared/lib/freeAudit/freeAuditCopy';
 
+/** The closing band's field asks the hero to run its audit: the hero shows the progress and the report */
+export const FREE_AUDIT_EVENT = 'auditely:free-audit';
+
 export type FreeAuditState =
   | { kind: 'idle' }
   | { kind: 'running'; host: string }

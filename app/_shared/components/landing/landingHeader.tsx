@@ -22,20 +22,26 @@ export function LandingLogo() {
   );
 }
 
-// The landing page's, and the Terms' and Privacy's, top bar. The page's own
-// sections hide below 600px; signing in and starting free never do.
+// The landing page's, and the Terms' and Privacy's, top bar. It stays at the top
+// as the page scrolls. The page's own sections hide below 960px; signing in and
+// starting free never do.
+const SECTIONS = [
+  { hash: 'demo', label: 'Demo' },
+  { hash: 'how', label: 'How it works' },
+  { hash: 'pricing', label: 'Pricing' },
+];
+
 export function LandingHeader() {
   return (
-    <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+    <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]/85 backdrop-blur-md">
       <div className={`flex h-[72px] items-center justify-between gap-4 ${wrapClasses}`}>
         <LandingLogo />
         <nav aria-label="Main" className="flex items-center gap-1">
-          <a href={`${ROUTES.HOME}#sample`} className={`${linkClasses} hidden min-[601px]:inline-block`}>
-            Sample report
-          </a>
-          <a href={`${ROUTES.HOME}#pricing`} className={`${linkClasses} hidden min-[601px]:inline-block`}>
-            Pricing
-          </a>
+          {SECTIONS.map(({ hash, label }) => (
+            <a key={hash} href={`${ROUTES.HOME}#${hash}`} className={`${linkClasses} hidden min-[961px]:inline-block`}>
+              {label}
+            </a>
+          ))}
           <Link href={ROUTES.LOGIN} className={linkClasses}>
             Sign in
           </Link>

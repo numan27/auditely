@@ -6,7 +6,6 @@
 
 import { pdfFileName, renderPdf } from '@/app/_shared/lib/audit/pdfRender';
 import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
-import { reportContact } from '@/app/_shared/lib/config/reportContact';
 import { demoData } from '@/app/_shared/lib/demo/demoData';
 import { allSamples } from '@/app/_shared/lib/demo/demoSamples';
 
@@ -24,10 +23,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ aud
   const business = samples.find((b) => b.audit?.id === auditId);
   if (!business?.audit || !business.ai_report) return new Response('Report not found', { status: 404 });
 
-  // The owner's report as it was before profiles. The contact is off by default:
-  // Upwork restricts sharing contact details before a contract.
-  const contact = process.env.DEMO_PDF_CONTACT === '1' ? reportContact() : null;
-  const brand = { ...resolveBrand({ profile: null, isOwner: true, plan: 'owner' }), contact };
+  // As an account without a brand of its own sends it: Auditely's name, no contact
+  // box, and nothing of the owner's. The landing page links here.
+  const brand = resolveBrand({ profile: null, isOwner: false, plan: 'free' });
   const pdf = await renderPdf(business.audit, business, business.ai_report, brand);
   return new Response(new Uint8Array(pdf), {
     headers: {

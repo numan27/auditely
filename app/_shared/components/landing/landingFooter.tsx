@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LogoMark } from '@/app/_shared/components/auditely/logoMark/logoMark';
+import { wrapClasses } from '@/app/_shared/components/landing/landingStyles';
 import { LEGAL } from '@/app/_shared/lib/config/legal';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 
@@ -9,7 +10,7 @@ const linkClasses = 'px-2.5 py-3 text-[14.5px] text-[var(--color-text-secondary)
 export function LandingFooter() {
   return (
     <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
-      <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-4 px-4 pb-11 pt-7 min-[601px]:px-10">
+      <div className={`${wrapClasses} flex flex-wrap items-center justify-between gap-4 pb-11 pt-7`}>
         <Link
           href={ROUTES.HOME}
           className="flex items-center gap-2.5 font-display text-[17px] font-semibold tracking-tight text-[var(--color-text-primary)]"

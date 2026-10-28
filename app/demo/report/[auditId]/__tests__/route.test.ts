@@ -25,23 +25,23 @@ describe('GET /demo/report/[auditId]', () => {
     expect(generateStaticParams()).toEqual(allSamples(demoData).map((b) => ({ auditId: b.audit!.id })));
   });
 
-  it("downloads a sample audit's PDF, without the contact box", async () => {
+  it("downloads a sample audit's PDF under Auditely's name, without a contact box", async () => {
     const res = await open(first.audit!.id);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/pdf');
     expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="audit-[a-z0-9-]+\.pdf"$/);
-    // The owner's report as before profiles, minus the contact
-    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'owner', name: 'DevArtVentures', contact: null });
+    // As an account without a brand of its own would send it: never the owner's
+    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'auditely', name: 'Auditely', contact: null });
   });
 
   it('keeps the reports out of search engines', async () => {
     expect((await open(first.audit!.id)).headers.get('x-robots-tag')).toBe('noindex');
   });
 
-  it('adds the contact box when DEMO_PDF_CONTACT is switched on', async () => {
+  it("never adds the owner's contact details, even with the old DEMO_PDF_CONTACT switch on", async () => {
     vi.stubEnv('DEMO_PDF_CONTACT', '1');
     await open(first.audit!.id);
-    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'owner', contact: { email: expect.any(String) } });
+    expect(vi.mocked(renderPdf).mock.calls[0][3]).toMatchObject({ kind: 'auditely', contact: null });
   });
 
   it('answers 404 for anything that is not a sample audit, without drawing a PDF', async () => {

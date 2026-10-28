@@ -11,7 +11,7 @@ import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 export const demoData = data as unknown as DemoData;
 
 /** The landing page's sample report: the first lead of the demo's search */
-const SAMPLE_ID = 'demo-b1';
+export const SAMPLE_ID = 'demo-b1';
 
 export interface SampleReportData {
   name: string;

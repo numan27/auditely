@@ -1,6 +1,7 @@
 // The landing page, as a signed-out visitor first sees it: one field for the
-// free audit, a real sample report, the agency steps and the prices, built from
-// the same plans and feature names the app uses, and nothing about DevArtVentures.
+// free audit beside a moving sample, the demo's real search, how it works, the
+// report you send, the prices from the same plans and feature names the app uses,
+// questions, a last way in, and nothing about DevArtVentures.
 
 import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
@@ -14,14 +15,22 @@ vi.mock('@/app/_shared/assets/images/landing/resultsDark.png', () => ({
 }));
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LandingPage } from '@/app/_shared/components/landing/landingPage';
-import { FreeAuditHero } from '@/app/_shared/components/landing/freeAuditHero';
+import { FREE_PLAN_LINE, FreeAuditHero } from '@/app/_shared/components/landing/freeAuditHero';
+import { DemoSection } from '@/app/_shared/components/landing/demoSection';
+import { DemoWalkthrough, type WalkthroughLinks } from '@/app/_shared/components/landing/demoWalkthrough';
+import { HowItWorks } from '@/app/_shared/components/landing/howItWorks';
+import { ReportShowcase } from '@/app/_shared/components/landing/reportShowcase';
+import { FAQ, LandingFaq } from '@/app/_shared/components/landing/landingFaq';
+import { ClosingBand } from '@/app/_shared/components/landing/closingBand';
+import { LandingHeader } from '@/app/_shared/components/landing/landingHeader';
 import { SampleReport } from '@/app/_shared/components/landing/sampleReport';
 import { AgencySteps } from '@/app/_shared/components/landing/agencySteps';
 import { PricingTable, planHref, planPrice } from '@/app/_shared/components/landing/pricingTable';
 import { PlansView } from '@/app/_shared/components/auditely/plansView/plansView';
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { PLAN_FEATURES } from '@/app/_shared/lib/usage/usageCopy';
-import { sampleReportData } from '@/app/_shared/lib/demo/demoData';
+import { demoData, sampleReportData } from '@/app/_shared/lib/demo/demoData';
+import { landingLeads, landingSample, searchLabel } from '@/app/_shared/lib/demo/landingDemo';
 import { periodOptionClasses, periodTrackClasses } from '@/app/_shared/components/auditely/billing/billingPeriodStyles';
 
 // What a reader sees: the markup's text, entities decoded
@@ -37,27 +46,49 @@ const count = (html: string, pattern: RegExp) => [...html.matchAll(pattern)].len
 /** The opening tag of the link that reads `label` */
 const linkTo = (html: string, label: string) => html.match(new RegExp(`<a[^>]*>\\s*${label}\\s*</a>`))?.[0] ?? '';
 
-const hero = (enabled: boolean) => renderToStaticMarkup(createElement(FreeAuditHero, { enabled }));
-const page = (freeAuditOn: boolean) => renderToStaticMarkup(createElement(LandingPage, { freeAuditOn }));
+const sample = landingSample(demoData);
+const leads = landingLeads(demoData);
+const search = searchLabel(demoData.query);
+const LOOM: WalkthroughLinks = { url: 'https://www.loom.com/share/abc123', playerUrl: 'https://www.loom.com/embed/abc123?autoplay=1' };
+const YOUTUBE: WalkthroughLinks = { url: 'https://youtu.be/abc123', playerUrl: null };
+
+const hero = (enabled: boolean, video = false) => renderToStaticMarkup(createElement(FreeAuditHero, { enabled, sample, video }));
+const demo = (video: WalkthroughLinks | null) => renderToStaticMarkup(createElement(DemoSection, { leads, search, video }));
+const page = (freeAuditOn: boolean, video: WalkthroughLinks | null = null) =>
+  renderToStaticMarkup(createElement(LandingPage, { freeAuditOn, video }));
 
 describe('the hero', () => {
-  it('has one field, labelled Paste a website, and no illustration', () => {
+  it('says who it is for, with one field labelled Paste a website', () => {
     const html = hero(true);
-    expect(text(html)).toContain('Audit any website in about a minute.');
+    expect(text(html)).toContain('For web designers, SEO freelancers and agencies');
+    expect(html).toMatch(/<h1[^>]*>Find clients whose websites <span[^>]*>need you\.<\/span><\/h1>/);
     expect(text(html)).toContain(
-      'Speed, SEO, mobile, SSL and AI-search readiness, scored and explained in plain English. Your first audit is free, with no sign-up.'
+      'Audit any website in about a minute. Speed, SEO, mobile, SSL and AI-search readiness, explained in plain English, with the first email written for you. Or audit a whole city at once.'
     );
     expect(count(html, /<input/g)).toBe(1);
     expect(html).toMatch(/<label[^>]*for="site"[^>]*>Paste a website<\/label>/);
     expect(html).toMatch(/<input[^>]*id="site"/);
     expect(html).toContain('placeholder="example.com"');
-    expect(text(html)).toContain('Audit it');
-    expect(text(html)).toContain(
-      `One free audit per visitor. Sign up free to keep it, and run ${PLANS.free.limits.audit} audits a month.`
-    );
-    // Icons only: no pictures, and every drawing is hidden from screen readers
+    expect(text(html)).toContain('Audit it free');
+    expect(text(html)).toContain('Your first audit needs no sign-up');
+    expect(text(html)).toContain(FREE_PLAN_LINE);
+    expect(FREE_PLAN_LINE).toBe(`Free plan: ${PLANS.free.limits.audit} audits and ${PLANS.free.limits.search} search a month`);
+    // Drawn, not pictured, and every drawing is hidden from screen readers
     expect(html).not.toContain('<img');
     expect(count(html, /<svg/g)).toBe(count(html, /<svg[^>]*aria-hidden/g));
+  });
+
+  it('shows Auditely at work on the sample beside the headline, with a pause button', () => {
+    const html = hero(true);
+    expect(html).toContain(`aria-label="Auditely at work on ${sample.host}"`);
+    expect(text(html)).toContain(sample.name);
+    for (const tab of ['Audit', 'Summary', 'Email', 'Report']) expect(html).toMatch(new RegExp(`<button[^>]*aria-pressed="(true|false)"[^>]*>[^<]*${tab}`));
+    expect(html).toContain('aria-label="Pause the animation"');
+  });
+
+  it('links to the walkthrough only when there is one', () => {
+    expect(hero(true, true)).toMatch(/<a[^>]*href="#demo-video"[^>]*>[\s\S]*?Watch the 45-second demo<\/a>/);
+    expect(text(hero(true, false))).not.toContain('Watch the 45-second demo');
   });
 
   it('says Sign up to audit a website when free audits are off', () => {
@@ -65,8 +96,152 @@ describe('the hero', () => {
     expect(text(html)).toContain('Sign up to audit a website.');
     expect(linkTo(html, 'Sign up free')).toContain('href="/signup"');
     expect(html).not.toContain('<input');
-    // The headline and lead still say what Auditely does
-    expect(text(html)).toContain('Audit any website in about a minute.');
+    expect(text(html)).toContain(FREE_PLAN_LINE);
+    expect(text(html)).toContain('No card needed');
+    expect(text(html)).not.toContain('Your first audit needs no sign-up');
+    // The headline still says what Auditely does, and the sample still plays
+    expect(text(html)).toContain('Find clients whose websites need you.');
+    expect(html).toContain(`aria-label="Auditely at work on ${sample.host}"`);
+  });
+});
+
+describe('the demo section', () => {
+  const rows = (html: string) => html.match(/<button[^>]*aria-controls="demo-lead"[^>]*>/g) ?? [];
+
+  it("shows the demo's search, every lead, weakest site first", () => {
+    const html = demo(null);
+    expect(html).toContain('id="demo"');
+    expect(text(html)).toContain('A real search, start to finish.');
+    expect(text(html)).toContain(`A search for “cosmetic dentist” in Houston, TX: ${leads.length} businesses found`);
+    expect(rows(html)).toHaveLength(leads.length);
+    expect(html.indexOf(leads[0].name)).toBeLessThan(html.indexOf(leads.at(-1)!.name));
+    expect(linkTo(html, 'Open the full demo')).toContain('href="/demo"');
+    expect(html).toMatch(/<figcaption[^>]*>Business data from Google Maps<\/figcaption>/);
+  });
+
+  it('opens on the weakest lead: its scores, what Auditely wrote, its first email and its PDF', () => {
+    const html = demo(null);
+    const pressed = rows(html).filter((row) => row.includes('aria-pressed="true"'));
+    expect(pressed).toHaveLength(1);
+    expect(rows(html)[0]).toContain('aria-pressed="true"');
+    const detail = html.slice(html.indexOf('id="demo-lead"'));
+    expect(text(detail)).toContain(`#1 of ${leads.length}, weakest first`);
+    expect(text(detail)).toContain(leads[0].name);
+    expect(text(detail)).toContain(leads[0].summary);
+    expect(text(detail)).toContain(`First email: ${leads[0].subject}`);
+    expect(linkTo(detail, 'Download the report')).toContain(`href="${leads[0].reportUrl}"`);
+  });
+
+  it('sends the browser only what it shows: no email address or phone number', () => {
+    expect(Object.keys(leads[0]).sort()).toEqual(
+      ['average', 'host', 'id', 'name', 'rank', 'rating', 'reportUrl', 'reviews', 'scores', 'subject', 'summary', 'weakest'].sort()
+    );
+    expect(demo(null)).not.toContain('mailto:');
+    expect(demo(null)).not.toContain('tel:');
+  });
+
+  it('adds a walkthrough tab only when there is a walkthrough', () => {
+    expect(demo(null)).not.toContain('Walkthrough');
+    expect(demo(null)).not.toContain('id="demo-video"');
+    const html = demo(LOOM);
+    expect(html).toContain('id="demo-video"');
+    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>[\s\S]*?Sample search<\/button>/);
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*>[\s\S]*?Walkthrough · 45 s<\/button>/);
+    // The search shows first; the video waits for its tab
+    expect(rows(html)).toHaveLength(leads.length);
+    expect(html).not.toContain('<iframe');
+  });
+});
+
+describe('the walkthrough', () => {
+  it("loads Loom's player only once the visitor presses play", () => {
+    const html = renderToStaticMarkup(createElement(DemoWalkthrough, { video: LOOM }));
+    expect(html).toMatch(/<button[^>]*aria-label="Play the walkthrough"/);
+    expect(html).not.toContain('<iframe');
+    expect(html).not.toContain('loom.com');
+  });
+
+  it('opens any other link in a new tab', () => {
+    const html = renderToStaticMarkup(createElement(DemoWalkthrough, { video: YOUTUBE }));
+    expect(html).toMatch(/<a[^>]*href="https:\/\/youtu\.be\/abc123"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+    expect(text(html)).toContain('Opens in a new tab');
+  });
+});
+
+describe('how it works', () => {
+  it('runs from a search to an audit to a report, over the sample search', () => {
+    const html = renderToStaticMarkup(createElement(HowItWorks, { search, total: leads.length, sample }));
+    expect(html).toContain('id="how"');
+    expect(text(html)).toContain('From a city to a first email, in three steps.');
+    for (const step of ['Search a trade and a city', 'Audit every website', 'Send each one its report']) expect(text(html)).toContain(step);
+    expect(text(html)).toContain(`Cosmetic dentist Houston, TX ${leads.length} found`);
+    expect(text(html)).toContain(sample.email.subject);
+  });
+});
+
+describe('what you send', () => {
+  const html = renderToStaticMarkup(createElement(ReportShowcase, { sample }));
+
+  it("shows the sample's report under the place for your logo", () => {
+    expect(html).toContain('id="sample"');
+    expect(text(html)).toContain('A report your prospect reads in a minute.');
+    expect(text(html)).toContain('YOUR LOGO');
+    expect(text(html)).toContain(`Website audit for ${sample.name}`);
+    expect(text(html)).toContain('Performance 72 Needs work SEO 85 Good Mobile 37 Poor GEO 75 Needs work AEO 55 Needs work Lead capture 85 Good');
+    expect(text(html)).toContain(sample.summary);
+    for (const fix of sample.improvements) expect(text(html)).toContain(fix);
+  });
+
+  it('shows how its first email starts, unsigned, and what Pro and Agency do next', () => {
+    expect(text(html)).toContain(`The first email ${sample.email.subject} Your site loads in 21.7`);
+    expect(html).not.toContain('[Your name]');
+    expect(text(html)).toContain('Then, on Pro and Agency');
+    for (const line of ['Send it from your own mailbox, so replies come to you', 'Hand the lead and a private report link to HubSpot', 'Export to CSV or Google Sheets']) {
+      expect(text(html)).toContain(line);
+    }
+  });
+});
+
+describe('questions', () => {
+  it('folds five answers away, the first one open', () => {
+    const html = renderToStaticMarkup(createElement(LandingFaq));
+    expect(html).toContain('id="faq"');
+    expect(count(html, /<details/g)).toBe(5);
+    expect(count(html, /<details[^>]*open=""/g)).toBe(1);
+    expect(html.indexOf('open=""')).toBeLessThan(html.indexOf(FAQ[1].question));
+    for (const { question, answer } of FAQ) {
+      expect(text(html)).toContain(question);
+      expect(text(html)).toContain(answer);
+    }
+  });
+});
+
+describe('the closing band', () => {
+  it('hands its website to the hero when free audits are on', () => {
+    const html = renderToStaticMarkup(createElement(ClosingBand, { enabled: true }));
+    expect(html).toMatch(/<label[^>]*for="closing-site"[^>]*>Website to audit<\/label>/);
+    expect(html).toMatch(/<input[^>]*id="closing-site"/);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Audit it free<\/button>/);
+    expect(text(html)).toContain('Your first audit is free, with no sign-up.');
+  });
+
+  it('offers sign-up when they are off', () => {
+    const html = renderToStaticMarkup(createElement(ClosingBand, { enabled: false }));
+    expect(html).not.toContain('<input');
+    expect(linkTo(html, 'Sign up free')).toContain('href="/signup"');
+    expect(text(html)).toContain(`${FREE_PLAN_LINE}. No card needed.`);
+  });
+});
+
+describe('the header', () => {
+  it("links to the page's sections, sign-in and sign-up", () => {
+    const html = renderToStaticMarkup(createElement(LandingHeader));
+    expect(html).toMatch(/<header[^>]*class="sticky top-0/);
+    expect(linkTo(html, 'Demo')).toContain('href="/#demo"');
+    expect(linkTo(html, 'How it works')).toContain('href="/#how"');
+    expect(linkTo(html, 'Pricing')).toContain('href="/#pricing"');
+    expect(linkTo(html, 'Sign in')).toContain('href="/login"');
+    expect(linkTo(html, 'Start free')).toContain('href="/signup"');
   });
 });
 
@@ -177,27 +352,42 @@ describe('pricing', () => {
 });
 
 describe('LandingPage', () => {
-  it('runs from the free audit to the sample, the agency steps, pricing and a last way in', () => {
+  it('runs from the hero to the demo, how it works, the report, pricing, questions and a last way in', () => {
     const html = page(true);
-    const at = (needle: string) => html.indexOf(needle);
-    expect(at('Audit any website in about a minute.')).toBeGreaterThan(-1);
-    expect(at('id="sample"')).toBeGreaterThan(at('Audit any website in about a minute.'));
-    expect(at('Looking for clients?')).toBeGreaterThan(at('id="sample"'));
-    expect(at('id="pricing"')).toBeGreaterThan(at('Looking for clients?'));
-    expect(at('Try it on a site you know.')).toBeGreaterThan(at('id="pricing"'));
-    expect(linkTo(html, 'Audit a website')).toContain('href="#site"');
-    expect(at('© ')).toBeGreaterThan(at('Try it on a site you know.'));
+    const order = [
+      'Find clients whose websites',
+      'aria-label="What Auditely checks"',
+      'id="demo"',
+      'id="how"',
+      'id="sample"',
+      'id="pricing"',
+      'id="faq"',
+      'Try it on a site you know.',
+      '© ',
+    ].map((needle) => html.indexOf(needle));
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(text(html)).toContain('04 · Pricing Start free. Upgrade when you need more. One new client pays for a year of Pro.');
   });
 
-  it('sends the closing button to sign-up when free audits are off', () => {
+  it('has two fields for the free audit when it is on, and none when it is off', () => {
+    expect(count(page(true), /<input/g)).toBe(2);
     const html = page(false);
-    expect(linkTo(html, 'Audit a website')).toBe('');
+    expect(html).not.toContain('<input');
     expect(text(html)).toContain('Sign up to audit a website.');
     const closing = html.slice(html.indexOf('Try it on a site you know.'));
     expect(linkTo(closing, 'Sign up free')).toContain('href="/signup"');
   });
 
-  it('never mentions DevArtVentures', () => {
-    for (const on of [true, false]) expect(page(on)).not.toMatch(/dev\s*art\s*ventures/i);
+  it('links the hero to the walkthrough only when there is one', () => {
+    expect(page(true)).not.toContain('#demo-video');
+    expect(page(true, LOOM)).toContain('href="#demo-video"');
+    expect(page(true, LOOM)).toContain('id="demo-video"');
+  });
+
+  it('never mentions DevArtVentures or signs as its owner', () => {
+    for (const on of [true, false]) {
+      for (const video of [null, LOOM]) expect(page(on, video).match(/dev\s*art\s*ventures|numan/gi) ?? []).toEqual([]);
+    }
   });
 });
