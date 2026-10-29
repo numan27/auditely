@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './modal.module.scss';
 
 interface ModalProps {
@@ -57,9 +58,14 @@ export const Modal = ({
     }
   };
 
+  // In the browser it renders into <body>: opened from inside an element with a
+  // backdrop-filter or transform (the sticky header), a fixed overlay would
+  // otherwise be pinned to that element instead of the viewport
+  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+
   if (!isOpen) return null;
 
-  return (
+  const overlay = (
     <div className={styles['modal-overlay']} onClick={handleOverlayClick}>
       <div
         className={[styles.modal, styles[`modal--${size}`], className].filter(Boolean).join(' ')}
@@ -70,7 +76,10 @@ export const Modal = ({
       </div>
     </div>
   );
+  return inBrowser ? createPortal(overlay, document.body) : overlay;
 };
+
+const noSubscribe = () => () => {};
 
 interface ModalHeaderProps {
   title?: string;
