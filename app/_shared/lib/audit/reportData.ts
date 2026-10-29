@@ -38,13 +38,30 @@ export const formatScore = (score: number | null | undefined): string =>
 export const formatSsl = (valid: boolean | null | undefined): string =>
   valid === true ? 'valid' : valid === false ? 'invalid or missing' : 'not measured';
 
-/** The site-read failure reason in words a user (or prospect) understands. */
-export function siteReasonText(reason: string): string {
+const UNREAD_AFTER =
+  "so GEO, AEO and lead capture couldn't be checked. Performance, SEO, mobile and SSL come from Google and aren't affected.";
+
+/** Why the site couldn't be read at all (no GEO, AEO or lead capture checks), or null */
+export function unreadSiteReason(checks: Partial<AuditChecks> | null | undefined): string | null {
+  const { geo, aeo, lead, site } = checks ?? {};
+  return !geo && !aeo && !lead && site?.reason ? site.reason : null;
+}
+
+/** Why GEO, AEO and lead capture weren't checked, in words a user (or prospect) understands. */
+export function siteNotice(reason: string): { title: string; body: string } {
   // "Blocked (403)" / "Blocked (bot challenge)": the site's bot protection turned the audit away
   if (reason.startsWith('Blocked')) {
-    return "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected.";
+    return { title: 'This website blocked our checks', body: `It turns away automated visitors, ${UNREAD_AFTER}` };
   }
-  return `Couldn't read site: ${reason}`;
+  const http = /^HTTP (\d{3})$/.exec(reason);
+  const why = /timed out$/.test(reason)
+    ? 'It took too long to answer'
+    : /unreachable$/.test(reason)
+      ? "It didn't respond"
+      : http
+        ? `Its home page answered with an error (${http[1]})`
+        : `The site check said: ${reason}`;
+  return { title: "We couldn't read this website", body: `${why}, ${UNREAD_AFTER}` };
 }
 
 export function scoreTone(score: number | null | undefined): ScoreTone {

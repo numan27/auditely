@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 import type { Finding } from '@/app/_shared/lib/audit/types';
-import { siteReasonText, sortFindings } from '@/app/_shared/lib/audit/reportData';
+import { sortFindings } from '@/app/_shared/lib/audit/reportData';
 import { CheckIcon, XIcon } from '@/app/_shared/components/ui/icons/icons';
 
 const STATUS_STYLES: Record<Finding['status'], { icon: ReactNode; className: string; label: string }> = {
@@ -68,13 +68,10 @@ function FindingGroup({ title, score, findings }: FindingGroupProps) {
 
 /** GEO / AEO / lead capture findings, plus HTML-based SEO basics when PageSpeed's SEO score is missing. */
 export function AuditChecklist({ audit }: { audit: AuditFields }) {
-  const { geo, aeo, seo, site, lead } = audit.checks ?? {};
+  const { geo, aeo, seo, lead } = audit.checks ?? {};
   const showSeoBasics = audit.seo_score === null && !!seo;
-  if (!geo && !aeo && !lead && !showSeoBasics) {
-    return site?.reason ? (
-      <p className="text-sm text-[var(--color-text-tertiary)]">{siteReasonText(site.reason)}</p>
-    ) : null;
-  }
+  // A site that couldn't be read says why under the scores (AuditScores)
+  if (!geo && !aeo && !lead && !showSeoBasics) return null;
 
   return (
     <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">

@@ -1,7 +1,8 @@
 // app/_shared/components/auditely/auditScores/auditScores.tsx
 
 import type { AuditFields } from '@/app/_shared/lib/types/auditely';
-import { scoreTone, topLighthouseIssues, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
+import { ShieldAlertIcon } from '@/app/_shared/components/ui/icons/icons';
+import { scoreTone, siteNotice, topLighthouseIssues, unreadSiteReason, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 
 const SSL_EXPIRY_WARN_DAYS = 30;
 
@@ -45,11 +46,11 @@ function Tile({ label, value, tone, fill, note, reason }: TileProps) {
 }
 
 // `== null` also covers undefined (rows written before the GEO/AEO columns existed)
-function ScoreTile({ label, score, reason }: { label: string; score: number | null | undefined; reason?: string }) {
+function ScoreTile({ label, score, reason, blocked }: { label: string; score: number | null | undefined; reason?: string; blocked?: boolean }) {
   return (
     <Tile
       label={label}
-      value={score == null ? '—' : String(score)}
+      value={score == null ? (blocked ? 'Blocked' : '—') : String(score)}
       tone={scoreTone(score)}
       fill={score ?? 0}
       reason={score == null ? (reason ?? 'Not measured') : undefined}
@@ -82,6 +83,20 @@ function psiReason(audit: AuditFields, strategy: 'mobile' | 'desktop'): string |
   return status && status !== 'ok' ? `PageSpeed failed: ${status}` : undefined;
 }
 
+/** Why GEO, AEO and lead capture have no scores: the site couldn't be read */
+function SiteNotice({ reason }: { reason: string }) {
+  const { title, body } = siteNotice(reason);
+  return (
+    <div role="note" className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+      <ShieldAlertIcon size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div>
+        <p className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</p>
+        <p className="mt-0.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">{body}</p>
+      </div>
+    </div>
+  );
+}
+
 function KeyIssues({ rawJson }: { rawJson: Record<string, unknown> }) {
   const issues = topLighthouseIssues(rawJson, 4);
   if (issues.length === 0) return null;
@@ -108,6 +123,8 @@ function KeyIssues({ rawJson }: { rawJson: Record<string, unknown> }) {
 
 export function AuditScores({ audit }: { audit: AuditFields }) {
   const siteReason = audit.checks?.site?.reason;
+  const unread = unreadSiteReason(audit.checks);
+  const blocked = !!unread?.startsWith('Blocked');
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -115,10 +132,11 @@ export function AuditScores({ audit }: { audit: AuditFields }) {
         <ScoreTile label="SEO" score={audit.seo_score} reason={psiReason(audit, 'mobile')} />
         <ScoreTile label="Mobile" score={audit.mobile_score} reason={psiReason(audit, 'mobile')} />
         <SslTile audit={audit} />
-        <ScoreTile label="GEO" score={audit.geo_score} reason={siteReason} />
-        <ScoreTile label="AEO" score={audit.aeo_score} reason={siteReason} />
-        <ScoreTile label="Lead capture" score={audit.lead_score} reason={siteReason} />
+        <ScoreTile label="GEO" score={audit.geo_score} reason={siteReason} blocked={blocked} />
+        <ScoreTile label="AEO" score={audit.aeo_score} reason={siteReason} blocked={blocked} />
+        <ScoreTile label="Lead capture" score={audit.lead_score} reason={siteReason} blocked={blocked} />
       </div>
+      {unread && <SiteNotice reason={unread} />}
       <KeyIssues rawJson={audit.raw_json} />
     </div>
   );

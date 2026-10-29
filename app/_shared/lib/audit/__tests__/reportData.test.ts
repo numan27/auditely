@@ -4,7 +4,7 @@ import {
   formatScore,
   formatSsl,
   scoreTone,
-  siteReasonText,
+  siteNotice,
   sortFindings,
   topLighthouseIssues,
   type AuditLike,
@@ -77,17 +77,24 @@ describe('issue selection', () => {
   });
 });
 
-describe('siteReasonText', () => {
+describe('siteNotice', () => {
+  const after = "so GEO, AEO and lead capture couldn't be checked. Performance, SEO, mobile and SSL come from Google and aren't affected.";
+
   it('explains bot blocking in plain words, for new and old audits', () => {
     for (const reason of ['Blocked (403)', 'Blocked (bot challenge)']) {
-      expect(siteReasonText(reason)).toBe(
-        "This website blocks automated visitors, so GEO, AEO and lead capture couldn't be checked. The PageSpeed scores come from Google and aren't affected."
-      );
+      expect(siteNotice(reason)).toEqual({ title: 'This website blocked our checks', body: `It turns away automated visitors, ${after}` });
     }
   });
 
+  it('says plainly why a site that didn’t answer couldn’t be read', () => {
+    expect(siteNotice('Site timed out').body).toBe(`It took too long to answer, ${after}`);
+    expect(siteNotice('Site unreachable').body).toBe(`It didn't respond, ${after}`);
+    expect(siteNotice('HTTP 500').body).toBe(`Its home page answered with an error (500), ${after}`);
+    expect(siteNotice('Site timed out').title).toBe("We couldn't read this website");
+  });
+
   it('passes other reasons through', () => {
-    expect(siteReasonText('Site timed out')).toBe("Couldn't read site: Site timed out");
+    expect(siteNotice('Not an HTML page').body).toBe(`The site check said: Not an HTML page, ${after}`);
   });
 });
 
