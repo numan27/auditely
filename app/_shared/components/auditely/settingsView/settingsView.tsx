@@ -13,7 +13,8 @@ import type { GrowthCounts } from '@/app/_shared/lib/growth/funnel';
 import { HubSpotForm } from '@/app/_shared/components/auditely/settingsView/hubspotForm';
 import { MailboxForm } from '@/app/_shared/components/auditely/settingsView/mailboxForm';
 import { PasswordSection } from '@/app/_shared/components/auditely/settingsView/passwordSection';
-import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
+// The profile form moved to the Brand studio (brandStudio/studioBrandPanel.tsx), beside a live preview
+// import { ProfileForm } from '@/app/_shared/components/auditely/settingsView/profileForm';
 import { Section } from '@/app/_shared/components/auditely/settingsView/settingsSection';
 import { subscriptionNote } from '@/app/_shared/lib/billing/billingCopy';
 import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
@@ -73,7 +74,8 @@ function StillSaved({ text, note, url, disconnected }: { text: string; note: str
 }
 
 /** The account's profile and branding, its mailbox and HubSpot, its password, its plan, and deleting it */
-export function SettingsView({ profile, connections, plan, email, subscription, billingReady, freeAudits, growth }: SettingsViewProps) {
+// `profile` is edited in the Brand studio now; the page still passes it
+export function SettingsView({ connections, plan, email, subscription, billingReady, freeAudits, growth }: SettingsViewProps) {
   const paying = plan !== 'owner' && subscription;
   return (
     <ToastProvider position="bottom-right">
@@ -92,7 +94,20 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
           </p>
         }
       >
-        {/* Free has no branding, in the beta too: what it saved before stays saved, unused */}
+        {planHas(plan, 'branding') ? (
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Your name, logo and contact details, and the colours, sections and wording of your reports, are in the Brand
+            studio, with a live preview.
+          </p>
+        ) : (
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            On the {PLANS[plan].name} plan, reports and emails carry Auditely&apos;s name. {featureMessage('branding')} <SeePlans />
+          </p>
+        )}
+        <Link href={ROUTES.STUDIO} className={`mt-3 inline-block text-sm ${PLANS_LINK}`}>
+          {planHas(plan, 'branding') ? 'Open the Brand studio' : 'See what the Brand studio does'}
+        </Link>
+        {/* Moved to the Brand studio. Free has no branding, in the beta too: what it saved before stays saved, unused.
         {!planHas(plan, 'branding') ? (
           <p className="text-sm text-[var(--color-text-secondary)]">
             On the {PLANS[plan].name} plan, reports and emails carry Auditely&apos;s name. {featureMessage('branding')} <SeePlans />
@@ -103,7 +118,7 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
           <p className="text-sm text-[var(--color-error)]" role="alert">
             Couldn&apos;t load your profile. Refresh the page to try again.
           </p>
-        )}
+        )} */}
       </Section>
 
       <Section

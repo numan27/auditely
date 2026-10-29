@@ -34,6 +34,8 @@ const ROUTES = {
   'settings/profile': () => import('@/app/api/settings/profile/route'),
   'settings/mailbox': () => import('@/app/api/settings/mailbox/route'),
   'settings/hubspot': () => import('@/app/api/settings/hubspot/route'),
+  studio: () => import('@/app/api/studio/route'),
+  'studio/preview': () => import('@/app/api/studio/preview/route'),
   'billing/checkout': () => import('@/app/api/billing/checkout/route'),
   'billing/portal': () => import('@/app/api/billing/portal/route'),
 };

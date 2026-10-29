@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GearIcon } from '@/app/_shared/components/ui/icons/icons';
+import { GearIcon, PaletteIcon } from '@/app/_shared/components/ui/icons/icons';
 import { ThemeToggle } from '@/app/_shared/components/ui/themeToggle/themeToggle';
 // import { FeedbackButton } from '@/app/_shared/components/auditely/feedback/feedbackButton';
 import { ProfileMenu } from '@/app/_shared/components/auditely/profileMenu/profileMenu';
@@ -15,20 +15,22 @@ import { parseWorkspacePath } from '@/app/_shared/lib/utils/workspacePath';
 import { NotificationBell } from '@/app/_shared/components/auditely/notificationBell/notificationBell';
 import { UsageMeter } from '@/app/_shared/components/auditely/usageMeter/usageMeter';
 
-// Below 1024px Settings is a gear and Saved searches is Saved, so the header fits from 360px
+// Below 1024px Brand studio is a palette, Settings a gear and Saved searches is Saved, so the header fits from 360px
 const NAV: { href: string; label: string; short: string; icon?: typeof GearIcon }[] = [
   { href: ROUTES.HOME, label: 'Search', short: 'Search' },
   { href: ROUTES.SEARCHES, label: 'Saved searches', short: 'Saved' },
+  { href: ROUTES.STUDIO, label: 'Brand studio', short: 'Brand studio', icon: PaletteIcon },
   { href: ROUTES.SETTINGS, label: 'Settings', short: 'Settings', icon: GearIcon },
 ];
 
-export function AppHeader() {
+/** `wide` lines the header up with a page wider than the workspace (the Brand studio) */
+export function AppHeader({ wide = false }: { wide?: boolean }) {
   const pathname = usePathname();
   const demo = useDemo();
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/85 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 sm:gap-8 sm:px-6">
+      <div className={`mx-auto flex h-14 ${wide ? 'max-w-7xl' : 'max-w-5xl'} items-center gap-2 px-4 sm:gap-8 sm:px-6`}>
         <Link
           href={demo ? ROUTES.DEMO : ROUTES.HOME}
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-[var(--color-text-primary)]"

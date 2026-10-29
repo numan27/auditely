@@ -7,7 +7,8 @@
 
 import type { Profile } from '@/app/_shared/lib/brand/brandRules';
 
-export type ProfileFields = Omit<Profile, 'email'>;
+/** The details the account fills in; the Brand studio's design is saved beside them */
+export type ProfileFields = Omit<Profile, 'email' | 'brand_design'>;
 
 export type ProfileInputResult =
   | { ok: true; profile: ProfileFields }

@@ -1,50 +1,37 @@
 // app/_shared/components/auditely/pdfDocument/pdfDocument.tsx
 
-import { Document, Image, Page, Text, View, Link, Svg, Path } from '@react-pdf/renderer';
-import { scoreColor, styles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
+// The PDF report: the header and the business, then the sections in the order
+// the account's design (brandDesign.ts) gives them, each with its title and
+// icon, and the footer. The default design draws today's report.
+
+import { Fragment, type ReactNode } from 'react';
+import { Document, Image, Page, Text, View, Link } from '@react-pdf/renderer';
+import { pdfStyles } from '@/app/_shared/components/auditely/pdfDocument/pdfStyles';
+import { DEFAULT_ACCENT } from '@/app/_shared/components/auditely/pdfDocument/pdfTheme';
+import { ScoresSection } from '@/app/_shared/components/auditely/pdfDocument/pdfScores';
 import { shortUrl } from '@/app/_shared/lib/utils/shortUrl';
 import {
+  DEFAULT_CTA_BUTTON,
+  DEFAULT_TITLE,
+  sectionIcon,
+  sectionTitle,
+  visibleSections,
+  type BrandDesign,
+  type SectionId,
+} from '@/app/_shared/lib/brand/brandDesign';
+import {
+  FixesSection,
   InviteSection,
   LeadCaptureSection,
   NextStepSection,
   ProblemsSection,
-  ScoreLegend,
   SearchReadinessSection,
+  SummarySection,
+  type SectionHead,
 } from '@/app/_shared/components/auditely/pdfDocument/pdfSections';
 
-// null = not measured → "—"
-function ScoreTile({ label, score }: { label: string; score: number | null }) {
-  return (
-    <View style={styles.scoreBox}>
-      <Text style={[styles.scoreValue, scoreColor(score)]}>{score ?? '—'}</Text>
-      <Text style={styles.scoreLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// The tick is drawn — built-in Helvetica has no "✓" glyph (it rendered blank)
-function SslTile({ valid }: { valid: boolean | null }) {
-  const color = valid === null ? styles.scoreNeutral : valid ? styles.scoreGreen : styles.scoreRed;
-  return (
-    <View style={styles.scoreBox}>
-      {valid ? (
-        <Svg width={21} height={21} viewBox="0 0 24 24" style={{ marginBottom: 3 }}>
-          <Path
-            d="M5 12.5l4.5 4.5L19 7.5"
-            stroke={styles.scoreGreen.color}
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </Svg>
-      ) : (
-        <Text style={[styles.scoreValue, color]}>{valid === null ? '—' : 'X'}</Text>
-      )}
-      <Text style={styles.scoreLabel}>SSL</Text>
-    </View>
-  );
-}
+// A rule follows these when another section comes after them, as in today's report
+const RULED = new Set<SectionId>(['scores', 'problems', 'aiSearch', 'leads']);
 
 export interface PdfFinding {
   status: 'fail' | 'warn';
@@ -79,6 +66,8 @@ export interface PdfBrand {
   invite: boolean;
   /** The call the "next step" box offers, as in "on a free call" */
   call: string;
+  /** The Brand studio's design, its wording made safe for the PDF's fonts */
+  design: BrandDesign;
 }
 
 export interface PdfDocumentProps {
@@ -130,23 +119,56 @@ export function PdfDocument({
   contact,
   links = true,
 }: PdfDocumentProps) {
+  const { design } = brand;
+  const s = pdfStyles(design);
   const brandUrl = links ? brand.website : null;
+  const head = (id: SectionId): SectionHead => ({ title: sectionTitle(design, id), icon: sectionIcon(design, id), accent: design.accent ?? DEFAULT_ACCENT });
+  const ctaText = design.ctaText ?? `We can walk you through every issue in this report on ${brand.call}, with no obligation.`;
+
+  // null: nothing to show for this audit (an older audit never measured it, or there's no contact)
+  const sections: Record<SectionId, ReactNode> = {
+    scores: (
+      <ScoresSection
+        s={s}
+        head={head('scores')}
+        scores={{ performance: performanceScore, seo: seoScore, mobile: mobileScore, ssl: sslValid, geo: geoScore, aeo: aeoScore, leads: leadScore }}
+      />
+    ),
+    // What it costs them, worst first
+    problems: problems.length > 0 ? <ProblemsSection s={s} head={head('problems')} problems={problems} /> : null,
+    // GEO / AEO findings — v1 audits never measured them
+    aiSearch:
+      geoScore !== null || aeoScore !== null ? (
+        <SearchReadinessSection s={s} head={head('aiSearch')} geoScore={geoScore} aeoScore={aeoScore} geoFindings={geoFindings} aeoFindings={aeoFindings} />
+      ) : null,
+    // Lead capture — audits made before it show nothing
+    leads: leadScore !== null ? <LeadCaptureSection s={s} head={head('leads')} score={leadScore} findings={leadFindings} /> : null,
+    summary: <SummarySection s={s} head={head('summary')} summary={summary} />,
+    fixes: improvements.length > 0 ? <FixesSection s={s} head={head('fixes')} improvements={improvements} /> : null,
+    nextStep: brand.invite ? (
+      links ? <InviteSection s={s} /> : null
+    ) : contact ? (
+      <NextStepSection s={s} head={head('nextStep')} contact={contact} text={ctaText} button={design.ctaButton ?? DEFAULT_CTA_BUTTON} />
+    ) : null,
+  };
+  const shown = visibleSections(design).filter((id) => sections[id]);
+
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={s.page}>
         {/* Header */}
-        <View style={[styles.header, styles.headerRow]}>
+        <View style={[s.header, s.headerRow]}>
           {/* A logo is an image, not a link: it stays in the Upwork version */}
           {/* eslint-disable-next-line jsx-a11y/alt-text -- a PDF image has no alt text */}
-          {brand.logo ? <Image src={brand.logo} style={styles.headerLogo} /> : null}
+          {brand.logo ? <Image src={brand.logo} style={s.headerLogo} /> : null}
           <View>
-            <Text style={styles.headerTitle}>Website Audit Report</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={s.headerTitle}>{design.title ?? DEFAULT_TITLE}</Text>
+            <Text style={s.headerSubtitle}>
               {brand.invite ? (
                 `Prepared with ${brand.name} · ${auditDate}`
               ) : (
                 <>
-                  Prepared by {brandUrl ? <Link src={brandUrl} style={styles.link}>{brand.name}</Link> : brand.name} · {auditDate}
+                  Prepared by {brandUrl ? <Link src={brandUrl} style={s.headerLink}>{brand.name}</Link> : brand.name} · {auditDate}
                 </>
               )}
             </Text>
@@ -154,94 +176,33 @@ export function PdfDocument({
         </View>
 
         {/* Business Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Business</Text>
-          <Text style={styles.businessName}>{businessName}</Text>
-          <Text style={styles.businessMeta}>{website}</Text>
-          <Text style={styles.businessMeta}>{address}</Text>
-          {phone ? <Text style={styles.businessMeta}>{phone}</Text> : null}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>Business</Text>
+          <Text style={s.businessName}>{businessName}</Text>
+          <Text style={s.businessMeta}>{website}</Text>
+          <Text style={s.businessMeta}>{address}</Text>
+          {phone ? <Text style={s.businessMeta}>{phone}</Text> : null}
         </View>
 
-        <View style={styles.divider} />
+        <View style={s.divider} />
 
-        {/* Scores */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Audit Scores</Text>
-          <View style={styles.scoresRow}>
-            <ScoreTile label="Performance" score={performanceScore} />
-            <ScoreTile label="SEO" score={seoScore} />
-            <ScoreTile label="Mobile" score={mobileScore} />
-            <SslTile valid={sslValid} />
-            <ScoreTile label="GEO" score={geoScore} />
-            <ScoreTile label="AEO" score={aeoScore} />
-            <ScoreTile label="Leads" score={leadScore} />
-          </View>
-          <ScoreLegend />
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* What it costs them, worst first */}
-        {problems.length > 0 && (
-          <>
-            <ProblemsSection problems={problems} />
-            <View style={styles.divider} />
-          </>
-        )}
-
-        {/* GEO / AEO findings — v1 audits never measured them */}
-        {(geoScore !== null || aeoScore !== null) && (
-          <>
-            <SearchReadinessSection
-              geoScore={geoScore}
-              aeoScore={aeoScore}
-              geoFindings={geoFindings}
-              aeoFindings={aeoFindings}
-            />
-            <View style={styles.divider} />
-          </>
-        )}
-
-        {/* Lead capture — audits made before it show nothing */}
-        {leadScore !== null && (
-          <>
-            <LeadCaptureSection score={leadScore} findings={leadFindings} />
-            <View style={styles.divider} />
-          </>
-        )}
-
-        {/* Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Summary</Text>
-          <Text style={styles.bodyText}>{summary}</Text>
-        </View>
-
-        {/* Improvements: the library's fixes for the problems above */}
-        {improvements.length > 0 && (
-          <View style={styles.section} wrap={false}>
-            <Text style={styles.sectionLabel}>How We&apos;d Fix It</Text>
-            {improvements.map((item, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <Text style={styles.bulletNum}>{i + 1}.</Text>
-                <Text style={styles.bulletText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {contact && !brand.invite && <NextStepSection contact={contact} call={brand.call} />}
-        {brand.invite && links && <InviteSection />}
+        {shown.map((id, i) => (
+          <Fragment key={id}>
+            {sections[id]}
+            {RULED.has(id) && i < shown.length - 1 && <View style={s.divider} />}
+          </Fragment>
+        ))}
 
         {/* Footer */}
-        <View style={styles.footer} fixed>
+        <View style={s.footer} fixed>
           {/* Without the link it is the name: a PDF reader makes a bare domain clickable */}
-          <Text style={styles.footerText}>
+          <Text style={s.footerText}>
             Powered by{' '}
-            {brandUrl ? <Link src={brandUrl} style={styles.link}>{shortUrl(brandUrl)}</Link> : brand.name}
+            {brandUrl ? <Link src={brandUrl} style={s.link}>{shortUrl(brandUrl)}</Link> : brand.name}
           </Text>
           {contact && (
-            <Text style={styles.footerText}>
-              <Link src={`mailto:${contact.email}`} style={styles.link}>{contact.email}</Link>
+            <Text style={s.footerText}>
+              <Link src={`mailto:${contact.email}`} style={s.link}>{contact.email}</Link>
             </Text>
           )}
         </View>

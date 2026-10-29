@@ -14,6 +14,7 @@ import { serviceDb } from '@/app/_shared/lib/supabase/client';
 import { planFor } from '@/app/_shared/lib/usage/plans';
 
 export const SETTINGS_MIGRATION = 'docs/migrations/2026-10-29-settings.sql';
+export const STUDIO_MIGRATION = 'docs/migrations/2026-11-02-brand-studio.sql';
 export const BRAND_UNAVAILABLE = "Couldn't load this account's branding. Try again in a minute.";
 
 export class BrandUnavailable extends Error {
@@ -28,6 +29,13 @@ export function settingsUnavailable(isOwner: boolean): string {
   return isOwner
     ? `Settings need the latest database update: run ${SETTINGS_MIGRATION} in Supabase.`
     : "Settings can't be saved right now. Try again later.";
+}
+
+/** What the Brand studio says when its migration hasn't run */
+export function studioUnavailable(isOwner: boolean): string {
+  return isOwner
+    ? `The Brand studio needs the latest database update: run ${STUDIO_MIGRATION} in Supabase.`
+    : "Your brand can't be saved right now. Try again later.";
 }
 
 const AUDITELY = (): Brand => resolveBrand({ profile: null, isOwner: false, plan: 'free' });

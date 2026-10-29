@@ -118,11 +118,16 @@ CREATE TABLE IF NOT EXISTS profiles (
   contact_email TEXT,
   contact_phone TEXT,
   booking_url   TEXT,
+  -- The look the account gives its reports and emails in the Brand studio (brandDesign.ts)
+  brand_design  JSONB,
   updated_at    TIMESTAMPTZ,
   CONSTRAINT profiles_settings_length CHECK (
     char_length(display_name) <= 200 AND char_length(company) <= 200 AND char_length(website) <= 200
     AND char_length(contact_email) <= 200 AND char_length(contact_phone) <= 200 AND char_length(booking_url) <= 200
     AND char_length(logo_data_url) <= 350000
+  ),
+  CONSTRAINT profiles_brand_design_shape CHECK (
+    brand_design IS NULL OR (jsonb_typeof(brand_design) = 'object' AND pg_column_size(brand_design) <= 16384)
   )
 );
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
@@ -198,7 +203,7 @@ GRANT SELECT ON profiles TO authenticated;
 -- the email, which decides who the owner is, and the id stay as sign-up set them.
 -- Supabase grants new tables to anon and authenticated by default, so that goes first.
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON profiles FROM anon, authenticated;
-GRANT UPDATE (display_name, company, website, logo_data_url, contact_email, contact_phone, booking_url, updated_at)
+GRANT UPDATE (display_name, company, website, logo_data_url, contact_email, contact_phone, booking_url, brand_design, updated_at)
   ON profiles TO authenticated;
 -- The server's owner lookup (ownerUserId) and the brand lookup (brand.ts) read
 -- profiles with the service role key

@@ -5,6 +5,7 @@
 
 import { isOutdatedAudit, type AuditChecks, type Finding, type KeyAudit } from '@/app/_shared/lib/audit/types';
 import { impactFor, plainLabel, rankedProblems } from '@/app/_shared/lib/audit/impact';
+import type { BrandDesign } from '@/app/_shared/lib/brand/brandDesign';
 import type { Brand } from '@/app/_shared/lib/brand/brandRules';
 import type { PdfBrand, PdfDocumentProps, PdfFinding, PdfProblem } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
 
@@ -137,6 +138,23 @@ function reportName({ name, website }: ReportBusiness): string {
   }
 }
 
+// Beyond pdfText's fixes, anything the built-in fonts' WinAnsi encoding has no
+// glyph for (emoji, most scripts other than Latin) is dropped from words typed
+// in the Brand studio rather than drawn as gibberish
+const NOT_WINANSI = /[^\u0000-\u00ff\u0152\u0153\u0160\u0161\u0178\u017d\u017e\u0192\u02c6\u02dc\u2013\u2014\u2018-\u201a\u201c-\u201e\u2020-\u2022\u2026\u2030\u2039\u203a\u20ac\u2122]/gu;
+const designText = (text: string | null): string | null => text && pdfText(text).replace(NOT_WINANSI, '');
+
+/** The design with every word it adds made safe for the PDF */
+function pdfDesign(design: BrandDesign): BrandDesign {
+  return {
+    ...design,
+    title: designText(design.title),
+    ctaText: designText(design.ctaText),
+    ctaButton: designText(design.ctaButton),
+    sections: design.sections.map((section) => ({ ...section, title: designText(section.title) })),
+  };
+}
+
 /** What the PDF says about whose report it is */
 export function pdfBrand(brand: Brand): PdfBrand {
   return {
@@ -145,6 +163,7 @@ export function pdfBrand(brand: Brand): PdfBrand {
     logo: brand.logo?.dataUrl ?? null,
     invite: brand.kind === 'auditely',
     call: brand.call,
+    design: pdfDesign(brand.design),
   };
 }
 

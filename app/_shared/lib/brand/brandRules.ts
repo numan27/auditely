@@ -5,9 +5,12 @@
 // (or a tester given a paid plan) with a name or company gets its own, beta or
 // not; everyone else, Free included, gets Auditely's neutral brand,
 // which invites the reader to try Auditely. The AI writes as the brand's writer.
-// No I/O: brand.ts reads the profile.
+// The owner and branded accounts also get the look they saved in the Brand
+// studio (brandDesign.ts); the Auditely brand keeps its own. No I/O: brand.ts
+// reads the profile.
 
 import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { DEFAULT_DESIGN, readDesign, type BrandDesign } from '@/app/_shared/lib/brand/brandDesign';
 import { reportContact } from '@/app/_shared/lib/config/reportContact';
 import { AUDITELY_NAME, AUDITELY_URL } from '@/app/_shared/lib/config/site';
 import { planHas, type PlanId } from '@/app/_shared/lib/usage/plans';
@@ -35,6 +38,8 @@ export interface Profile {
   contact_email: string | null;
   contact_phone: string | null;
   booking_url: string | null;
+  /** The Brand studio's design, as saved; absent before the brand studio migration */
+  brand_design?: unknown;
 }
 
 export interface Brand {
@@ -50,6 +55,8 @@ export interface Brand {
   /** The call the "next step" box offers, as in "on a free call" */
   call: string;
   writer: ReportWriter;
+  /** Colours, type, sections and wording from the Brand studio */
+  design: BrandDesign;
 }
 
 /** The owner's account as it was before profiles: devartventures.com's details */
@@ -78,6 +85,7 @@ const AUDITELY_BRAND: Brand = {
   contact: null,
   call: CALL,
   writer: AUDITELY_WRITER,
+  design: DEFAULT_DESIGN,
 };
 
 const BLANK: Omit<Profile, 'email'> = {
@@ -129,6 +137,7 @@ export function resolveBrand(
         about: profile.company ?? OWNER_BRAND.about,
         signOff: contact.name ? `${contact.name}, ${name}` : `The ${name} team`,
       },
+      design: readDesign(profile.brand_design),
     };
   }
 
@@ -153,5 +162,6 @@ export function resolveBrand(
       about: company ?? `${person}, a web consultant`,
       signOff: person && company ? `${person}, ${company}` : company ? `The ${company} team` : person!,
     },
+    design: readDesign(profile.brand_design),
   };
 }

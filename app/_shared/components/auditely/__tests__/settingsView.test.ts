@@ -92,20 +92,24 @@ describe('SettingsView', () => {
       vi.stubEnv('NEXT_PUBLIC_BETA_MODE', flag);
       const html = view({ plan: 'free', profile: { ...BLANK, display_name: 'Sam Lee' } });
       expect(html).not.toContain('value="Sam Lee"');
-      expect(html).not.toContain('Save profile');
       expect(html).not.toContain('during the beta');
       expect(html).toContain(
         'On the Free plan, reports and emails carry Auditely&#x27;s name. Your own branding on reports comes with the Pro and Agency plans.'
       );
+      // The studio shows a Free account what branding would do
+      expect(html).toContain('href="/studio"');
       expect(html).toContain('href="/plans"');
     }
     vi.unstubAllEnvs();
   });
 
-  it('gives Pro the profile form, with nothing about the Free plan', () => {
-    const html = view({ plan: 'pro' });
-    expect(html).toContain('Save profile');
+  // The profile form moved to the Brand studio (studio/__tests__/page.test.ts)
+  it('sends a paid account to the Brand studio for its profile, with nothing about the Free plan', () => {
+    const html = view({ plan: 'pro', profile: { ...BLANK, display_name: 'Sam Lee' } });
+    expect(html).toContain('href="/studio"');
+    expect(html).toContain('Open the Brand studio');
     expect(html).toContain('Your name and company sign the AI&#x27;s emails');
+    expect(html).not.toContain('value="Sam Lee"');
     expect(html).not.toContain('On the Free plan');
   });
 
@@ -113,29 +117,6 @@ describe('SettingsView', () => {
     const html = view({ plan: 'pro' });
     for (const id of ['profile', 'mailbox', 'hubspot', 'plan']) expect(html).toContain(`id="${id}"`);
     expect(html).toContain('Profile and branding');
-  });
-
-  it('fills the profile form from the saved profile', () => {
-    const html = view({ plan: 'pro', profile: { ...BLANK, display_name: 'Sam Lee', company: 'Acme Studio', contact_phone: '+1 555 0100' } });
-    expect(html).toContain('value="Sam Lee"');
-    expect(html).toContain('value="Acme Studio"');
-    expect(html).toContain('value="+1 555 0100"');
-    expect(html).toContain('Shown on reports. Leave blank to use sam@acme.studio.');
-    expect(html).toContain('PNG or JPEG, under 256 KB');
-  });
-
-  it('shows a saved logo with a way to remove it', () => {
-    const logo = 'data:image/png;base64,iVBORw0KGgo=';
-    const html = view({ plan: 'pro', profile: { ...BLANK, logo_data_url: logo } });
-    expect(html).toContain(`src="${logo}"`);
-    expect(html).toContain('Remove logo');
-    expect(view({ plan: 'pro' })).not.toContain('Remove logo');
-  });
-
-  it('offers no profile form when the profile couldn’t be loaded, so a save can’t blank it', () => {
-    const html = view({ plan: 'pro', profile: null });
-    expect(html).toContain('Couldn&#x27;t load your profile. Refresh the page to try again.');
-    expect(html).not.toContain('Save profile');
   });
 
   it('shows a connected mailbox by its address, with Disconnect', () => {
@@ -230,6 +211,12 @@ describe('SettingsView delete account', () => {
 });
 
 describe('AppHeader', () => {
+  it('links to the Brand studio from the header', () => {
+    const html = renderToStaticMarkup(createElement(AppHeader));
+    expect(html).toContain('href="/studio"');
+    expect(html).toContain('Brand studio');
+  });
+
   it('links to Settings from the header', () => {
     const html = renderToStaticMarkup(createElement(AppHeader));
     expect(html).toContain('href="/settings"');

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { DEFAULT_DESIGN } from '@/app/_shared/lib/brand/brandDesign';
 import { logoFromDataUrl, resolveBrand, type Profile } from '@/app/_shared/lib/brand/brandRules';
 
 // Paid plans are closed while NEXT_PUBLIC_BETA_MODE isn't 'false': the beta
@@ -115,6 +116,31 @@ describe('branding in the beta', () => {
     for (const plan of ['pro', 'agency'] as const) {
       expect(resolveBrand({ profile: p, isOwner: false, plan }, contact)).toMatchObject({ kind: 'account', name: 'My Tool' });
     }
+  });
+});
+
+describe('the brand’s design', () => {
+  const design = { accent: '#0e7490', header: 'band', sections: [{ id: 'summary', title: 'In short' }] };
+  const acme: Profile = { ...blank, company: 'Acme', brand_design: design };
+
+  it('carries the design a paid account saved in the Brand studio', () => {
+    const b = resolveBrand({ profile: acme, isOwner: false, plan: 'pro' }, contact);
+    expect(b.design).toMatchObject({ accent: '#0e7490', header: 'band' });
+    expect(b.design.sections[0]).toEqual({ id: 'summary', hidden: false, title: 'In short', icon: null });
+  });
+
+  it('carries the owner’s design too', () => {
+    expect(resolveBrand({ profile: { ...blank, brand_design: design }, isOwner: true, plan: 'owner' }, contact).design.accent).toBe('#0e7490');
+  });
+
+  it('keeps today’s look for a profile that never saved one, or saved before the migration', () => {
+    expect(resolveBrand({ profile: { ...blank, company: 'Acme' }, isOwner: false, plan: 'pro' }, contact).design).toEqual(DEFAULT_DESIGN);
+    expect(resolveBrand({ profile: blank, isOwner: true, plan: 'owner' }, contact).design).toEqual(DEFAULT_DESIGN);
+  });
+
+  it('gives the Auditely brand its own look, whatever a Free account saved', () => {
+    expect(resolveBrand({ profile: acme, isOwner: false, plan: 'free' }, contact).design).toEqual(DEFAULT_DESIGN);
+    expect(resolveBrand({ profile: null, isOwner: false, plan: 'pro' }, contact).design).toEqual(DEFAULT_DESIGN);
   });
 });
 

@@ -16,6 +16,8 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  // The Brand studio: the look of the account's reports and emails, with a live preview
+  STUDIO: '/studio',
   // The plans and the current allowances; Checkout comes back to /plans/done
   PLANS: '/plans',
   PLANS_DONE: '/plans/done',
@@ -64,6 +66,9 @@ export const API_ROUTES = {
   SETTINGS_HUBSPOT: '/api/settings/hubspot',
   SETTINGS_PASSWORD: '/api/settings/password',
   SETTINGS_ACCOUNT: '/api/settings/account',
+  // The Brand studio: saving the brand and its design, and the live preview of the sample report and email
+  STUDIO: '/api/studio',
+  STUDIO_PREVIEW: '/api/studio/preview',
   // Buying a plan (Stripe Checkout) and managing it (Stripe's billing portal)
   BILLING_CHECKOUT: '/api/billing/checkout',
   BILLING_PORTAL: '/api/billing/portal',

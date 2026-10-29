@@ -5,18 +5,21 @@
 // with a snapshot of the audit and a "Book your free call" button for the lead
 // who never opens the PDF. Someone
 // who requested the audit on devartventures.com gets the same email, with a
-// note saying why it came instead of the opt-out line. Tables and inline
-// styles only: mail clients ignore most other CSS. Client-safe.
+// note saying why it came instead of the opt-out line. The account's design
+// from the Brand studio sets its link and button colours, typeface, the call's
+// wording and which parts of the snapshot it shows. Tables and inline styles
+// only: mail clients ignore most other CSS. Client-safe.
 
 import { rankedProblems, type Problem } from '@/app/_shared/lib/audit/impact';
 import { measuredSeoAndSsl, scoreTone, type AuditLike, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { escapeHtml } from '@/app/_shared/lib/utils/html';
 import { shortUrl } from '@/app/_shared/lib/utils/shortUrl';
 import type { PdfContact } from '@/app/_shared/components/auditely/pdfDocument/pdfDocument';
+import { DEFAULT_CTA_BUTTON, DEFAULT_DESIGN, sectionShown, sectionTitle, textOn, type FontId } from '@/app/_shared/lib/brand/brandDesign';
 import type { Brand } from '@/app/_shared/lib/brand/brandRules';
 
-/** Whose email it is: the sender's brand, with the contact the email offers */
-export type OutreachBrand = Pick<Brand, 'name' | 'website' | 'tagline' | 'stripe' | 'call'> & { contact: PdfContact };
+/** Whose email it is: the sender's brand, with the contact the email offers; no design is today's look */
+export type OutreachBrand = Pick<Brand, 'name' | 'website' | 'tagline' | 'stripe' | 'call'> & Partial<Pick<Brand, 'design'>> & { contact: PdfContact };
 
 export interface OutreachEmail {
   /** The message as edited in the dialog */
@@ -30,9 +33,6 @@ export interface OutreachEmail {
   requested?: boolean;
 }
 
-const CALL_TITLE = 'Want help fixing these?';
-const callText = (brand: OutreachBrand) => `We can walk you through every issue in the report on ${brand.call}, with no obligation.`;
-const CALL_BUTTON = 'Book your free call';
 const OPT_OUT = "Not the right person, or not interested? Just reply and we won't email again.";
 const REQUESTED = 'You received this because you requested a free website audit on devartventures.com.';
 const SNAPSHOT_PROBLEMS = 3;
@@ -46,9 +46,44 @@ const MIST = '#f4f5f8';
 const BORDER = '#e3e5eb';
 const LINK = '#1b5fa8';
 const TONE: Record<ScoreTone, string> = { good: '#16a34a', ok: '#d97706', poor: '#dc2626', none: '#9ca3af' };
-const FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+const FONTS: Record<FontId, string> = {
+  sans: "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;",
+  serif: "font-family:Georgia,'Times New Roman',Times,serif;",
+  mono: 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;',
+};
 const TABLE = 'role="presentation" cellpadding="0" cellspacing="0" border="0"';
 const LABEL = `margin:0 0 10px;font-size:14px;line-height:20px;font-weight:700;color:${INK};`;
+
+/** What the account's design changes in the email */
+interface Look {
+  link: string;
+  button: string;
+  font: string;
+  stripe: readonly string[] | null;
+  callTitle: string;
+  callText: string;
+  callButton: string;
+  scores: boolean;
+  problems: boolean;
+  call: boolean;
+}
+
+function lookOf(brand: OutreachBrand): Look {
+  const design = brand.design ?? DEFAULT_DESIGN;
+  return {
+    link: design.accent ?? LINK,
+    button: design.button ?? INK,
+    font: FONTS[design.font],
+    // The owner's logo colours; otherwise a stripe of the accent once there is one
+    stripe: brand.stripe ?? (design.accent ? [design.accent] : null),
+    callTitle: sectionTitle(design, 'nextStep'),
+    callText: design.ctaText ?? `We can walk you through every issue in the report on ${brand.call}, with no obligation.`,
+    callButton: design.ctaButton ?? DEFAULT_CTA_BUTTON,
+    scores: sectionShown(design, 'scores'),
+    problems: sectionShown(design, 'problems'),
+    call: sectionShown(design, 'nextStep'),
+  };
+}
 
 interface Tile {
   label: string;
@@ -94,11 +129,11 @@ function tileRows(tiles: Tile[]): string {
 const problemRow = (problem: Problem) =>
   `<tr><td valign="top" style="padding:7px 10px 0 0;"><div style="width:7px;height:7px;border-radius:7px;background:${TONE.poor};font-size:0;line-height:0;">&nbsp;</div></td><td style="padding:0 0 12px;font-size:14px;line-height:21px;color:${MUTED};"><strong style="color:${INK};">${escapeHtml(problem.problem)}</strong>${problem.cost ? `<br>${escapeHtml(problem.cost)}` : ''}</td></tr>`;
 
-function snapshot({ business, audit }: OutreachEmail, problems: Problem[]): string {
-  const tiles = scoreTiles(audit);
+function snapshot({ business, audit }: OutreachEmail, problems: Problem[], look: Look): string {
+  const tiles = look.scores ? scoreTiles(audit) : [];
   // Only a web address becomes a link
   const website = business.website && /^https?:\/\//i.test(business.website)
-    ? `<a href="${escapeHtml(business.website)}" style="color:${LINK};text-decoration:underline;">${escapeHtml(shortUrl(business.website))}</a>`
+    ? `<a href="${escapeHtml(business.website)}" style="color:${look.link};text-decoration:underline;">${escapeHtml(shortUrl(business.website))}</a>`
     : escapeHtml(business.website ?? '');
   const scores = tiles.length
     ? `<tr><td style="padding:14px 14px 0;"><table ${TABLE} width="100%">${tileRows(tiles)}</table></td></tr>
@@ -136,17 +171,27 @@ const stripe = (colors: readonly string[] | null) =>
 export function outreachHtml(email: OutreachEmail): string {
   const { body, business, audit, brand, logoSrc, requested } = email;
   const { contact } = brand;
+  const look = lookOf(brand);
+  const { font } = look;
   const name = escapeHtml(brand.name);
   const site = brand.website && escapeHtml(brand.website);
-  const problems = rankedProblems(audit).slice(0, SNAPSHOT_PROBLEMS);
+  const problems = look.problems ? rankedProblems(audit).slice(0, SNAPSHOT_PROBLEMS) : [];
   const logo = logoSrc
     ? `<td width="46" valign="middle"><img src="${escapeHtml(logoSrc)}" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;"></td>`
     : '';
   const details = contactDetails(contact)
     .map((value) =>
-      value === contact.email ? `<a href="mailto:${escapeHtml(value)}" style="color:${LINK};text-decoration:underline;">${escapeHtml(value)}</a>` : escapeHtml(value)
+      value === contact.email ? `<a href="mailto:${escapeHtml(value)}" style="color:${look.link};text-decoration:underline;">${escapeHtml(value)}</a>` : escapeHtml(value)
     )
     .join(' &nbsp;·&nbsp; ');
+  const call = look.call
+    ? `<tr><td style="padding:20px 28px 28px;${font}"><table ${TABLE} width="100%" style="background:${MIST};border-radius:12px;"><tr><td align="center" style="padding:24px 22px;">
+<div style="font-size:18px;line-height:26px;font-weight:700;color:${INK};">${escapeHtml(look.callTitle)}</div>
+<div style="margin:6px 0 18px;font-size:14px;line-height:21px;color:${MUTED};">${escapeHtml(look.callText)}</div>
+<table ${TABLE} align="center"><tr><td bgcolor="${look.button}" style="border-radius:999px;mso-padding-alt:13px 28px;"><a href="${escapeHtml(bookingLink(contact))}" style="display:inline-block;padding:13px 28px;font-size:15px;line-height:20px;font-weight:600;color:${textOn(look.button)};text-decoration:none;${font}">${escapeHtml(look.callButton)}</a></td></tr></table>
+<div style="margin-top:14px;font-size:13px;line-height:19px;color:${MUTED};">Prefer email? Just reply to this message.</div>
+</td></tr></table></td></tr>`
+    : '<tr><td style="padding:0 0 28px;"></td></tr>';
 
   return `<!doctype html>
 <html lang="en">
@@ -156,27 +201,22 @@ export function outreachHtml(email: OutreachEmail): string {
 <meta name="color-scheme" content="light">
 <title>${escapeHtml(business.name)} website audit</title>
 </head>
-<body style="margin:0;padding:0;background:${MIST};${FONT}">
+<body style="margin:0;padding:0;background:${MIST};${font}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader(body))}</div>
 <table ${TABLE} width="100%" style="background:${MIST};"><tr><td align="center" style="padding:24px 12px;">
 <!--[if mso]><table ${TABLE} width="600" align="center"><tr><td><![endif]-->
-<table ${TABLE} width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ${BORDER};border-radius:14px;overflow:hidden;${FONT}">
-${stripe(brand.stripe)}
+<table ${TABLE} width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ${BORDER};border-radius:14px;overflow:hidden;${font}">
+${stripe(look.stripe)}
 <tr><td style="padding:20px 28px;border-bottom:1px solid ${BORDER};"><table ${TABLE} width="100%"><tr>
-${logo}<td valign="middle" style="font-size:19px;line-height:24px;font-weight:700;color:${INK};${FONT}">${site ? `<a href="${site}" style="color:${INK};text-decoration:none;">${name}</a>` : name}</td>
-<td align="right" valign="middle" style="font-size:13px;line-height:16px;color:${MUTED};${FONT}">Website audit</td>
+${logo}<td valign="middle" style="font-size:19px;line-height:24px;font-weight:700;color:${INK};${font}">${site ? `<a href="${site}" style="color:${INK};text-decoration:none;">${name}</a>` : name}</td>
+<td align="right" valign="middle" style="font-size:13px;line-height:16px;color:${MUTED};${font}">Website audit</td>
 </tr></table></td></tr>
-<tr><td style="padding:28px 28px 8px;font-size:15px;line-height:24px;color:${INK};${FONT}">${paragraphs(body)}</td></tr>
-<tr><td style="padding:4px 28px 0;${FONT}">${snapshot(email, problems)}</td></tr>
-<tr><td style="padding:20px 28px 28px;${FONT}"><table ${TABLE} width="100%" style="background:${MIST};border-radius:12px;"><tr><td align="center" style="padding:24px 22px;">
-<div style="font-size:18px;line-height:26px;font-weight:700;color:${INK};">${CALL_TITLE}</div>
-<div style="margin:6px 0 18px;font-size:14px;line-height:21px;color:${MUTED};">${escapeHtml(callText(brand))}</div>
-<table ${TABLE} align="center"><tr><td bgcolor="${INK}" style="border-radius:999px;mso-padding-alt:13px 28px;"><a href="${escapeHtml(bookingLink(contact))}" style="display:inline-block;padding:13px 28px;font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;${FONT}">${CALL_BUTTON}</a></td></tr></table>
-<div style="margin-top:14px;font-size:13px;line-height:19px;color:${MUTED};">Prefer email? Just reply to this message.</div>
-</td></tr></table></td></tr>
-<tr><td style="padding:22px 28px;background:${MIST};border-top:1px solid ${BORDER};font-size:13px;line-height:21px;color:${MUTED};${FONT}">
+<tr><td style="padding:28px 28px 8px;font-size:15px;line-height:24px;color:${INK};${font}">${paragraphs(body)}</td></tr>
+<tr><td style="padding:4px 28px 0;${font}">${snapshot(email, problems, look)}</td></tr>
+${call}
+<tr><td style="padding:22px 28px;background:${MIST};border-top:1px solid ${BORDER};font-size:13px;line-height:21px;color:${MUTED};${font}">
 <strong style="font-size:14px;color:${INK};">${name}</strong><br>${brand.tagline ? `${escapeHtml(brand.tagline)}<br>` : ''}
-${site ? `<a href="${site}" style="color:${LINK};text-decoration:underline;">${escapeHtml(shortUrl(brand.website!))}</a><br>` : ''}${details}
+${site ? `<a href="${site}" style="color:${look.link};text-decoration:underline;">${escapeHtml(shortUrl(brand.website!))}</a><br>` : ''}${details}
 <div style="margin-top:12px;padding-top:12px;border-top:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};">${requested ? REQUESTED : OPT_OUT}</div>
 </td></tr>
 </table>
@@ -189,8 +229,9 @@ ${site ? `<a href="${site}" style="color:${LINK};text-decoration:underline;">${e
 /** The same email for mail clients that show no HTML */
 export function outreachText({ body, business, audit, brand, requested }: OutreachEmail): string {
   const { contact } = brand;
-  const problems = rankedProblems(audit).slice(0, SNAPSHOT_PROBLEMS);
-  const scores = scoreTiles(audit).map((tile) =>
+  const look = lookOf(brand);
+  const problems = look.problems ? rankedProblems(audit).slice(0, SNAPSHOT_PROBLEMS) : [];
+  const scores = (look.scores ? scoreTiles(audit) : []).map((tile) =>
     tile.label === 'Secure (https)' ? `${tile.label}: ${tile.value === '✓' ? 'yes' : 'no'}` : `${tile.label} ${tile.value}/100`
   );
   const sections = [
@@ -198,7 +239,10 @@ export function outreachText({ body, business, audit, brand, requested }: Outrea
     '---',
     [`${business.name} website at a glance`, scores.join(' · ')].filter(Boolean).join('\n'),
     problems.length > 0 && ["What's costing you customers:", ...problems.map((p) => `- ${[`${p.problem}.`, p.cost].filter(Boolean).join(' ')}`)].join('\n'),
-    [`${CALL_TITLE} ${callText(brand)}`, `${CALL_BUTTON}: ${contact.bookingUrl ?? 'reply to this email'}`, 'The full report is attached as a PDF.'].join('\n'),
+    [
+      ...(look.call ? [`${look.callTitle} ${look.callText}`, `${look.callButton}: ${contact.bookingUrl ?? 'reply to this email'}`] : []),
+      'The full report is attached as a PDF.',
+    ].join('\n'),
     [brand.website ? `${brand.name} · ${brand.website}` : brand.name, contactDetails(contact).join(' · '), requested ? REQUESTED : OPT_OUT].join('\n'),
   ];
   return sections.filter(Boolean).join('\n\n');

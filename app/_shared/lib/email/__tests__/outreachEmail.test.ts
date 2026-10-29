@@ -224,3 +224,63 @@ describe('outreachText', () => {
     expect(text).not.toContain("we won't email again");
   });
 });
+
+describe('the email in the account’s design', () => {
+  const designed = (design: unknown) => {
+    const brand = resolveBrand({ profile: { ...acmeProfile, brand_design: design }, isOwner: false, plan: 'pro' });
+    return email({ brand: { ...brand, contact: brand.contact! } });
+  };
+  const hide = (...ids: string[]) => ['scores', 'problems', 'aiSearch', 'leads', 'summary', 'fixes', 'nextStep'].map((id) => ({ id, hidden: ids.includes(id) }));
+
+  it('keeps today’s colours and wording without a design', () => {
+    const html = outreachHtml(designed(null));
+    expect(html).toContain('color:#1b5fa8');
+    expect(html).toContain('bgcolor="#15172a"');
+    expect(html).toContain('Want help fixing these?');
+    expect(html).toContain('Book your free call');
+    expect(html).not.toMatch(/height="4" bgcolor/);
+  });
+
+  it('puts the accent on links and as a stripe across the top, and colours the button', () => {
+    const html = outreachHtml(designed({ accent: '#0e7490', button: '#f9cf6e' }));
+    expect(html).toContain('color:#0e7490;text-decoration:underline');
+    expect(html).not.toContain('#1b5fa8');
+    expect(html).toContain('height="4" bgcolor="#0e7490"');
+    expect(html).toContain('bgcolor="#f9cf6e"');
+    // Dark words on a light button
+    expect(html).toMatch(/color:#111827;text-decoration:none;[^"]*">Book your free call/);
+  });
+
+  it('sets the email in the chosen typeface', () => {
+    expect(outreachHtml(designed({ font: 'serif' }))).toContain("font-family:Georgia,'Times New Roman',Times,serif;");
+  });
+
+  it('uses the design’s next step wording, in the HTML and the plain text', () => {
+    const design = {
+      ctaText: 'Let’s fix these together.',
+      ctaButton: 'Pick a time',
+      sections: [{ id: 'nextStep', title: 'Ready when you are' }],
+    };
+    const html = outreachHtml(designed(design));
+    expect(html).toContain('Ready when you are');
+    expect(html).toContain('Let’s fix these together.');
+    expect(html).toContain('>Pick a time</a>');
+    expect(html).not.toContain('Book your free call');
+    const text = outreachText(designed(design));
+    expect(text).toContain('Ready when you are Let’s fix these together.');
+    expect(text).toContain('Pick a time: https://cal.com/acme');
+  });
+
+  it('leaves out what the design hides: the scores, the problems, the next step', () => {
+    const html = outreachHtml(designed({ sections: hide('scores', 'problems', 'nextStep') }));
+    expect(html).not.toContain('Scores are out of 100');
+    expect(html).not.toContain("What's costing you customers");
+    expect(html).not.toContain('Want help fixing these?');
+    expect(html).toContain('Your website at a glance');
+    const text = outreachText(designed({ sections: hide('scores', 'problems', 'nextStep') }));
+    expect(text).not.toContain('/100');
+    expect(text).not.toContain("What's costing you customers");
+    expect(text).not.toContain('Book your free call');
+    expect(text).toContain('The full report is attached as a PDF.');
+  });
+});
