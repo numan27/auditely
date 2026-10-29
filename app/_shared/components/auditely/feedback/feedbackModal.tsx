@@ -60,7 +60,7 @@ export function FeedbackModal({ onClose, initial = '' }: FeedbackModalProps) {
         <form onSubmit={submit} noValidate>
           <Modal.Content>
             <p className="mb-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              Tell us what works, what doesn&apos;t, and what you&apos;d like Auditely to do. Replies come to your email.
+              Tell us what works, what doesn&apos;t, and what you&apos;d like Auditely to do.
             </p>
             <TextArea
               label="Your message"

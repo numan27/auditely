@@ -10,7 +10,8 @@ describe('FeedbackModal', () => {
     const html = renderToStaticMarkup(createElement(FeedbackModal, { onClose() {} }));
     expect(html).toContain('role="dialog"');
     expect(html).toContain('Send feedback');
-    expect(html).toContain('Tell us what works, what doesn&#x27;t, and what you&#x27;d like Auditely to do. Replies come to your email.');
+    expect(html).toContain('Tell us what works, what doesn&#x27;t, and what you&#x27;d like Auditely to do.');
+    expect(html).not.toContain('Replies come to your email');
     expect(html).toMatch(/<label[^>]*>Your message<\/label>/);
     expect(html).toMatch(/<textarea[^>]*>\s*<\/textarea>/);
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*>[\s\S]*Send[\s\S]*<\/button>/);
