@@ -104,6 +104,17 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
             {mail.sentAt ? 'Send follow-up' : 'Send email'}
           </Button>
         )}
+        {/* Sending from a mailbox is paid: a Free account's button says so, and sends nothing */}
+        {options.mail.kind === 'compose' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => usage?.promptUpgrade({ feature: 'mailbox' })}
+            leftIcon={<MailIcon size={14} />}
+          >
+            Send email
+          </Button>
+        )}
         {options.mail.kind === 'compose' &&
           (['gmail', 'outlook'] as const).map((app) => (
             <Button

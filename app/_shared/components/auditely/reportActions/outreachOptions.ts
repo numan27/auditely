@@ -3,7 +3,7 @@
 // What a report card offers for emailing the lead and handing it to HubSpot,
 // by who is looking: the demo answers every button itself, the owner keeps
 // today's, a paid account sends from what it connected in Settings, and a Free
-// account opens drafts in its own mail.
+// account opens drafts in its own mail (its Send email only says it's a paid feature).
 
 import type { Account } from '@/app/_shared/lib/auth/account';
 import { ROUTES } from '@/app/_shared/lib/config/routes';

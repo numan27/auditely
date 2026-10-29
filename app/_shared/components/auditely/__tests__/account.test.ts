@@ -119,12 +119,14 @@ describe('ReportActions', () => {
     expect(html).toContain('Send to HubSpot');
   });
 
-  it('offers a Free account Gmail and Outlook drafts and the HubSpot upgrade, and the PDF', () => {
+  // Send email and Send to HubSpot show as paid features: pressing either opens the upgrade dialog
+  it('offers a Free account Gmail and Outlook drafts, Send email and HubSpot as upgrades, and the PDF', () => {
     for (const connections of [free, null]) {
       const html = card(tester, connections);
       expect(html).toContain('Open in Gmail');
       expect(html).toContain('Open in Outlook');
-      expect(html).not.toContain('Send email');
+      expect(html).toContain('Send email');
+      expect(html).not.toContain('Send follow-up');
       expect(html).toContain('Send to HubSpot');
       expect(html).toContain('Download the PDF and attach it before you send.');
       expect(html).toContain('Download PDF report');

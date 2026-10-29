@@ -27,6 +27,18 @@ describe('ReportActions', () => {
     expect(html).not.toContain('A branded PDF of this audit, ready to send.');
   });
 
+  // Sending from a mailbox is a paid feature: a Free account sees the button, and
+  // pressing it says so (during the beta, that paid plans open later). It sends nothing.
+  it("shows a Free account Send email beside its drafts, as a feature it doesn't have", () => {
+    const html = render({ email: 'hello@smiledental.com' });
+    const send = html.match(/<button[^>]*>(?:(?!<\/button>).)*Send email(?:(?!<\/button>).)*<\/button>/)?.[0] ?? '';
+    expect(send).not.toBe('');
+    expect(send).not.toContain('disabled');
+    expect(html).toContain('Open in Gmail');
+    expect(html).toContain('Open in Outlook');
+    expect(html.indexOf('Send email')).toBeLessThan(html.indexOf('Open in Gmail'));
+  });
+
   it('shows the PDF problem first, as the latest thing pressed', () => {
     const html = render({ pdfError: "Couldn't make the PDF. Try again in a minute." }, { error: 'HubSpot said no' });
     expect(html).toContain("Couldn&#x27;t make the PDF.");
