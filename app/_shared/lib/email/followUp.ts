@@ -114,3 +114,12 @@ export function leadDrafts(
   const first = request ? requestDraft({ businessName, request, problems, aiEmail: ai.body, sender }) : ai;
   return { first, followUp: followUpDraft({ businessName, problems, firstEmail: first.body, name: request?.name, sender }) };
 }
+
+/**
+ * Whether a lead gets an email at all. A website with nothing to fix has nothing
+ * to pitch; someone who asked for the audit still gets the reply, and a lead
+ * already emailed keeps its follow-up.
+ */
+export function hasPitch(improvements: string[], request?: AuditRequest | null, emailedAt?: string | null): boolean {
+  return improvements.length > 0 || !!request || !!emailedAt;
+}

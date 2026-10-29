@@ -44,4 +44,16 @@ describe('ReportActions', () => {
     expect(html).toContain("Couldn&#x27;t make the PDF.");
     expect(html).not.toContain('HubSpot said no');
   });
+
+  // A website that passed has nothing to pitch: no email buttons, the PDF stays
+  it('offers no email for a website with nothing to fix', () => {
+    const audit = { created_at: '2026-10-01T00:00:00Z', performance_score: 95, seo_score: 100, mobile_score: 95, ssl_valid: true, checks: null, raw_json: null };
+    const report = { summary: 'The site did well.', improvements: [], cold_email: 'Subject: No issues found\n\nAll good.' };
+    const html = render({ email: 'hello@smiledental.com', report, audit });
+    expect(html).not.toContain('Send email');
+    expect(html).not.toContain('Open in Gmail');
+    expect(html).not.toContain('Open in Outlook');
+    expect(html).toContain("No problems found, so there&#x27;s no email to send.");
+    expect(html).toContain('Download PDF report');
+  });
 });

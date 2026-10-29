@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { followUpDraft, leadDrafts, requestDraft } from '@/app/_shared/lib/email/followUp';
+import { followUpDraft, hasPitch, leadDrafts, requestDraft } from '@/app/_shared/lib/email/followUp';
 import type { Problem } from '@/app/_shared/lib/audit/impact';
 
 const problems: Problem[] = [
@@ -141,5 +141,23 @@ describe('leadDrafts for a requested audit', () => {
     expect(reply.body.startsWith('Hi Sarah,')).toBe(true);
     expect(reply.body.endsWith('Numan, DevArtVentures')).toBe(true);
     expect(followUp.body.startsWith('Hi Sarah,\n\nJust following up')).toBe(true);
+  });
+});
+
+// A website with nothing to fix has nothing to pitch, so it gets no cold email
+describe('hasPitch', () => {
+  it('is true when the report lists something to fix', () => {
+    expect(hasPitch(['Compress the images.'])).toBe(true);
+  });
+
+  it('is false for a report with nothing to fix', () => {
+    expect(hasPitch([])).toBe(false);
+    expect(hasPitch([], null, null)).toBe(false);
+  });
+
+  it('still answers someone who asked for the audit, and follows up a lead already emailed', () => {
+    const request = { name: 'Sarah' } as unknown as Parameters<typeof hasPitch>[1];
+    expect(hasPitch([], request)).toBe(true);
+    expect(hasPitch([], null, '2026-10-20T00:00:00Z')).toBe(true);
   });
 });

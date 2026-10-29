@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { CheckIcon, CopyIcon, RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
-import { leadDrafts } from '@/app/_shared/lib/email/followUp';
+import { hasPitch, leadDrafts } from '@/app/_shared/lib/email/followUp';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import { useConnections } from '@/app/_shared/lib/hooks/useConnections';
 import type { AuditLike } from '@/app/_shared/lib/audit/reportData';
@@ -80,23 +80,34 @@ export function AiReportSection({ report, businessName, audit, emailedAt, reques
           {rewriteError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{rewriteError}</p>}
         </div>
 
-        <div>
-          <h4 className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">What to fix first</h4>
-          <ol className="space-y-2.5">
-            {report.improvements.map((item, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-primary-600)]/15 text-[11px] font-semibold tabular-nums text-[var(--color-primary-600)]">
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{item}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        {report.improvements.length > 0 && (
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">What to fix first</h4>
+            <ol className="space-y-2.5">
+              {report.improvements.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-primary-600)]/15 text-[11px] font-semibold tabular-nums text-[var(--color-primary-600)]">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{item}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">
-        <EmailDraft title={request ? 'Reply email' : 'Outreach email'} draft={drafts.first} />
+        {hasPitch(report.improvements, request, emailedAt) ? (
+          <EmailDraft title={request ? 'Reply email' : 'Outreach email'} draft={drafts.first} />
+        ) : (
+          <div>
+            <h4 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">Outreach email</h4>
+            <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              No email for this one. We found no problems on the website to write to {businessName} about.
+            </p>
+          </div>
+        )}
         {emailedAt && <EmailDraft title="Follow-up email" hint="Sent by “Send follow-up”" draft={drafts.followUp} />}
       </div>
     </div>

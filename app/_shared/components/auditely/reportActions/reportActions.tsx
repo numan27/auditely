@@ -10,7 +10,7 @@ import { DownloadIcon, ExternalLinkIcon, MailIcon } from '@/app/_shared/componen
 import { outreachOptions, type OutreachAction } from '@/app/_shared/components/auditely/reportActions/outreachOptions';
 import { SendEmailModal } from '@/app/_shared/components/auditely/sendEmailModal/sendEmailModal';
 import { composeLinks } from '@/app/_shared/lib/email/composeLinks';
-import { leadDrafts } from '@/app/_shared/lib/email/followUp';
+import { hasPitch, leadDrafts } from '@/app/_shared/lib/email/followUp';
 import { freshCheck } from '@/app/_shared/lib/email/emailCheck';
 import type { OutreachDraft } from '@/app/_shared/lib/email/outreach';
 import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
@@ -55,6 +55,8 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
   const options = outreachOptions({ demo: !!demo, account: useAccount(), connections, upworkPdf: !!upworkPdf });
   const [composing, setComposing] = useState(false);
   const { email, report, audit } = state;
+  // A website with nothing to fix has nothing to pitch: no email buttons
+  const mailKind = report && !hasPitch(report.improvements, request, mail.sentAt) ? 'none' : options.mail.kind;
   const drafts = () => report && audit && leadDrafts(report.cold_email, businessName, audit, request, connections?.sender);
 
   const openComposer = () => {
@@ -84,14 +86,16 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
           <span className="text-red-600 dark:text-red-400">{problem}</span>
         ) : done.length ? (
           done.join(' · ')
-        ) : options.mail.kind === 'compose' ? (
+        ) : mailKind === 'none' ? (
+          "No problems found, so there's no email to send."
+        ) : mailKind === 'compose' ? (
           'Download the PDF and attach it before you send.'
         ) : (
           'A branded PDF of this audit, ready to send.'
         )}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        {options.mail.kind === 'send' && (
+        {mailKind === 'send' && (
           <Button
             variant="outline"
             size="sm"
@@ -105,7 +109,7 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
           </Button>
         )}
         {/* Sending from a mailbox is paid: a Free account's button says so, and sends nothing */}
-        {options.mail.kind === 'compose' && (
+        {mailKind === 'compose' && (
           <Button
             variant="outline"
             size="sm"
@@ -115,7 +119,7 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
             Send email
           </Button>
         )}
-        {options.mail.kind === 'compose' &&
+        {mailKind === 'compose' &&
           (['gmail', 'outlook'] as const).map((app) => (
             <Button
               key={app}
@@ -129,7 +133,7 @@ export function ReportActions({ businessName, state, crm, mail, upworkPdf, reque
               {app === 'gmail' ? 'Open in Gmail' : 'Open in Outlook'}
             </Button>
           ))}
-        {options.mail.kind === 'setup' && <SetupLink action={options.mail} />}
+        {mailKind === 'setup' && options.mail.kind === 'setup' && <SetupLink action={options.mail} />}
         {options.hubspot.kind === 'send' && (
           <Button variant="outline" size="sm" onClick={demo ? () => demo.restrict('crm') : crm.send} isLoading={crm.sending}>
             {crm.sending ? 'Sending…' : crm.sentAt ? 'Update HubSpot' : 'Send to HubSpot'}
