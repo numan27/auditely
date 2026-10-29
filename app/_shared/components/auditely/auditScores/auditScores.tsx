@@ -5,6 +5,8 @@ import { ShieldAlertIcon } from '@/app/_shared/components/ui/icons/icons';
 import { scoreTone, siteBlocked, siteNotice, topLighthouseIssues, unreadSiteReason, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 
 const SSL_EXPIRY_WARN_DAYS = 30;
+// Google calls a mobile score of 90 or more good: no list of "biggest issues" then
+const GOOD_MOBILE = 90;
 
 const TONE_CLASSES: Record<ScoreTone, { text: string; meter: string }> = {
   good: { text: 'text-emerald-600 dark:text-emerald-400', meter: 'bg-emerald-500' },
@@ -137,7 +139,7 @@ export function AuditScores({ audit }: { audit: AuditFields }) {
         <ScoreTile label="Lead capture" score={audit.lead_score} reason={siteReason} blocked={blocked} />
       </div>
       {unread && <SiteNotice reason={unread} />}
-      <KeyIssues rawJson={audit.raw_json} />
+      {(audit.mobile_score ?? 0) < GOOD_MOBILE && <KeyIssues rawJson={audit.raw_json} />}
     </div>
   );
 }

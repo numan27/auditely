@@ -47,3 +47,27 @@ describe('AuditScores for a site that couldn’t be read', () => {
     expect(renderToStaticMarkup(createElement(AuditChecklist, { audit: unread('Blocked (403)') }))).toBe('');
   });
 });
+
+// Google calls 90 and over good: a list headed "Biggest issues" would contradict the score
+describe('AuditScores: Biggest issues on mobile', () => {
+  const withMobile = (mobile_score: number) =>
+    ({
+      performance_score: 100, seo_score: 100, mobile_score, ssl_valid: true, geo_score: 100, aeo_score: 100, lead_score: 100,
+      raw_json: { mobile: { keyAudits: { si: { title: 'Speed Index', score: 0.8, displayValue: '4.1 s' } } } },
+      checks: { psi: { mobile: 'ok', desktop: 'ok' } },
+    }) as unknown as AuditFields;
+
+  it('isn’t shown for a mobile score of 90 or more', () => {
+    for (const score of [90, 95, 100]) {
+      const html = scores(withMobile(score));
+      expect(html).not.toContain('Biggest issues on mobile');
+      expect(html).not.toContain('Speed Index');
+    }
+  });
+
+  it('lists what slows the site down below 90', () => {
+    const html = scores(withMobile(89));
+    expect(html).toContain('Biggest issues on mobile');
+    expect(html).toContain('Speed Index');
+  });
+});
