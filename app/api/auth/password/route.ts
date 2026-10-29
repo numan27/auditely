@@ -15,12 +15,14 @@ import { keepFreeAudit } from '@/app/_shared/lib/freeAudit/keepFreeAudit';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const refuse = (status: number, error: string) => NextResponse.json({ error }, { status });
+const refuse = (status: number, error: string, extra: Record<string, unknown> = {}) =>
+  NextResponse.json({ error, ...extra }, { status });
 
 // What Supabase's refusal means for the person signing in
 function signInError(error: { status?: number; code?: string }) {
   if (error.status === 429) return refuse(429, 'Too many tries. Wait a few minutes, or email yourself a sign-in link.');
-  if (error.code === 'email_not_confirmed') return refuse(400, 'Confirm your email first: email yourself a sign-in link.');
+  // Its sign-up code was never typed: `confirm` has the form ask for one
+  if (error.code === 'email_not_confirmed') return refuse(400, 'Confirm your email first: enter the code we email you.', { confirm: true });
   if (error.status === 400) return refuse(400, "That email and password don't match. Try again, or email yourself a sign-in link.");
   return refuse(502, "Couldn't sign you in. Try again in a minute.");
 }

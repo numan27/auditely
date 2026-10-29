@@ -21,13 +21,18 @@ const terms = render(TermsContent);
 const privacy = render(PrivacyContent);
 
 describe('signing in', () => {
-  it('names every way to sign in, the password among them', () => {
+  // Google isn't named while its sign-in is hidden (GOOGLE_SIGN_IN_HIDDEN)
+  it('names every way to sign in, and not Google while it is hidden', () => {
     expect(text(terms)).toContain(
-      'You sign in with a link we email you, with Google, or with a password you set in Settings. Anyone who can open that email account can sign in as you, so keep it and your password safe.'
+      'You sign in with your email and a password, or with a link we email you. Anyone who can open that email account can sign in as you, so keep it and your password safe.'
     );
     expect(text(privacy)).toContain(
-      'how you sign in (an emailed link, Google, or a password you set, which Supabase keeps only as a one-way hash)'
+      'how you sign in (a password you set, which Supabase keeps only as a one-way hash, or an emailed link)'
     );
+    expect(text(terms)).not.toContain('or with Google');
+    expect(text(privacy)).not.toContain('or Google)');
+    expect(text(privacy)).not.toContain('Google sign-in');
+    expect(text(privacy)).toContain('Google: Places for business details and PageSpeed for audits.');
   });
 });
 

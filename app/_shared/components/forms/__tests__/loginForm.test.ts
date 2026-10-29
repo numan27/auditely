@@ -18,7 +18,7 @@ describe('LoginForm', () => {
     }
     expect(text(render({ open: true, google: false }))).toContain("We'll email you a sign-in link.");
     expect(text(render({ mode: 'signup', open: true, google: false }))).toContain(
-      "Free, with 1 search and 2 audits a month. We'll email you a link."
+      "Free, with 1 search and 2 audits a month. We'll email you a code to confirm your address."
     );
     expect(text(render({ open: true, method: 'password', google: false }))).toContain('Sign in with your email and password.');
     expect(render({ open: true })).toContain('href="/auth/google?next=%2F"');
@@ -40,11 +40,20 @@ describe('LoginForm', () => {
     }
   });
 
-  it('keeps the invite-only sign-in as it was while sign-ups are closed', () => {
-    const page = text(render({}));
-    expect(page).toContain('Sign in to Auditely');
-    expect(page).toContain('Use the email you were invited with.');
-    expect(page).not.toContain('Create an account');
+  // Accounts are made on the sign-up page only, so an invited newcomer is sent there
+  it('points an invited newcomer to the sign-up page while sign-ups are closed', () => {
+    const html = render({});
+    expect(text(html)).toContain('Sign in to Auditely');
+    expect(text(html)).toContain('Use the email you were invited with.');
+    expect(text(html)).toContain('Invited to Auditely? Create your account');
+    expect(text(html)).not.toContain('Create an account');
+    expect(html).toContain('href="/signup"');
+  });
+
+  it('says sign-up is for invited addresses while sign-ups are closed', () => {
+    const page = text(render({ mode: 'signup', google: false }));
+    expect(page).toContain('Create your Auditely account');
+    expect(page).toContain('Auditely is invite-only for now. Use the email you were invited with.');
   });
 
   it('offers a new visitor an account from the sign-in once sign-ups are open', () => {
@@ -58,7 +67,7 @@ describe('LoginForm', () => {
   it('invites a new visitor to make a free account', () => {
     const html = render({ mode: 'signup', open: true });
     expect(text(html)).toContain('Create your Auditely account');
-    expect(text(html)).toContain("Free, with 1 search and 2 audits a month. We'll email you a link, or use Google.");
+    expect(text(html)).toContain("Free, with 1 search and 2 audits a month. We'll email you a code to confirm your address, or use Google.");
     expect(text(html)).toContain('Already have an account? Sign in');
     expect(html).toContain('href="/login"');
   });
@@ -81,9 +90,12 @@ describe('LoginForm', () => {
     expect(html).toContain('href="/login?callbackUrl=%2Fplans"');
   });
 
-  it('keeps sign-up to a link or Google', () => {
-    const html = render({ mode: 'signup', open: true, method: 'password' });
-    expect(html).not.toContain('type="password"');
+  it('asks a new visitor for an email and a new password, not for a link', () => {
+    const html = render({ mode: 'signup', open: true, google: false });
+    expect(html).toMatch(/<input[^>]*type="password"[^>]*autoComplete="new-password"|<input[^>]*autoComplete="new-password"[^>]*type="password"/i);
+    expect(text(html)).toContain('At least 8 characters.');
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>(?:(?!<\/button>).)*Create account/);
+    expect(text(html)).not.toContain('Email me a link');
     expect(text(html)).not.toContain('password instead');
   });
 

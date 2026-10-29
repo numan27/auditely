@@ -92,7 +92,15 @@ describe('proxy', () => {
   });
 
   it('still answers 401 to a logged-out call of any API route but the sign-ins, the free audit and the contact form', async () => {
-    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT, API_ROUTES.CONTACT];
+    const open: string[] = [
+      API_ROUTES.AUTH,
+      API_ROUTES.AUTH_PASSWORD,
+      API_ROUTES.AUTH_SIGNUP,
+      API_ROUTES.AUTH_SIGNUP_CODE,
+      API_ROUTES.AUTH_SIGNUP_RESEND,
+      API_ROUTES.FREE_AUDIT,
+      API_ROUTES.CONTACT,
+    ];
     for (const path of Object.values(API_ROUTES).filter((p) => !open.includes(p))) {
       expect((await visit(path)).status).toBe(401);
     }
@@ -124,9 +132,11 @@ describe('proxy', () => {
     expect(sentTo(await visit(`${ROUTES.AUTH_CONTINUE}?token_hash=h1&type=email&next=%2F`))).toBeNull();
     expect(sentTo(await visit(`${ROUTES.AUTH_GOOGLE}?next=%2F`))).toBeNull();
     expect(sentTo(await visit(API_ROUTES.AUTH))).toBeNull();
-    const byPassword = await visit(API_ROUTES.AUTH_PASSWORD);
-    expect(byPassword.status).not.toBe(401);
-    expect(sentTo(byPassword)).toBeNull();
+    for (const path of [API_ROUTES.AUTH_PASSWORD, API_ROUTES.AUTH_SIGNUP, API_ROUTES.AUTH_SIGNUP_CODE, API_ROUTES.AUTH_SIGNUP_RESEND]) {
+      const res = await visit(path);
+      expect(res.status, path).not.toBe(401);
+      expect(sentTo(res), path).toBeNull();
+    }
   });
 
   it('gives a logged-in user the real home page, and the demo when asked for', async () => {

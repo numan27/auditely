@@ -47,7 +47,15 @@ describe('route access', () => {
     expect(demoReportPath('demo-a1')).toBe('/demo/report/demo-a1');
     expect(isPublicRoute(demoReportPath('demo-a1'))).toBe(true);
     expect(isPublicRoute('/demos')).toBe(false);
-    const open: string[] = [API_ROUTES.AUTH, API_ROUTES.AUTH_PASSWORD, API_ROUTES.FREE_AUDIT, API_ROUTES.CONTACT];
+    const open: string[] = [
+      API_ROUTES.AUTH,
+      API_ROUTES.AUTH_PASSWORD,
+      API_ROUTES.AUTH_SIGNUP,
+      API_ROUTES.AUTH_SIGNUP_CODE,
+      API_ROUTES.AUTH_SIGNUP_RESEND,
+      API_ROUTES.FREE_AUDIT,
+      API_ROUTES.CONTACT,
+    ];
     for (const path of Object.values(API_ROUTES)) expect(isProtectedRoute(path)).toBe(!open.includes(path));
     expect(isProtectedRoute('/api/autocomplete')).toBe(true);
   });

@@ -45,6 +45,14 @@ afterEach(() => {
 });
 
 describe('POST /api/auth/password', () => {
+  // Its sign-up code was never typed: the form asks for one, and sends a new one
+  it("says an account whose email isn't confirmed yet needs its code", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: { status: 400, code: 'email_not_confirmed', message: 'Email not confirmed' } });
+    const res = await post(OWNER);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Confirm your email first: enter the code we email you.', confirm: true });
+  });
+
   it('asks for the email address and the password', async () => {
     for (const body of [{}, { email: 'owner', password: 'x' }, { email: OWNER.email }, { email: OWNER.email, password: '' }, 'not json']) {
       const res = await post(body);

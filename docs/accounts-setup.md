@@ -45,20 +45,39 @@ address gets its account on its first sign-in, and Auditely itself refuses every
 
 ## 3. Email templates
 
-Supabase → Authentication → Email Templates. In both **"Magic Link"** and **"Confirm signup"**, replace
-`{{ .ConfirmationURL }}` with:
+Accounts are made on the sign-up page (`/signup`) only, with an email and a password. Supabase emails the
+new account a 6-digit code, and typing it there confirms the address and signs the account in. The sign-in
+link never makes an account: an address with none is told to create one first.
 
-```
-{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email
-```
+Supabase → Authentication → Sign In / Providers → Email: set **Email OTP Length** to **6**. The sign-up
+page asks for 6 digits, and the code works for an hour (**Email OTP Expiration**, 3600 seconds).
 
-For example: `<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Sign in to Auditely</a>`.
+Supabase → Authentication → Email Templates:
 
-The link then works in any browser or on a phone, not only in the browser that asked for it. It opens a
-"Finish signing in" page whose Continue signs in: email security scanners (Outlook's Safe Links and
-others) open links before the person does, and opening the link alone doesn't use it up. Both
-templates need it: the first time an invited address signs in it has no account yet, so Supabase sends
-"Confirm signup" instead of "Magic Link".
+- **"Confirm signup"** is the code. Subject `Your Auditely code`, and a body with `{{ .Token }}` and no
+  link, for example:
+
+  ```html
+  <h2>Your Auditely code</h2>
+  <p>Enter this code on the Auditely sign-up page to confirm your email address. It works for an hour.</p>
+  <p style="font-size:28px;font-weight:600;letter-spacing:6px">{{ .Token }}</p>
+  <p>If you didn't sign up for Auditely, you can ignore this email.</p>
+  ```
+
+- **"Magic Link"** is the sign-in link. Replace `{{ .ConfirmationURL }}` with:
+
+  ```
+  {{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email
+  ```
+
+  For example: `<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Sign in to Auditely</a>`.
+
+  The link then works in any browser or on a phone, not only in the browser that asked for it. It opens a
+  "Finish signing in" page whose Continue signs in: email security scanners (Outlook's Safe Links and
+  others) open links before the person does, and opening the link alone doesn't use it up.
+
+An account that never typed its code is sent the code again when it signs in with its password, and asked
+for it. If it asks for a sign-in link instead, Supabase sends it the "Confirm signup" code, not a link.
 
 ## 4. Email sending (custom SMTP)
 
@@ -152,7 +171,7 @@ Wait until Vercel → Deployments shows the new production deployment as Ready.
 
 ## 9. Check it
 
-- Sign in by link, then sign out and sign in with Google.
+- Sign in by link, then sign out and sign in with your password (Settings → Password sets one).
 - Your searches, URL audits and requests are all there, and so is the bell.
 - An `ALLOWED_EMAILS` test account sees an empty workspace with no Requests tab.
 - That account runs a niche and city you've already searched and gets a new search of its own, not
@@ -184,8 +203,10 @@ Rows saved meanwhile belong to no one. Straight before you deploy, run the accou
    **Production and Preview**. It's the addresses that may sign in besides yours, separated by commas.
 2. Redeploy: Vercel → Deployments → the latest production deployment → ⋯ → Redeploy. The change only
    takes effect once that deployment is Ready.
-3. A new tester can then sign in with their address, by link or with Google. While Google's consent
-   screen is still "Testing" (step 2), add them there as a test user too.
+3. A new tester then makes their account on the sign-up page (`/signup`) with their address and a
+   password, and types the code Auditely emails them. After that they sign in with the password or by
+   link. If Google sign-in is turned on and its consent screen is still "Testing" (step 2), add them
+   there as a test user too.
 
 Removing an address locks that person out on their next request. Their data stays in the database until
 their user is deleted in Authentication → Users, and deleting it removes their searches, leads and audits

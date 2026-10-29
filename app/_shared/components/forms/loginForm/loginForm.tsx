@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useFormik } from 'formik';
-import { emailLinkSchema, passwordSignInSchema, type PasswordSignInFormValues } from '@/app/_shared/lib/validations/schemas';
+import {
+  emailLinkSchema,
+  passwordSignInSchema,
+  signupSchema,
+  type PasswordSignInFormValues,
+} from '@/app/_shared/lib/validations/schemas';
 import { Input } from '@/app/_shared/components/ui/input/input';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import buttonStyles from '@/app/_shared/components/ui/button/button.module.scss';
@@ -11,11 +16,15 @@ import { API_ROUTES, ROUTES, safeCallbackUrl } from '@/app/_shared/lib/config/ro
 import { PLANS } from '@/app/_shared/lib/usage/plans';
 import { countOf } from '@/app/_shared/lib/usage/usageCopy';
 import { ConsentLine } from '@/app/_shared/components/forms/consentLine/consentLine';
+import { ConfirmCodeForm } from '@/app/_shared/components/forms/confirmCodeForm/confirmCodeForm';
+import { requestSignup, resendCode } from '@/app/_shared/lib/auth/signupRequests';
+import { PASSWORD_MIN } from '@/app/_shared/lib/auth/passwordRules';
 
 // What went wrong on the way back from a sign-in (/auth/callback, /auth/google), by ?error=
+const INVITE_ONLY = 'Auditely is invite-only for now. Use the email you were invited with.';
 const SIGN_IN_ERRORS: Record<string, string> = {
   link: 'That sign-in link has expired or was already used. Send yourself a new one.',
-  closed: 'Auditely is invite-only for now. Use the email you were invited with.',
+  closed: INVITE_ONLY,
   google: "Couldn't reach Google. Try again, or use your email.",
   'google-off': "Google sign-in isn't available yet. Use your email instead.",
 };
@@ -33,7 +42,7 @@ interface LoginFormProps {
   error?: string;
   /** The sign-up page or the sign-in page; the same form either way */
   mode?: 'signin' | 'signup';
-  /** Sign-ups are open (signupsOpen(), read on the server): anyone may make an account */
+  /** Sign-ups are open (signupsOpen(), read on the server): anyone may make an account, not only invited addresses */
   open?: boolean;
   /** Sign in with an emailed link, or with the password set in Settings (/login?method=password) */
   method?: 'link' | 'password';
@@ -50,17 +59,26 @@ function loginHref(next: string, method: 'link' | 'password') {
   return query ? `${ROUTES.LOGIN}?${query}` : ROUTES.LOGIN;
 }
 
-// The heading, the line under it, and the way to the other page
+// The heading, the line under it, and the way to the other page. Accounts are made
+// on the sign-up page only, so an invited newcomer is sent there too.
 function copyFor(mode: 'signin' | 'signup', open: boolean, byPassword: boolean, google: boolean) {
   const orGoogle = google ? ', or use Google' : '';
   if (mode === 'signup') {
     return {
       heading: 'Create your Auditely account',
-      lead: `Free, with ${countOf('search', PLANS.free.limits.search ?? 0)} and ${countOf('audit', PLANS.free.limits.audit ?? 0)} a month. We'll email you a link${orGoogle}.`,
+      lead: open
+        ? `Free, with ${countOf('search', PLANS.free.limits.search ?? 0)} and ${countOf('audit', PLANS.free.limits.audit ?? 0)} a month. We'll email you a code to confirm your address${orGoogle}.`
+        : INVITE_ONLY,
       other: { prompt: 'Already have an account?', label: 'Sign in', path: ROUTES.LOGIN },
     };
   }
-  if (!open) return { heading: 'Sign in to Auditely', lead: 'Use the email you were invited with.', other: null };
+  if (!open) {
+    return {
+      heading: 'Sign in to Auditely',
+      lead: 'Use the email you were invited with.',
+      other: { prompt: 'Invited to Auditely?', label: 'Create your account', path: ROUTES.SIGNUP },
+    };
+  }
   return {
     heading: 'Sign in to Auditely',
     lead: byPassword ? `Sign in with your email and password${orGoogle}.` : `We'll email you a sign-in link${orGoogle}.`,
@@ -70,9 +88,12 @@ function copyFor(mode: 'signin' | 'signup', open: boolean, byPassword: boolean, 
 
 export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, method = 'link', google = true }: LoginFormProps) {
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Waiting for the code Supabase emailed, to confirm the address
+  const [pending, setPending] = useState<{ email: string; password: string; notice?: string } | null>(null);
   const next = safeCallbackUrl(callbackUrl);
-  // Passwords are for signing in: a new account starts with a link or Google, and sets one in Settings
-  const byPassword = mode === 'signin' && method === 'password';
+  // A new account starts with an email and a password, confirmed by an emailed code
+  const signingUp = mode === 'signup';
+  const byPassword = !signingUp && method === 'password';
   const copy = copyFor(mode, open, byPassword, google);
   // Where the visitor was headed comes along to the other page
   const otherHref = copy.other && (next === ROUTES.HOME ? copy.other.path : `${copy.other.path}?callbackUrl=${encodeURIComponent(next)}`);
@@ -86,9 +107,10 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
     },
     initialErrors: signInError ? { email: signInError } : {},
     initialTouched: signInError ? { email: true } : {},
-    validationSchema: byPassword ? passwordSignInSchema : emailLinkSchema,
+    validationSchema: signingUp ? signupSchema : byPassword ? passwordSignInSchema : emailLinkSchema,
     onSubmit: async (values, { setSubmitting, setErrors }) => {
       const email = values.email.trim();
+      if (signingUp) return signUp(email, values.password, setErrors, setSubmitting);
       if (byPassword) return signInWithPassword(email, values.password, setErrors, setSubmitting);
       try {
         const res = await fetch(API_ROUTES.AUTH, {
@@ -110,11 +132,38 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
     },
   });
 
+  type SetErrors = (errors: { email?: string; password?: string }) => void;
+
+  // The code is on its way (the next step asks for it), or Supabase signed the account straight in
+  async function signUp(email: string, password: string, setErrors: SetErrors, setSubmitting: (busy: boolean) => void) {
+    const answer = await requestSignup(email, password, next);
+    if (!answer.ok) {
+      setErrors(answer.field === 'password' ? { password: answer.error } : { email: answer.error });
+      setSubmitting(false);
+      return;
+    }
+    if ('next' in answer) return window.location.assign(answer.next);
+    setPending({ email, password });
+    setSubmitting(false);
+  }
+
+  // An account made but never confirmed gets a new code, and the step that asks for it
+  async function askForCode(email: string, password: string) {
+    const resent = await resendCode(email, next);
+    setPending({
+      email,
+      password,
+      notice: resent.ok
+        ? `Your email isn't confirmed yet. We sent a new code to ${email}.`
+        : `Your email isn't confirmed yet. Enter the code we emailed you, or send yourself a new one.`,
+    });
+  }
+
   // Signed in: a full page load, so the server reads the new session cookies
   async function signInWithPassword(
     email: string,
     password: string,
-    setErrors: (errors: { password?: string }) => void,
+    setErrors: SetErrors,
     setSubmitting: (busy: boolean) => void
   ) {
     try {
@@ -124,6 +173,11 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
         body: JSON.stringify({ email, password, callbackUrl: next }),
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok && data.confirm === true) {
+        await askForCode(email, password);
+        setSubmitting(false);
+        return;
+      }
       if (!res.ok) {
         setErrors({ password: data.error ?? "Couldn't sign you in. Try again in a minute." });
         setSubmitting(false);
@@ -144,6 +198,18 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{copy.lead}</p>
     </div>
   );
+
+  if (pending) {
+    return (
+      <ConfirmCodeForm
+        email={pending.email}
+        password={pending.password}
+        next={next}
+        notice={pending.notice}
+        onBack={() => setPending(null)}
+      />
+    );
+  }
 
   if (sentTo) {
     return (
@@ -174,18 +240,22 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
           required
         />
 
-        {byPassword && (
+        {(byPassword || signingUp) && (
           <Input
             id="password"
             name="password"
             type="password"
             label="Password"
-            autoComplete="current-password"
+            autoComplete={signingUp ? 'new-password' : 'current-password'}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             value={formik.values.password}
             error={formik.touched.password && formik.errors.password ? formik.errors.password : undefined}
-            helpText="Forgot your password? Email yourself a sign-in link, then set a new one in Settings."
+            helpText={
+              signingUp
+                ? `At least ${PASSWORD_MIN} characters.`
+                : 'Forgot your password? Email yourself a sign-in link, then set a new one in Settings.'
+            }
             required
           />
         )}
@@ -197,7 +267,7 @@ export function LoginForm({ callbackUrl, error, mode = 'signin', open = false, m
           fullWidth
           isLoading={formik.isSubmitting}
         >
-          {byPassword ? 'Sign in' : 'Email me a link'}
+          {signingUp ? 'Create account' : byPassword ? 'Sign in' : 'Email me a link'}
         </Button>
       </form>
 

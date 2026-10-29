@@ -30,11 +30,15 @@ export const ROUTES = {
   AUTH_GOOGLE: '/auth/google',
 } as const;
 
-// API route paths. Only AUTH (and AUTH_PASSWORD under it), FREE_AUDIT and CONTACT are public (see PUBLIC_ROUTES below).
+// API route paths. Only AUTH (and the sign-in and sign-up routes under it), FREE_AUDIT and CONTACT are public (see PUBLIC_ROUTES below).
 export const API_ROUTES = {
   AUTH: '/api/auth',
   // Signing in with the password an account set in Settings, behind BotID
   AUTH_PASSWORD: '/api/auth/password',
+  // Making an account with an email and a password, then confirming it with the emailed code, behind BotID
+  AUTH_SIGNUP: '/api/auth/signup',
+  AUTH_SIGNUP_CODE: '/api/auth/signup/code',
+  AUTH_SIGNUP_RESEND: '/api/auth/signup/resend',
   // The landing page's free audit: one per visitor's network, behind BotID
   FREE_AUDIT: '/api/free-audit',
   AUDIT: '/api/audit',

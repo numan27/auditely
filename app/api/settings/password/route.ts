@@ -6,10 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, unauthorized } from '@/app/_shared/lib/supabase/server';
-
-const MIN = 8;
-// Supabase hashes with bcrypt, which reads only the first 72 bytes
-const MAX = 72;
+import { passwordProblem } from '@/app/_shared/lib/auth/passwordRules';
 
 const refuse = (status: number, error: string) => NextResponse.json({ error }, { status });
 
@@ -19,8 +16,8 @@ export async function PUT(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) ?? {};
   const password = typeof body.password === 'string' ? body.password : '';
-  if (password.length < MIN) return refuse(400, `Use at least ${MIN} characters.`);
-  if (new TextEncoder().encode(password).length > MAX) return refuse(400, `Use ${MAX} characters or fewer.`);
+  const problem = passwordProblem(password);
+  if (problem) return refuse(400, problem);
 
   const { error } = await session.db.auth.updateUser({ password });
   if (error) {

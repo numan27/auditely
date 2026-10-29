@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LEGAL } from '@/app/_shared/lib/config/legal';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { GOOGLE_SIGN_IN_HIDDEN } from '@/app/_shared/lib/auth/googleSignIn';
 import { LegalContact, LegalSection, LegalTitle } from '@/app/_shared/components/legal/legalProse';
 
 // The Privacy Policy, in plain words: written for the United States, with the
@@ -17,8 +18,8 @@ export function PrivacyContent() {
       <LegalSection title="What we collect">
         <ul>
           <li>
-            <strong>Your account and profile:</strong> your email address, how you sign in (an emailed link, Google, or a
-            password you set, which Supabase keeps only as a one-way hash),
+            <strong>Your account and profile:</strong> your email address, how you sign in (a password you set, which
+            Supabase keeps only as a one-way hash, {GOOGLE_SIGN_IN_HIDDEN ? 'or an emailed link' : 'an emailed link, or Google'}),
             and what you add in Settings, such as your name, company, website, logo, contact details and booking link.
           </li>
           <li>
@@ -66,7 +67,10 @@ export function PrivacyContent() {
           <li>Supabase: our database and sign-in.</li>
           <li>Vercel: hosting, visit counts, and the bot check on the free audit.</li>
           <li>Stripe: payments and sales tax.</li>
-          <li>Google: Places for business details, PageSpeed for audits, and Google sign-in if you use it.</li>
+          <li>
+            Google: Places for business details{GOOGLE_SIGN_IN_HIDDEN ? ' and' : ','} PageSpeed for audits
+            {GOOGLE_SIGN_IN_HIDDEN ? '' : ', and Google sign-in if you use it'}.
+          </li>
           <li>Groq: writing the summaries and draft emails.</li>
           <li>Hunter, Tomba, Snov, Apollo and Verifalia: finding and checking business email addresses.</li>
           <li>Resend: delivering email.</li>

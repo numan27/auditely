@@ -73,7 +73,7 @@ describe('POST /api/auth', () => {
     expect(auth.signInWithOtp).toHaveBeenCalledWith({
       email: 'owner@example.com',
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: false,
         emailRedirectTo: 'https://auditely.app/auth/callback?next=%2Fsearch%2Fabc%3Fx%3D1',
       },
     });
@@ -94,6 +94,15 @@ describe('POST /api/auth', () => {
       expect(url.pathname).toBe('/auth/callback');
       expect(url.search).toBe('?next=%2F');
     }
+  });
+
+  // Accounts are made on the sign-up page, with a password and an emailed code
+  it("sends no link to an address that has no account yet, and says to make one", async () => {
+    vi.stubEnv('SIGNUPS_OPEN', 'true');
+    auth.signInWithOtp.mockResolvedValue({ data: {}, error: { message: 'Signups not allowed for otp', status: 422, code: 'otp_disabled' } });
+    const res = await post({ email: 'new@example.com' });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "There's no account with this email yet. Create one first." });
   });
 
   it('says the link was not sent when Supabase fails', async () => {

@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import { LEGAL } from '@/app/_shared/lib/config/legal';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
+import { GOOGLE_SIGN_IN_HIDDEN } from '@/app/_shared/lib/auth/googleSignIn';
 import { LegalContact, LegalSection, LegalTitle } from '@/app/_shared/components/legal/legalProse';
 
 // The Terms, in plain words: written for the United States, California included
+
+// Google isn't named as a way in while its sign-in is hidden
+const SIGN_IN_WAYS = GOOGLE_SIGN_IN_HIDDEN
+  ? 'You sign in with your email and a password, or with a link we email you.'
+  : 'You sign in with your email and a password, with a link we email you, or with Google.';
 export function TermsContent() {
   return (
     <article>
@@ -19,9 +25,8 @@ export function TermsContent() {
 
       <LegalSection title="Your account">
         <p>
-          You sign in with a link we email you, with Google, or with a password you set in Settings. Anyone who can
-          open that email account can sign in as you, so keep it and your password safe. Use an email address
-          that&apos;s yours and that works.
+          {SIGN_IN_WAYS} Anyone who can open that email account can sign in as you, so keep it and your password
+          safe. Use an email address that&apos;s yours and that works.
         </p>
         <p>You must be at least 18 to make an account. An account is for one person: don&apos;t share it.</p>
       </LegalSection>

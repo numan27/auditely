@@ -2,7 +2,9 @@
 
 // Sign in with an emailed link (POST) and sign out (DELETE). The link goes only to
 // the owner and the allowlist while sign-ups are closed, and leads back to
-// /auth/callback on the site that asked for it, which finishes the sign-in.
+// /auth/callback on the site that asked for it, which finishes the sign-in. It signs
+// in an account that exists: accounts are made on the sign-up page, with a password
+// and an emailed code (/api/auth/signup).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { userDb } from '@/app/_shared/lib/supabase/server';
@@ -18,9 +20,9 @@ export async function POST(request: NextRequest) {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!EMAIL.test(email)) return NextResponse.json({ error: 'Enter your email address' }, { status: 400 });
 
-  // Refused here, so an emailed link never creates an account for an address that may not
-  // sign in. Google can't be stopped this early: Supabase creates the auth.users and profiles
-  // rows for a stranger before /auth/callback signs them straight back out.
+  // Refused here, so a stranger is never emailed. Google can't be stopped this early: Supabase
+  // creates the auth.users and profiles rows for a stranger before /auth/callback signs them
+  // straight back out.
   if (!canSignIn(email)) {
     return NextResponse.json(
       { error: 'Auditely is invite-only for now. Use the email you were invited with.' },
@@ -37,11 +39,15 @@ export async function POST(request: NextRequest) {
   const { error } = await db.auth.signInWithOtp({
     email,
     options: {
-      shouldCreateUser: true,
+      shouldCreateUser: false,
       emailRedirectTo: `${origin}${ROUTES.AUTH_CALLBACK}?next=${encodeURIComponent(next)}${keepParam}`,
     },
   });
   if (error) {
+    // Supabase's answer for an address with no account, when the link may not make one
+    if (error.code === 'otp_disabled') {
+      return NextResponse.json({ error: "There's no account with this email yet. Create one first." }, { status: 404 });
+    }
     console.error('[auth] Failed to send a sign-in link:', error.message);
     return NextResponse.json({ error: "Couldn't send the link. Try again in a minute." }, { status: 502 });
   }
