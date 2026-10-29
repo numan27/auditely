@@ -45,7 +45,7 @@ const buy = (body: unknown) =>
   POST(new NextRequest('http://localhost/api/billing/checkout', { method: 'POST', body: JSON.stringify(body) }));
 
 beforeEach(() => {
-  vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
+  vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'false');
   fake.session = { db: {}, account: tester };
   fake.ready = true;
   fake.list.mockReset().mockResolvedValue({ data: [{ id: 'price_pro_y' }] });
@@ -64,7 +64,7 @@ afterEach(() => {
 
 describe('POST /api/billing/checkout', () => {
   it("doesn't reach Stripe while paid plans wait for the end of the beta", async () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'true');
     const res = await buy({ plan: 'pro', interval: 'month' });
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: 'Paid plans open after the beta.' });

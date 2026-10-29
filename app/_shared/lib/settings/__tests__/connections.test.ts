@@ -132,18 +132,18 @@ describe('connectionsFor', () => {
     expect(owner.sender.name).toBe('DevArtVentures');
   });
 
-  it('reads a Free account with a profile as branded during the beta', async () => {
+  it('reads a Free account with a profile as unbranded during the beta too', async () => {
     vi.stubEnv('PLAN_OVERRIDES', '');
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'true');
     vi.mocked(brandFor).mockResolvedValue(resolveBrand({ profile: ACME_PROFILE, isOwner: false, plan: 'free' }));
     const c = await connectionsFor(tester);
     expect(c.plan).toBe('free');
-    expect(c.branded).toBe(true);
+    expect(c.branded).toBe(false);
   });
 
   it('reads a Free account with a profile as unbranded after the beta', async () => {
     vi.stubEnv('PLAN_OVERRIDES', '');
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'false');
     vi.mocked(brandFor).mockResolvedValue(resolveBrand({ profile: ACME_PROFILE, isOwner: false, plan: 'free' }));
     const c = await connectionsFor(tester);
     expect(c.plan).toBe('free');

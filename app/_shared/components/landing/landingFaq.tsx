@@ -33,12 +33,13 @@ const OPEN: Question[] = [
   { question: 'Can I cancel any time?', answer: 'Yes, from Settings. Your plan keeps working until the end of the period you paid for.' },
 ];
 
-// During the beta (checkout closed): branding is on for everyone, and there's nothing to cancel
+// During the beta (checkout closed): only Free can be had, so branding waits for Pro and Agency, and there's nothing to cancel
 const BETA: Question[] = [
   DATA,
   {
     question: 'Will the reports carry my brand?',
-    answer: 'Yes. During the beta every account can put its name, logo, contact details and booking link on its reports.',
+    answer:
+      'On Pro and Agency, which open after the beta, your name, logo, contact details and booking link go on every report. On Free, reports carry Auditely’s name.',
   },
   {
     question: 'Does Auditely send the emails?',
@@ -49,7 +50,7 @@ const BETA: Question[] = [
   {
     question: 'What does the beta mean?',
     answer:
-      "Auditely is new, so you're among its first users. Everything is free while the beta runs, and Pro and Agency open when it ends. Tell us what works and what doesn't with the Feedback button in the app.",
+      "Auditely is new, so you're among its first users. During the beta there's only the Free plan, and Pro and Agency open when it ends. Tell us what works and what doesn't with the Feedback button in the app.",
   },
 ];
 

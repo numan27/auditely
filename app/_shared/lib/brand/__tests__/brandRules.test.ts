@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { logoFromDataUrl, resolveBrand, type Profile } from '@/app/_shared/lib/brand/brandRules';
-import { brandingOn } from '@/app/_shared/lib/usage/plans';
 
-// Paid plans are closed while NEXT_PUBLIC_CHECKOUT_OPEN isn't 'true': the beta
-const afterTheBeta = () => vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
-const inTheBeta = () => vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+// Paid plans are closed while NEXT_PUBLIC_BETA_MODE isn't 'false': the beta
+const afterTheBeta = () => vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'false');
+const inTheBeta = () => vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'true');
 afterEach(() => vi.unstubAllEnvs());
 
 const contact = { name: 'Numan', phone: null, email: 'contact@devartventures.com', bookingUrl: 'https://calendly.com/devart-ventures/30min' };
@@ -99,31 +98,23 @@ describe('resolveBrand', () => {
 });
 
 describe('branding in the beta', () => {
-  it("gives a Free account its own name, logo and contact while paid plans are closed", () => {
+  const p = { ...blank, display_name: 'Numan Khalil', company: 'My Tool', logo_data_url: png, contact_phone: '+92 300 1234567' };
+
+  it('gives a Free account the Auditely brand while paid plans are closed too, whatever its profile says', () => {
     inTheBeta();
-    const p = { ...blank, display_name: 'Numan Khalil', company: 'My Tool', logo_data_url: png, contact_phone: '+92 300 1234567' };
-    const b = resolveBrand({ profile: p, isOwner: false, plan: 'free' }, contact);
-    expect(b).toMatchObject({
-      kind: 'account',
-      name: 'My Tool',
-      logo: { contentType: 'image/png', dataUrl: png },
-      contact: { name: 'Numan Khalil', phone: '+92 300 1234567', email: 'a@x.com', bookingUrl: null },
-      writer: { about: 'My Tool', signOff: 'Numan Khalil, My Tool' },
+    expect(resolveBrand({ profile: p, isOwner: false, plan: 'free' }, contact)).toMatchObject({
+      kind: 'auditely',
+      logo: null,
+      contact: null,
+      writer: { signOff: '[Your name]' },
     });
   });
 
-  it('still gives a Free account with no name or company the Auditely brand', () => {
+  it('still gives Pro and Agency accounts their own brand', () => {
     inTheBeta();
-    expect(resolveBrand({ profile: blank, isOwner: false, plan: 'free' }, contact).kind).toBe('auditely');
-    expect(resolveBrand({ profile: null, isOwner: false, plan: 'free' }, contact).kind).toBe('auditely');
-  });
-
-  it('is every plan’s during the beta, and the paid plans’ after it', () => {
-    expect(brandingOn('free', false)).toBe(true);
-    expect(brandingOn('free', true)).toBe(false);
-    expect(brandingOn('pro', true)).toBe(true);
-    expect(brandingOn('agency', true)).toBe(true);
-    expect(brandingOn('owner', true)).toBe(true);
+    for (const plan of ['pro', 'agency'] as const) {
+      expect(resolveBrand({ profile: p, isOwner: false, plan }, contact)).toMatchObject({ kind: 'account', name: 'My Tool' });
+    }
   });
 });
 

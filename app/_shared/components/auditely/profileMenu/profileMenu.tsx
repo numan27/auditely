@@ -12,10 +12,11 @@ import { FeedbackModal } from '@/app/_shared/components/auditely/feedback/feedba
 import { LogoutButton } from '@/app/_shared/components/auditely/logoutButton/logoutButton';
 import { ROUTES } from '@/app/_shared/lib/config/routes';
 import { useAccount } from '@/app/_shared/lib/hooks/useAccount';
+import { useConnections } from '@/app/_shared/lib/hooks/useConnections';
 import { useLogout } from '@/app/_shared/lib/hooks/useLogout';
 import { useProfileCard, type ProfileCard } from '@/app/_shared/lib/hooks/useProfileCard';
 import { useUsage } from '@/app/_shared/lib/hooks/useUsage';
-import { PLANS } from '@/app/_shared/lib/usage/plans';
+import { PLANS, planHas } from '@/app/_shared/lib/usage/plans';
 
 const firstLetter = (word: string) => (Array.from(word)[0] ?? '').toUpperCase();
 
@@ -59,16 +60,18 @@ interface ProfilePanelProps {
   card: ProfileCard;
   /** The plan's name, or null when the usage couldn't be read */
   planName: string | null;
+  /** The plan puts the person's name and logo on reports, so there's a profile to edit */
+  branding: boolean;
   onClose: () => void;
   onLogout: () => void;
   onFeedback: () => void;
 }
 
-/** The menu's dropdown: who is signed in, then Edit profile, Plans and usage, Send feedback, and Log out */
-export function ProfilePanel({ card, planName, onClose, onLogout, onFeedback }: ProfilePanelProps) {
+/** The menu's dropdown: who is signed in, then Edit profile (on a plan with branding), Plans and usage, Send feedback, and Log out */
+export function ProfilePanel({ card, planName, branding, onClose, onLogout, onFeedback }: ProfilePanelProps) {
   const title = titleOf(card);
   const company = card.name?.trim() && card.company?.trim() ? card.company : null;
-  const blank = !card.name?.trim() && !card.company?.trim() && !card.logo;
+  const blank = branding && !card.name?.trim() && !card.company?.trim() && !card.logo;
   return (
     <>
       <div className="flex items-start gap-3 border-b border-[var(--color-border)] px-4 py-4">
@@ -86,7 +89,9 @@ export function ProfilePanel({ card, planName, onClose, onLogout, onFeedback }: 
         </p>
       )}
       <div className="py-1">
-        <Link href={`${ROUTES.SETTINGS}#profile`} onClick={onClose} className={itemClasses}>Edit profile</Link>
+        {branding && (
+          <Link href={`${ROUTES.SETTINGS}#profile`} onClick={onClose} className={itemClasses}>Edit profile</Link>
+        )}
         <Link href={ROUTES.PLANS} onClick={onClose} className={itemClasses}>Plans and usage</Link>
         <button type="button" onClick={onFeedback} className={itemClasses}>Send feedback</button>
       </div>
@@ -101,6 +106,7 @@ export function ProfilePanel({ card, planName, onClose, onLogout, onFeedback }: 
 export function ProfileMenu() {
   const saved = useProfileCard();
   const account = useAccount();
+  const plan = useConnections()?.plan;
   const summary = useUsage()?.summary;
   const logout = useLogout();
   const [open, setOpen] = useState(false);
@@ -156,6 +162,7 @@ export function ProfileMenu() {
           <ProfilePanel
             card={card}
             planName={summary ? PLANS[summary.plan].name : null}
+            branding={!!plan && planHas(plan, 'branding')}
             onClose={() => setOpen(false)}
             onLogout={logout}
             onFeedback={() => {

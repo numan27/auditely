@@ -257,12 +257,12 @@ describe('questions', () => {
     expect(faqFor(true).find((q) => q.question === 'Do I need a card to start?')?.answer).toBe('No. The Free plan needs only an email address.');
   });
 
-  it('answers for the beta while nothing can be bought: branding for everyone, no cancelling, and where to send feedback', () => {
+  it('answers for the beta while nothing can be bought: branding after it, no cancelling, and where to send feedback', () => {
     const html = renderToStaticMarkup(createElement(LandingFaq, { checkoutOpen: false }));
     const answers = Object.fromEntries(faqFor(false).map((q) => [q.question, q.answer]));
     expect(count(html, /<details/g)).toBe(5);
     expect(answers['Will the reports carry my brand?']).toBe(
-      'Yes. During the beta every account can put its name, logo, contact details and booking link on its reports.'
+      'On Pro and Agency, which open after the beta, your name, logo, contact details and booking link go on every report. On Free, reports carry Auditely’s name.'
     );
     expect(answers['Does Auditely send the emails?']).toBe(
       'It writes a first email for each business, and you copy it and send it yourself. Sending from your own mailbox comes with Pro and Agency, which open after the beta.'
@@ -270,7 +270,7 @@ describe('questions', () => {
     expect(answers['Do I need a card to start?']).toBe('No. Auditely is free during the beta, and you sign up with just an email address.');
     expect(answers['Can I cancel any time?']).toBeUndefined();
     expect(answers['What does the beta mean?']).toBe(
-      "Auditely is new, so you're among its first users. Everything is free while the beta runs, and Pro and Agency open when it ends. Tell us what works and what doesn't with the Feedback button in the app."
+      "Auditely is new, so you're among its first users. During the beta there's only the Free plan, and Pro and Agency open when it ends. Tell us what works and what doesn't with the Feedback button in the app."
     );
   });
 });

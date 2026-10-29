@@ -69,7 +69,7 @@ describe('SettingsView', () => {
     expect(html).toContain('The HubSpot handoff comes with the Pro and Agency plans.');
     expect(html).not.toContain('App password');
     expect(html).not.toContain('Private app access token');
-    expect(html).toContain('Save profile');
+    expect(html).not.toContain('Save profile');
   });
 
   it('lets a Free account delete the mailbox password and HubSpot token it saved on a paid plan', () => {
@@ -87,31 +87,26 @@ describe('SettingsView', () => {
     expect(view({ plan: 'free' })).not.toContain('Disconnect');
   });
 
-  it('tells a Free account its own name and logo go on its reports during the beta', () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
-    const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
-    const free = text(view({ plan: 'free' }));
-    expect(free).toContain(
-      "Your name and company sign the AI's emails, and your logo, contact details and booking link go on your reports and emails."
-    );
-    expect(free).toContain('Every plan gets this during the beta. After it, it comes with Pro and Agency.');
-    expect(free).not.toContain("carry Auditely's name");
-    expect(text(view({ plan: 'pro' }))).not.toContain('during the beta');
+  it('gives a Free account no profile form, in the beta or after it: its reports carry Auditely’s name', () => {
+    for (const flag of ['true', 'false']) {
+      vi.stubEnv('NEXT_PUBLIC_BETA_MODE', flag);
+      const html = view({ plan: 'free', profile: { ...BLANK, display_name: 'Sam Lee' } });
+      expect(html).not.toContain('value="Sam Lee"');
+      expect(html).not.toContain('Save profile');
+      expect(html).not.toContain('during the beta');
+      expect(html).toContain(
+        'On the Free plan, reports and emails carry Auditely&#x27;s name. Your own branding on reports comes with the Pro and Agency plans.'
+      );
+      expect(html).toContain('href="/plans"');
+    }
     vi.unstubAllEnvs();
   });
 
-  it('tells a Free account its reports carry Auditely’s name after the beta, with a link to the plans', () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
-    const html = view({ plan: 'free' });
-    expect(html).toContain(
-      'On Pro and Agency, your name, company, logo, contact details and booking link go on your reports and emails.'
-    );
-    expect(html).not.toContain('sign the AI');
-    expect(html).toContain('On the Free plan, reports and emails carry Auditely&#x27;s name instead.');
-    expect(html).toContain('href="/plans"');
-    expect(html).toContain('You&#x27;re on the Free plan.');
-    expect(view({ plan: 'pro' })).not.toContain('On the Free plan');
-    vi.unstubAllEnvs();
+  it('gives Pro the profile form, with nothing about the Free plan', () => {
+    const html = view({ plan: 'pro' });
+    expect(html).toContain('Save profile');
+    expect(html).toContain('Your name and company sign the AI&#x27;s emails');
+    expect(html).not.toContain('On the Free plan');
   });
 
   it('has the four sections the rest of the app links to', () => {

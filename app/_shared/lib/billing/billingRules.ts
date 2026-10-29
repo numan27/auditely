@@ -6,6 +6,8 @@
 // day it last switched between monthly and yearly), so a yearly plan gets twelve
 // separate months. Client-safe: no server imports.
 
+import { betaMode } from '@/app/_shared/lib/config/betaMode';
+
 export type PaidPlanId = 'pro' | 'agency';
 export type BillingInterval = 'month' | 'year';
 
@@ -15,12 +17,11 @@ export const INTERVALS: readonly BillingInterval[] = ['month', 'year'];
 export const CHECKOUT_CLOSED = 'Paid plans open after the beta.';
 
 /**
- * Whether Pro and Agency can be bought. During the beta they can't: their prices
- * show, and the checkout route turns everyone away before Stripe is asked.
- * NEXT_PUBLIC_CHECKOUT_OPEN=true opens it; it's read as written so the browser's
- * copy has it too, and it takes a new deploy to change.
+ * Whether Pro and Agency can be bought. During the beta (betaMode) they can't: their
+ * prices show, and the checkout route turns everyone away before Stripe is asked.
+ * NEXT_PUBLIC_BETA_MODE=false opens it.
  */
-export const checkoutOpen = (value: string | undefined = process.env.NEXT_PUBLIC_CHECKOUT_OPEN): boolean => value === 'true';
+export const checkoutOpen = (value: string | undefined = process.env.NEXT_PUBLIC_BETA_MODE): boolean => !betaMode(value);
 
 export interface Subscription {
   plan: PaidPlanId;

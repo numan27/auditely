@@ -19,7 +19,7 @@ const plansLinkClasses = [buttonStyles.button, buttonStyles['button--primary'], 
 interface UpgradeModalProps {
   prompt: UpgradePrompt;
   onClose: () => void;
-  /** Whether paid plans can be bought; NEXT_PUBLIC_CHECKOUT_OPEN unless a test says */
+  /** Whether paid plans can be bought; not while NEXT_PUBLIC_BETA_MODE keeps the beta on, unless a test says */
   checkoutOpen?: boolean;
 }
 

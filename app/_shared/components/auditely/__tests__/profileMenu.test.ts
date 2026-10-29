@@ -58,15 +58,17 @@ describe('ProfileMenu', () => {
 });
 
 describe('ProfilePanel', () => {
-  const panel = (card: ProfileCard, plan = 'Free') =>
-    renderToStaticMarkup(createElement(ProfilePanel, { card, planName: plan, onClose: () => {}, onLogout: () => {}, onFeedback: () => {} }));
+  const panel = (card: ProfileCard, plan = 'Pro', branding = true) =>
+    renderToStaticMarkup(
+      createElement(ProfilePanel, { card, planName: plan, branding, onClose: () => {}, onLogout: () => {}, onFeedback: () => {} })
+    );
 
   it('shows the name, company, email and plan, with Edit profile, plans and Log out', () => {
     const html = panel(numan);
     expect(text(html)).toContain('Numan Khalil');
     expect(text(html)).toContain('My Tool');
     expect(text(html)).toContain('numan@x.com');
-    expect(text(html)).toContain('Free plan');
+    expect(text(html)).toContain('Pro plan');
     expect(html).toMatch(/<a[^>]*href="\/settings#profile"[^>]*>Edit profile<\/a>/);
     expect(html).toMatch(/<a[^>]*href="\/plans"[^>]*>Plans and usage<\/a>/);
     expect(html).toMatch(/<button[^>]*>Log out<\/button>/);
@@ -81,6 +83,14 @@ describe('ProfilePanel', () => {
     expect(text(html)).toContain('Add your name and logo in Settings');
     expect(text(html).match(/sam@acme\.studio/g)).toHaveLength(1);
     expect(text(html)).toContain('Owner plan');
+  });
+
+  it('has no Edit profile, and asks for no name or logo, on a plan without branding', () => {
+    const html = panel(bare, 'Free', false);
+    expect(text(html)).not.toContain('Add your name and logo');
+    expect(html).not.toContain('Edit profile');
+    expect(text(html)).toContain('Free plan');
+    expect(html).toMatch(/<a[^>]*href="\/plans"[^>]*>Plans and usage<\/a>/);
   });
 });
 

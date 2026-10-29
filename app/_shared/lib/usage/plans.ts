@@ -7,7 +7,7 @@
 // paid plan's every month from its billing anchor. Client-safe: no server imports.
 
 import type { Account } from '@/app/_shared/lib/auth/account';
-import { checkoutOpen, monthlyWindow } from '@/app/_shared/lib/billing/billingRules';
+import { monthlyWindow } from '@/app/_shared/lib/billing/billingRules';
 
 export type UsageKind = 'search' | 'audit' | 'email_lookup';
 export const USAGE_KINDS: readonly UsageKind[] = ['search', 'audit', 'email_lookup'];
@@ -124,11 +124,6 @@ export function usagePeriod(
 
 export function planHas(plan: PlanId, feature: Feature): boolean {
   return PLANS[plan].features[feature];
-}
-
-/** An account's own name and logo on its reports: a paid plan's, and every plan's while the beta keeps paid plans closed */
-export function brandingOn(plan: PlanId, open: boolean = checkoutOpen()): boolean {
-  return planHas(plan, 'branding') || !open;
 }
 
 /** The limit a kind has reached, or null while some is left (or the plan never had any) */

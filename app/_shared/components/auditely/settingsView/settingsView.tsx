@@ -20,7 +20,7 @@ import type { Subscription } from '@/app/_shared/lib/billing/billingRules';
 import type { ProfileFields } from '@/app/_shared/lib/brand/profileInput';
 import { API_ROUTES, ROUTES } from '@/app/_shared/lib/config/routes';
 import type { Connections } from '@/app/_shared/lib/hooks/useConnections';
-import { PLANS, brandingOn, planHas, type Feature, type PlanId } from '@/app/_shared/lib/usage/plans';
+import { PLANS, planHas, type Feature, type PlanId } from '@/app/_shared/lib/usage/plans';
 import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
 
 export interface SettingsViewProps {
@@ -86,29 +86,18 @@ export function SettingsView({ profile, connections, plan, email, subscription, 
         id="profile"
         title="Profile and branding"
         lead={
-          <>
-            {brandingOn(plan) ? (
-              <>
-                <p>
-                  Your name and company sign the AI&apos;s emails, and your logo, contact details and booking link go on your
-                  reports and emails.
-                </p>
-                {!planHas(plan, 'branding') && <p>Every plan gets this during the beta. After it, it comes with Pro and Agency.</p>}
-              </>
-            ) : (
-              <>
-                <p>
-                  On Pro and Agency, your name, company, logo, contact details and booking link go on your reports and emails.
-                </p>
-                <p>
-                  On the Free plan, reports and emails carry Auditely&apos;s name instead. <SeePlans />
-                </p>
-              </>
-            )}
-          </>
+          <p>
+            Your name and company sign the AI&apos;s emails, and your logo, contact details and booking link go on your
+            reports and emails.
+          </p>
         }
       >
-        {profile ? (
+        {/* Free has no branding, in the beta too: what it saved before stays saved, unused */}
+        {!planHas(plan, 'branding') ? (
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            On the {PLANS[plan].name} plan, reports and emails carry Auditely&apos;s name. {featureMessage('branding')} <SeePlans />
+          </p>
+        ) : profile ? (
           <ProfileForm profile={profile} email={email} />
         ) : (
           <p className="text-sm text-[var(--color-error)]" role="alert">

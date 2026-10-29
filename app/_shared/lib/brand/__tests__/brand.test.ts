@@ -70,15 +70,15 @@ describe('brandFor', () => {
   });
 
   it('gives a Free account Auditely’s brand after the beta, whatever its profile says', async () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'false');
     db.row = { id: 'u4', email: 'free@x.com', company: 'Acme' };
     expect((await brandFor('u4')).kind).toBe('auditely');
   });
 
-  it('gives a Free account its own brand during the beta', async () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', '');
+  it('gives a Free account Auditely’s brand during the beta too', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'true');
     db.row = { id: 'u4', email: 'free@x.com', company: 'Acme' };
-    expect(await brandFor('u4')).toMatchObject({ kind: 'account', name: 'Acme' });
+    expect((await brandFor('u4')).kind).toBe('auditely');
   });
 
   it('gives a row from before accounts, or an account with no profile, Auditely’s brand', async () => {
@@ -98,7 +98,7 @@ describe('brandFor', () => {
   });
 
   it('brands as Free while the subscriptions table is missing', async () => {
-    vi.stubEnv('NEXT_PUBLIC_CHECKOUT_OPEN', 'true');
+    vi.stubEnv('NEXT_PUBLIC_BETA_MODE', 'false');
     vi.spyOn(console, 'error').mockImplementation(() => {});
     db.row = { id: 'u2', email: 'sam@x.com', display_name: 'Sam', company: 'Acme' };
     db.subscriptionError = { message: 'relation "subscriptions" does not exist' };
