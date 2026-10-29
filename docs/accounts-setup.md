@@ -59,7 +59,7 @@ Supabase → Authentication → Email Templates:
 
   ```html
   <h2>Your Auditely code</h2>
-  <p>Enter this code on the Auditely sign-up page to confirm your email address. It works for an hour.</p>
+  <p>Enter this code in Auditely to confirm your email address and sign in. It works for an hour.</p>
   <p style="font-size:28px;font-weight:600;letter-spacing:6px">{{ .Token }}</p>
   <p>If you didn't sign up for Auditely, you can ignore this email.</p>
   ```
