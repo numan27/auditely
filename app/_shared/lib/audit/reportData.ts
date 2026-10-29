@@ -47,6 +47,10 @@ export function unreadSiteReason(checks: Partial<AuditChecks> | null | undefined
   return !geo && !aeo && !lead && site?.reason ? site.reason : null;
 }
 
+/** The site's bot protection turned the audit away, so GEO, AEO and lead capture have no scores */
+export const siteBlocked = (checks: Partial<AuditChecks> | null | undefined): boolean =>
+  !!unreadSiteReason(checks)?.startsWith('Blocked');
+
 /** Why GEO, AEO and lead capture weren't checked, in words a user (or prospect) understands. */
 export function siteNotice(reason: string): { title: string; body: string } {
   // "Blocked (403)" / "Blocked (bot challenge)": the site's bot protection turned the audit away

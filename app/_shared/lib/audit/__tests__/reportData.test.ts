@@ -4,6 +4,7 @@ import {
   formatScore,
   formatSsl,
   scoreTone,
+  siteBlocked,
   siteNotice,
   sortFindings,
   topLighthouseIssues,
@@ -74,6 +75,23 @@ describe('issue selection', () => {
 
   it('sorts findings fail → warn → pass', () => {
     expect(sortFindings([f('a', 'pass'), f('b', 'warn'), f('c', 'fail')]).map((x) => x.id)).toEqual(['c', 'b', 'a']);
+  });
+});
+
+describe('siteBlocked', () => {
+  const site = (reason?: string) => ({ ok: false, finalUrl: null, status: 403, ...(reason ? { reason } : {}) });
+
+  it('is true when bot protection turned the audit away and nothing was read', () => {
+    expect(siteBlocked({ site: site('Blocked (403)') })).toBe(true);
+    expect(siteBlocked({ site: site('Blocked (bot challenge)') })).toBe(true);
+  });
+
+  it('is false for a site that answered with something else, or that was read', () => {
+    expect(siteBlocked({ site: site('Site timed out') })).toBe(false);
+    expect(siteBlocked({ site: site() })).toBe(false);
+    expect(siteBlocked(null)).toBe(false);
+    const geo = { findings: [], schemaTypes: [] } as unknown as NonNullable<Parameters<typeof siteBlocked>[0]>['geo'];
+    expect(siteBlocked({ site: site('Blocked (403)'), geo })).toBe(false);
   });
 });
 

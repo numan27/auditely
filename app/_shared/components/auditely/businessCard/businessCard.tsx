@@ -16,7 +16,7 @@ import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 import { useEmailSend } from '@/app/_shared/lib/hooks/useEmailSend';
 import { checkFor } from '@/app/_shared/lib/email/emailCheck';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
-import { scoreTone, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
+import { scoreTone, siteBlocked, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
 import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 import type { BulkState } from '@/app/_shared/lib/utils/bulkAudit';
@@ -38,6 +38,8 @@ interface BusinessCardProps {
   open?: boolean;
   /** Told when the report is opened or closed by hand */
   onToggle?: (open: boolean) => void;
+  /** Closes the report whenever it changes: the list's "Collapse all" */
+  collapseSignal?: number;
   /** Adds a cross that asks to remove this business from its list (websites added by URL) */
   onRemove?: () => void;
   /** Also offer the report's Upwork version, without contact details (websites added by URL) */
@@ -57,22 +59,24 @@ const displayDomain = (url: string) =>
 
 // Compact score summary shown when a completed card is collapsed
 function ScorePills({ audit }: { audit: Audit }) {
-  const scores: [string, number | null][] = [
-    ['Performance', audit.performance_score],
-    ['SEO', audit.seo_score],
-    ['Mobile', audit.mobile_score],
-    ['GEO', audit.geo_score],
-    ['AEO', audit.aeo_score],
-    ['Leads', audit.lead_score ?? null],
+  // The last three come from reading the site: a site that blocked it shows why they're missing
+  const blocked = siteBlocked(audit.checks);
+  const scores: [string, number | null, boolean][] = [
+    ['Performance', audit.performance_score, false],
+    ['SEO', audit.seo_score, false],
+    ['Mobile', audit.mobile_score, false],
+    ['GEO', audit.geo_score, blocked],
+    ['AEO', audit.aeo_score, blocked],
+    ['Leads', audit.lead_score ?? null, blocked],
   ];
   const ssl = audit.ssl_valid;
   const sslTone: ScoreTone = ssl === null ? 'none' : ssl ? 'good' : 'poor';
 
   return (
     <div className="mt-3 flex flex-wrap gap-1.5 text-xs font-medium">
-      {scores.map(([label, score]) => (
+      {scores.map(([label, score, unread]) => (
         <span key={label} className={`rounded-md px-2 py-1 ${PILL_TONES[scoreTone(score)]}`}>
-          {label} <span className="font-semibold tabular-nums">{score ?? '—'}</span>
+          {label} <span className="font-semibold tabular-nums">{score ?? (unread ? 'Blocked' : '—')}</span>
         </span>
       ))}
       <span className={`rounded-md px-2 py-1 ${PILL_TONES[sslTone]}`}>
@@ -82,7 +86,7 @@ function ScorePills({ audit }: { audit: Audit }) {
   );
 }
 
-export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, open, onToggle, onRemove, upworkPdf }: BusinessCardProps) {
+export function BusinessCard({ business, initialAudit, initialReport, onUpdate, autoRun, bulk, defaultOpen, open, onToggle, collapseSignal, onRemove, upworkPdf }: BusinessCardProps) {
   const demo = useDemo();
   const state = useBusinessAudit(business, { initialAudit, initialReport, onUpdate, autoRun, bulk });
   const crm = useCrmSend(business, onUpdate);
@@ -96,6 +100,11 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) setToggled(true);
+  }
+  const [seenCollapse, setSeenCollapse] = useState(collapseSignal);
+  if (collapseSignal !== seenCollapse) {
+    setSeenCollapse(collapseSignal);
+    setToggled(false);
   }
   const isExpanded = toggled ?? (startedBlank && bulk?.stage !== 'done');
   const toggle = () => {

@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { RefreshIcon } from '@/app/_shared/components/ui/icons/icons';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { CollapseAllButton, useCollapseAll } from '@/app/_shared/components/auditely/collapseAll/collapseAll';
 import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { useAuditRequests } from '@/app/_shared/lib/hooks/useAuditRequests';
@@ -28,6 +29,7 @@ export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequest
   // The named request is scrolled to once; one missing from the list is looked for once more (it may have just arrived)
   const scrolledTo = useRef<string | null>(null);
   const lookedFor = useRef<string | null>(null);
+  const { signal: collapseSignal, collapseAll } = useCollapseAll();
 
   useEffect(() => {
     if (!openId || isLoading || refreshing) return;
@@ -52,6 +54,12 @@ export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequest
     } else if (id === openId) {
       onOpenChange?.(null);
     }
+  };
+
+  // The address no longer names a request once its card is closed
+  const collapse = () => {
+    collapseAll();
+    if (openId) onOpenChange?.(null);
   };
 
   return (
@@ -81,6 +89,7 @@ export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequest
               Audit requests
             </h2>
             <div className="flex items-center gap-3">
+              <CollapseAllButton onClick={collapse} />
               {businesses.length > 1 && (
                 <button
                   type="button"
@@ -112,6 +121,7 @@ export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequest
                   onRemove={() => askRemove([business])}
                   open={business.id === openId}
                   onToggle={(open) => toggle(business.id, open)}
+                  collapseSignal={collapseSignal}
                 />
               </div>
             ))}

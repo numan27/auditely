@@ -2,7 +2,7 @@
 
 import type { AuditFields } from '@/app/_shared/lib/types/auditely';
 import { ShieldAlertIcon } from '@/app/_shared/components/ui/icons/icons';
-import { scoreTone, siteNotice, topLighthouseIssues, unreadSiteReason, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
+import { scoreTone, siteBlocked, siteNotice, topLighthouseIssues, unreadSiteReason, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 
 const SSL_EXPIRY_WARN_DAYS = 30;
 
@@ -124,7 +124,7 @@ function KeyIssues({ rawJson }: { rawJson: Record<string, unknown> }) {
 export function AuditScores({ audit }: { audit: AuditFields }) {
   const siteReason = audit.checks?.site?.reason;
   const unread = unreadSiteReason(audit.checks);
-  const blocked = !!unread?.startsWith('Blocked');
+  const blocked = siteBlocked(audit.checks);
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

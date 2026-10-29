@@ -3,6 +3,7 @@
 'use client';
 
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { CollapseAllButton, useCollapseAll } from '@/app/_shared/components/auditely/collapseAll/collapseAll';
 import { RemoveSitesModal } from '@/app/_shared/components/auditely/removeSitesModal/removeSitesModal';
 import { ResultsSkeleton } from '@/app/_shared/components/auditely/resultsSkeleton/resultsSkeleton';
 import { UrlAuditForm } from '@/app/_shared/components/auditely/urlAuditForm/urlAuditForm';
@@ -34,6 +35,7 @@ export function UrlAuditPanel() {
     useUrlAudits();
   // The demo's sample stays put: nothing there can be removed
   const canRemove = !demo;
+  const { signal: collapseSignal, collapseAll } = useCollapseAll();
 
   return (
     <>
@@ -57,15 +59,18 @@ export function UrlAuditPanel() {
             <h2 id="url-audits-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
               Audited websites
             </h2>
-            {canRemove && businesses.length > 1 && (
-              <button
-                type="button"
-                onClick={() => askRemove(businesses)}
-                className="shrink-0 cursor-pointer text-sm font-medium text-[var(--color-text-secondary)] hover:text-red-600 hover:underline dark:hover:text-red-400"
-              >
-                Clear all
-              </button>
-            )}
+            <div className="flex shrink-0 items-center gap-3">
+              <CollapseAllButton onClick={collapseAll} />
+              {canRemove && businesses.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => askRemove(businesses)}
+                  className="shrink-0 cursor-pointer text-sm font-medium text-[var(--color-text-secondary)] hover:text-red-600 hover:underline dark:hover:text-red-400"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
           <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
             {businesses.length} {businesses.length === 1 ? 'site' : 'sites'}, newest first
@@ -80,6 +85,7 @@ export function UrlAuditPanel() {
                 onUpdate={updateBusiness}
                 autoRun={business.id === autoRunId}
                 defaultOpen={!!demo}
+                collapseSignal={collapseSignal}
                 onRemove={canRemove ? () => askRemove([business]) : undefined}
                 upworkPdf
               />

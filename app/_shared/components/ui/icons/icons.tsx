@@ -83,6 +83,10 @@ export const XIcon = (p: IconProps) => (
   <Icon {...p}><path d="M6 6l12 12M18 6L6 18" /></Icon>
 );
 
+export const ChevronsDownUpIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M7 20l5-5 5 5M7 4l5 5 5-5" /></Icon>
+);
+
 export const ChevronRightIcon = (p: IconProps) => (
   <Icon {...p}><path d="M9 6l6 6-6 6" /></Icon>
 );

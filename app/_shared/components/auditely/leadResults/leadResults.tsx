@@ -7,6 +7,7 @@ import { Button } from '@/app/_shared/components/ui/button/button';
 import { Spinner } from '@/app/_shared/components/ui/spinner/spinner';
 import { BulkAuditControl } from '@/app/_shared/components/auditely/bulkAuditControl/bulkAuditControl';
 import { BusinessCard } from '@/app/_shared/components/auditely/businessCard/businessCard';
+import { CollapseAllButton, useCollapseAll } from '@/app/_shared/components/auditely/collapseAll/collapseAll';
 import { GoogleMapsAttribution } from '@/app/_shared/components/auditely/googleMapsAttribution/googleMapsAttribution';
 import { LeadToolbar } from '@/app/_shared/components/auditely/leadToolbar/leadToolbar';
 import { useBulkAudit } from '@/app/_shared/lib/hooks/useBulkAudit';
@@ -45,6 +46,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const { signal: collapseSignal, collapseAll } = useCollapseAll();
 
   const visible = view.leads.slice(0, visibleCount);
   const hasMore = visibleCount < view.leads.length;
@@ -76,9 +78,12 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
 
   return (
     <section className="mt-10" aria-labelledby="results-title">
-      <h2 id="results-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-        {query ? searchTitle(query) : 'Search results'}
-      </h2>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 id="results-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+          {query ? searchTitle(query) : 'Search results'}
+        </h2>
+        <CollapseAllButton onClick={collapseAll} />
+      </div>
       <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-text-secondary)]">
         <span>{businesses.length} businesses</span>
         {withoutWebsite > 0 && <span className="text-[var(--color-text-tertiary)]">{withoutWebsite} without a website</span>}
@@ -135,6 +140,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
               initialReport={business.ai_report}
               onUpdate={onUpdate}
               bulk={bulk.states[business.id]}
+              collapseSignal={collapseSignal}
               onRemove={onRemove && !inBulkRun(bulk.states[business.id]) ? () => onRemove(business) : undefined}
             />
           ))}
