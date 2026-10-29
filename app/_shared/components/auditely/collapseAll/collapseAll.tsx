@@ -15,7 +15,9 @@ export function useCollapseAll() {
   return { signal, collapseAll: () => setSignal((n) => n + 1) };
 }
 
-export function CollapseAllButton({ onClick }: { onClick: () => void }) {
+/** `count` is how many cards the list shows: one card has nothing to collapse all of */
+export function CollapseAllButton({ count, onClick }: { count: number; onClick: () => void }) {
+  if (count < 2) return null;
   return (
     <Button variant="ghost" size="sm" onClick={onClick} leftIcon={<ChevronsDownUpIcon size={14} />} className="shrink-0 whitespace-nowrap">
       Collapse all

@@ -60,7 +60,7 @@ export function UrlAuditPanel() {
               Audited websites
             </h2>
             <div className="flex shrink-0 items-center gap-3">
-              <CollapseAllButton onClick={collapseAll} />
+              <CollapseAllButton count={businesses.length} onClick={collapseAll} />
               {canRemove && businesses.length > 1 && (
                 <button
                   type="button"

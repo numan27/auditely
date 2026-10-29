@@ -82,7 +82,7 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
         <h2 id="results-title" className="font-display text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
           {query ? searchTitle(query) : 'Search results'}
         </h2>
-        <CollapseAllButton onClick={collapseAll} />
+        <CollapseAllButton count={view.leads.length} onClick={collapseAll} />
       </div>
       <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-text-secondary)]">
         <span>{businesses.length} businesses</span>

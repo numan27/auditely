@@ -89,7 +89,7 @@ export function AuditRequestsPanel({ openId = null, onOpenChange }: AuditRequest
               Audit requests
             </h2>
             <div className="flex items-center gap-3">
-              <CollapseAllButton onClick={collapse} />
+              <CollapseAllButton count={businesses.length} onClick={collapse} />
               {businesses.length > 1 && (
                 <button
                   type="button"
