@@ -5,7 +5,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
 import { CommandField } from '@/app/_shared/components/ui/commandField/commandField';
-import { MapPinIcon, SearchIcon } from '@/app/_shared/components/ui/icons/icons';
+import { MapPinIcon } from '@/app/_shared/components/ui/icons/icons';
+import { NicheField } from '@/app/_shared/components/auditely/nicheField/nicheField';
 import { useDemo } from '@/app/_shared/lib/hooks/useDemo';
 
 interface Suggestion {
@@ -102,14 +103,7 @@ export function LeadSearchForm({ onSearch, isLoading }: LeadSearchFormProps) {
       onSubmit={handleSubmit}
       className="flex flex-col gap-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-md sm:flex-row sm:items-center"
     >
-      <CommandField
-        label="Business type"
-        icon={<SearchIcon size={18} />}
-        placeholder="Dentists, plumbers, law firms…"
-        value={niche}
-        onChange={(e) => setNiche(e.target.value)}
-        disabled={isLoading}
-      />
+      <NicheField value={niche} onChange={setNiche} disabled={isLoading} />
 
       <span aria-hidden className="mx-4 h-px bg-[var(--color-border)] sm:mx-0 sm:h-8 sm:w-px" />
 
