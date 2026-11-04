@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type Result = { data?: unknown; count?: number | null; error: { message: string } | null };
+type Result = { data?: unknown; count?: number | null; error: { code?: string; message: string } | null };
 type Call = { table: string; op: string; payload?: unknown; options?: unknown; filters: unknown[][] };
 
 const db = vi.hoisted(() => {
@@ -76,7 +76,7 @@ describe('erasePlaceData', () => {
     expect(await erasePlaceData(true, NOW)).toEqual({ count: 12 });
     expect(businessCall()).toMatchObject({
       op: 'update',
-      payload: { name: '', address: '', website: null, phone: null, rating: null, review_count: null },
+      payload: { name: '', address: '', website: null, phone: null, rating: null, review_count: null, place_type: null },
       options: { count: 'exact' },
       filters: [
         ['lt', 'created_at', CUTOFF],
@@ -100,6 +100,17 @@ describe('erasePlaceData', () => {
     db.state.responses['searches.select'] = [{ data: null, error: { message: 'timeout' } }];
     expect(await erasePlaceData(true, NOW)).toEqual({ error: 'timeout' });
     expect(businessCall()).toBeUndefined();
+  });
+
+  it('blanks the rest when the database has no place_type column yet', async () => {
+    db.state.responses['businesses.update'] = [
+      { count: null, error: { code: 'PGRST204', message: "Could not find the 'place_type' column of 'businesses' in the schema cache" } },
+      { count: 5, error: null },
+    ];
+    expect(await erasePlaceData(true, NOW)).toEqual({ count: 5 });
+    const updates = db.state.calls.filter((c) => c.table === 'businesses');
+    expect(updates).toHaveLength(2);
+    expect(updates[1].payload).toEqual({ name: '', address: '', website: null, phone: null, rating: null, review_count: null });
   });
 
   it('says so when the database refuses', async () => {

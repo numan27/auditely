@@ -71,7 +71,8 @@ function buildSubQueries(niche: string, location: string): string[] {
 // Places API (New) Text Search returns website + phone inline, so no separate
 // Place Details request is needed. The field mask controls which fields (and
 // billing tier) are returned: website and phone already put the request in the
-// Enterprise tier, which also covers rating and review count at no extra cost.
+// Enterprise tier, which also covers rating, review count, the business type and
+// whether the business has closed at no extra cost.
 const FIELD_MASK = [
   'places.id',
   'places.displayName',
@@ -80,6 +81,8 @@ const FIELD_MASK = [
   'places.nationalPhoneNumber',
   'places.rating',
   'places.userRatingCount',
+  'places.primaryTypeDisplayName',
+  'places.businessStatus',
 ].join(',');
 
 interface NewPlace {
@@ -90,6 +93,10 @@ interface NewPlace {
   nationalPhoneNumber?: string;
   rating?: number;
   userRatingCount?: number;
+  /** Google's main type for the place in words, e.g. "Marketing agency" */
+  primaryTypeDisplayName?: { text?: string };
+  /** OPERATIONAL, CLOSED_TEMPORARILY or CLOSED_PERMANENTLY */
+  businessStatus?: string;
 }
 
 interface SearchResponseData {
@@ -141,6 +148,8 @@ export async function searchGooglePlaces(
   for (const resp of searchResponses) {
     if (!resp.ok) continue;
     for (const place of resp.data.places ?? []) {
+      // A business that has closed for good is no lead
+      if (place.businessStatus === 'CLOSED_PERMANENTLY') continue;
       if (place.id && !seenPlaceIds.has(place.id)) {
         seenPlaceIds.add(place.id);
         places.push({
@@ -152,6 +161,7 @@ export async function searchGooglePlaces(
           rating: place.rating ?? null,
           reviewCount: place.userRatingCount ?? 0,
           placeId: place.id,
+          placeType: place.primaryTypeDisplayName?.text ?? null,
         });
       }
     }

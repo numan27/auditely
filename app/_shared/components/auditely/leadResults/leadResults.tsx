@@ -18,6 +18,7 @@ import type { BusinessUpdate, BusinessWithData } from '@/app/_shared/lib/types/a
 import { needsAudit, type BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import { exportFileName } from '@/app/_shared/lib/utils/leadExport';
 import { matchesFilters } from '@/app/_shared/lib/utils/leadView';
+import { isPlaceFiltered } from '@/app/_shared/lib/utils/placeFilter';
 import { searchTitle } from '@/app/_shared/lib/utils/searchLabel';
 
 const PAGE_SIZE = 20;
@@ -51,9 +52,9 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
   const visible = view.leads.slice(0, visibleCount);
   const hasMore = visibleCount < view.leads.length;
   const withoutWebsite = businesses.filter((b) => !b.website).length;
-  const isFiltered = view.filters.length > 0 || view.emailed !== 'all';
+  const isFiltered = view.filters.length > 0 || view.emailed !== 'all' || isPlaceFiltered(view.place);
   // "Audit all" covers the businesses the filters show, whether or not they're scrolled into view
-  const toAudit = businesses.filter((b) => needsAudit(b) && matchesFilters(b, view.filters, view.emailed)).length;
+  const toAudit = businesses.filter((b) => needsAudit(b) && matchesFilters(b, view.filters, view.emailed, view.place)).length;
   const { currentLeads } = view;
   const { start: startBulk } = bulk;
   const auditAll = useCallback(() => startBulk(currentLeads().filter(needsAudit)), [startBulk, currentLeads]);
@@ -107,6 +108,10 @@ export function LeadResults({ businesses, query, discovery, onUpdate, onRemove }
           emailed={view.emailed}
           countEmailed={view.countEmailed}
           onEmailedChange={view.setEmailed}
+          place={view.place}
+          types={view.types}
+          countPlace={view.countPlace}
+          onPlaceChange={view.setPlace}
           getExportLeads={view.currentLeads}
           exportFileName={exportFileName(query)}
           actions={<BulkAuditControl pending={toAudit} progress={bulk.progress} onStart={auditAll} onStop={bulk.stop} />}

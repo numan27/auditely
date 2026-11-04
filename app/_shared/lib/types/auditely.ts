@@ -30,6 +30,8 @@ export interface Business {
   rating: number | null;
   /** Google review count; null when unknown (older searches, providers without reviews) */
   review_count: number | null;
+  /** Google's main type for the business, e.g. "Marketing agency"; absent before the place type migration */
+  place_type?: string | null;
   /** The HubSpot company this lead was sent to; absent before the HubSpot migration */
   hubspot_company_id?: string | null;
   /** When the lead was last sent to HubSpot */

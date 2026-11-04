@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- Google's place id, kept for good as Google allows; its other details are kept 30 days
   -- (docs/place-data-setup.md), and a search run again after that matches its rows by this id
   place_id            TEXT,
+  -- Google's main type for the business in words ("Marketing agency"), for the results' Type filter.
+  -- Google place data, so it's blanked after 30 days with the other details
+  place_type          TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

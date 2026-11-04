@@ -3,6 +3,7 @@
 // Sorting and filtering for the search results list.
 
 import type { Audit, BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import { ANY_PLACE, matchesPlace, type PlaceFilter } from '@/app/_shared/lib/utils/placeFilter';
 
 export type LeadSort = 'email' | 'score' | 'reviews' | 'name' | 'default';
 export type LeadFilter = 'email' | 'phone' | 'website' | 'audited';
@@ -18,6 +19,7 @@ export type EmailedFilter = EmailedPreset | EmailedRange;
 
 type LeadLike = Pick<BusinessWithData, 'name' | 'email' | 'phone' | 'website'> & {
   review_count?: number | null;
+  place_type?: string | null;
   emailed_at?: string | null;
   audit?: Pick<Audit, 'performance_score' | 'seo_score' | 'mobile_score' | 'geo_score' | 'aeo_score' | 'lead_score'>;
 };
@@ -117,8 +119,13 @@ export function emailedLabel(filter: EmailedFilter): string {
 }
 
 /** Whether a business passes every active filter */
-export function matchesFilters(business: LeadLike, filters: readonly LeadFilter[], emailed: EmailedFilter = 'all'): boolean {
-  return filters.every((f) => MATCHES[f](business)) && matchesEmailed(business, emailed);
+export function matchesFilters(
+  business: LeadLike,
+  filters: readonly LeadFilter[],
+  emailed: EmailedFilter = 'all',
+  place: PlaceFilter = ANY_PLACE
+): boolean {
+  return filters.every((f) => MATCHES[f](business)) && matchesEmailed(business, emailed) && matchesPlace(business, place);
 }
 
 /**
@@ -129,9 +136,10 @@ export function arrangeLeads<T extends LeadLike>(
   businesses: T[],
   sort: LeadSort,
   filters: readonly LeadFilter[],
-  emailed: EmailedFilter = 'all'
+  emailed: EmailedFilter = 'all',
+  place: PlaceFilter = ANY_PLACE
 ): T[] {
-  const kept = businesses.filter((b) => matchesFilters(b, filters, emailed));
+  const kept = businesses.filter((b) => matchesFilters(b, filters, emailed, place));
   const compare = COMPARE[sort];
   return compare ? kept.sort(compare) : kept;
 }

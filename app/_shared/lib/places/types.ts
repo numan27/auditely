@@ -11,6 +11,8 @@ export interface PlaceResult {
   reviewCount?: number | null;
   /** Google's id for the place, the one detail its terms let Auditely keep for good */
   placeId?: string | null;
+  /** Google's main type for the business in words, e.g. "Marketing agency"; left out by other providers */
+  placeType?: string | null;
 }
 
 export type PlacesSearchOutcome =

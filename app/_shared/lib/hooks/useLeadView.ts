@@ -10,6 +10,7 @@ import {
   type LeadFilter,
   type LeadSort,
 } from '@/app/_shared/lib/utils/leadView';
+import { ANY_PLACE, placeTypes, type PlaceFilter } from '@/app/_shared/lib/utils/placeFilter';
 
 /**
  * Sort + filter state for the results list.
@@ -26,12 +27,13 @@ export function useLeadView(businesses: BusinessWithData[], refreshKey: string) 
   const [sort, setSort] = useState<LeadSort>('email');
   const [filters, setFilters] = useState<LeadFilter[]>([]);
   const [emailed, setEmailed] = useState<EmailedFilter>('all');
+  const [place, setPlace] = useState<PlaceFilter>(ANY_PLACE);
   const [snapshot, setSnapshot] = useState({ key: '', ids: [] as string[] });
 
   // Adjusting state during render (instead of in an effect) avoids a frame in the old order
-  const key = `${refreshKey}|${sort}|${filters.join(',')}|${JSON.stringify(emailed)}`;
+  const key = `${refreshKey}|${sort}|${filters.join(',')}|${JSON.stringify(emailed)}|${JSON.stringify(place)}`;
   if (snapshot.key !== key) {
-    setSnapshot({ key, ids: arrangeLeads(businesses, sort, filters, emailed).map((b) => b.id) });
+    setSnapshot({ key, ids: arrangeLeads(businesses, sort, filters, emailed, place).map((b) => b.id) });
   }
 
   const byId = new Map(businesses.map((b) => [b.id, b]));
@@ -41,12 +43,20 @@ export function useLeadView(businesses: BusinessWithData[], refreshKey: string) 
   const counts = Object.fromEntries(
     FILTER_OPTIONS.map(({ value }) => {
       const combined = filters.includes(value) ? filters : [...filters, value];
-      return [value, businesses.filter((b) => matchesFilters(b, combined, emailed)).length];
+      return [value, businesses.filter((b) => matchesFilters(b, combined, emailed, place)).length];
     })
   ) as Record<LeadFilter, number>;
 
   // Live match count for an emailed option, on top of the chips already active
-  const countEmailed = (option: EmailedFilter) => businesses.filter((b) => matchesFilters(b, filters, option)).length;
+  const countEmailed = (option: EmailedFilter) =>
+    businesses.filter((b) => matchesFilters(b, filters, option, place)).length;
+
+  // Live match count for a Type & size choice, on top of the other filters
+  const countPlace = (option: PlaceFilter) => businesses.filter((b) => matchesFilters(b, filters, emailed, option)).length;
+  // Every type in the results, counted on top of the other filters and the size choice
+  const types = placeTypes(
+    businesses.filter((b) => matchesFilters(b, filters, emailed, { types: [], size: place.size }))
+  );
 
   const toggleFilter = useCallback((filter: LeadFilter) => {
     setFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
@@ -55,13 +65,30 @@ export function useLeadView(businesses: BusinessWithData[], refreshKey: string) 
   const clearFilters = useCallback(() => {
     setFilters([]);
     setEmailed('all');
+    setPlace(ANY_PLACE);
   }, []);
 
   // Exports use the live data, so anything found since the last re-arrange is included
   const currentLeads = useCallback(
-    () => arrangeLeads(businesses, sort, filters, emailed),
-    [businesses, sort, filters, emailed]
+    () => arrangeLeads(businesses, sort, filters, emailed, place),
+    [businesses, sort, filters, emailed, place]
   );
 
-  return { sort, setSort, filters, toggleFilter, clearFilters, counts, emailed, setEmailed, countEmailed, leads, currentLeads };
+  return {
+    sort,
+    setSort,
+    filters,
+    toggleFilter,
+    clearFilters,
+    counts,
+    emailed,
+    setEmailed,
+    countEmailed,
+    place,
+    setPlace,
+    countPlace,
+    types,
+    leads,
+    currentLeads,
+  };
 }

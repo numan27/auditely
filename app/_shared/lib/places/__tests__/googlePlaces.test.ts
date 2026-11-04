@@ -57,12 +57,32 @@ describe('searchGooglePlaces', () => {
     expect(outcome).toEqual({
       ok: true,
       places: [
-        { name: 'Smile Dental', address: '1 Main St', website: null, phone: null, rating: 4.6, reviewCount: 123, placeId: 'a' },
-        { name: 'New Dental', address: '2 Main St', website: null, phone: null, rating: null, reviewCount: 0, placeId: 'b' },
+        { name: 'Smile Dental', address: '1 Main St', website: null, phone: null, rating: 4.6, reviewCount: 123, placeId: 'a', placeType: null },
+        { name: 'New Dental', address: '2 Main St', website: null, phone: null, rating: null, reviewCount: 0, placeId: 'b', placeType: null },
       ],
     });
     const mask: string = fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask'];
     expect(mask.split(',')).toEqual(expect.arrayContaining(['places.rating', 'places.userRatingCount']));
+  });
+
+  it("keeps each place's business type and leaves out businesses closed for good", async () => {
+    fetchMock.mockImplementation(async () =>
+      json({
+        places: [
+          { id: 'a', displayName: { text: 'Bright Marketing' }, primaryTypeDisplayName: { text: 'Marketing agency' }, businessStatus: 'OPERATIONAL' },
+          { id: 'b', displayName: { text: 'Gone Media' }, primaryTypeDisplayName: { text: 'Marketing agency' }, businessStatus: 'CLOSED_PERMANENTLY' },
+          { id: 'c', displayName: { text: 'Away Ads' }, businessStatus: 'CLOSED_TEMPORARILY' },
+        ],
+      })
+    );
+    const outcome = await searchGooglePlaces('marketing agencies', 'austin', 'key');
+
+    expect(outcome.ok && outcome.places.map((p) => [p.name, p.placeType])).toEqual([
+      ['Bright Marketing', 'Marketing agency'],
+      ['Away Ads', null],
+    ]);
+    const mask: string = fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask'];
+    expect(mask.split(',')).toEqual(expect.arrayContaining(['places.primaryTypeDisplayName', 'places.businessStatus']));
   });
 
   it("says in plain words when Google can't be searched, not Google's error code", async () => {

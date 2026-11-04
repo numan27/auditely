@@ -6,9 +6,11 @@ import type { ReactNode } from 'react';
 import { EmailedFilterMenu } from '@/app/_shared/components/auditely/emailedFilterMenu/emailedFilterMenu';
 import { ExportMenu } from '@/app/_shared/components/auditely/exportMenu/exportMenu';
 import { FilterChip } from '@/app/_shared/components/auditely/filterChip/filterChip';
+import { PlaceFilterMenu } from '@/app/_shared/components/auditely/placeFilterMenu/placeFilterMenu';
 import { SortMenu } from '@/app/_shared/components/auditely/sortMenu/sortMenu';
 import { FILTER_OPTIONS, type EmailedFilter, type LeadFilter, type LeadSort } from '@/app/_shared/lib/utils/leadView';
 import type { BusinessWithData } from '@/app/_shared/lib/types/auditely';
+import type { PlaceFilter } from '@/app/_shared/lib/utils/placeFilter';
 
 interface LeadToolbarProps {
   sort: LeadSort;
@@ -20,6 +22,12 @@ interface LeadToolbarProps {
   /** How many leads an emailed option would show, on top of the chips */
   countEmailed: (option: EmailedFilter) => number;
   onEmailedChange: (emailed: EmailedFilter) => void;
+  place: PlaceFilter;
+  /** Every business type in the results, with its count */
+  types: { type: string; count: number }[];
+  /** How many leads a Type & size choice would show, on top of the other filters */
+  countPlace: (option: PlaceFilter) => number;
+  onPlaceChange: (place: PlaceFilter) => void;
   getExportLeads: () => BusinessWithData[];
   exportFileName: string;
   /** Shown before the sort order ("Audit all") */
@@ -36,6 +44,10 @@ export function LeadToolbar({
   emailed,
   countEmailed,
   onEmailedChange,
+  place,
+  types,
+  countPlace,
+  onPlaceChange,
   getExportLeads,
   exportFileName,
   actions,
@@ -64,6 +76,7 @@ export function LeadToolbar({
             );
           })}
         </div>
+        <PlaceFilterMenu place={place} types={types} count={countPlace} onChange={onPlaceChange} />
         <EmailedFilterMenu emailed={emailed} count={countEmailed} onChange={onEmailedChange} />
       </div>
 

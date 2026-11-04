@@ -18,6 +18,7 @@ import { checkFor } from '@/app/_shared/lib/email/emailCheck';
 import { isOutdatedAudit, isStaleAudit } from '@/app/_shared/lib/audit/types';
 import { scoreTone, siteBlocked, type ScoreTone } from '@/app/_shared/lib/audit/reportData';
 import { reviewsLabel } from '@/app/_shared/lib/utils/reviewsLabel';
+import { sizeHint } from '@/app/_shared/lib/utils/placeFilter';
 import { sentOn } from '@/app/_shared/lib/utils/sentOn';
 import type { BulkState } from '@/app/_shared/lib/utils/bulkAudit';
 import type { Business, Audit, AiReport, BusinessUpdate } from '@/app/_shared/lib/types/auditely';
@@ -117,7 +118,9 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
   const isOutdated = !demo && auditStatus === 'done' && !!audit && isOutdatedAudit(audit.engine_version);
   // Outdated already says "re-audit"; stale only needs saying for a current-engine audit
   const isStale = !demo && auditStatus === 'done' && !!audit && !isOutdated && isStaleAudit(audit);
-  const reviews = reviewsLabel(business.rating, business.review_count);
+  const size = sizeHint(business.review_count);
+  // "4.6 · 12 Google reviews · Likely small": the size is only a guess from the reviews, so it goes beside them
+  const reviews = [reviewsLabel(business.rating, business.review_count), size].filter(Boolean).join(' · ');
 
   return (
     <article
@@ -129,6 +132,12 @@ export function BusinessCard({ business, initialAudit, initialReport, onUpdate, 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold leading-snug text-[var(--color-text-primary)]">{business.name}</h3>
+            {/* Google's type, so a staffing firm in an agency search shows what it is */}
+            {business.place_type && (
+              <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
+                {business.place_type}
+              </span>
+            )}
             {isCompleted && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon size={11} strokeWidth={3} />

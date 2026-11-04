@@ -13,10 +13,11 @@ type Call = { table: string; op: string; payload?: unknown; columns?: string; op
 
 const NO_COLUMN_WRITE = { code: 'PGRST204', message: "Could not find the 'place_id' column of 'businesses' in the schema cache" };
 const NO_COLUMN_READ = { code: '42703', message: 'column businesses.place_id does not exist' };
+const NO_TYPE_WRITE = { code: 'PGRST204', message: "Could not find the 'place_type' column of 'businesses' in the schema cache" };
 
 // Chainable fake of the Supabase query builder: answers are queued per `table.op`,
-// and without the migration any read or write that names place_id fails as PostgREST does
-function fakeDb(responses: Record<string, Result[]> = {}, { migrated = true } = {}) {
+// and without a migration any read or write that names its column fails as PostgREST does
+function fakeDb(responses: Record<string, Result[]> = {}, { migrated = true, typed = true } = {}) {
   const calls: Call[] = [];
   const from = (table: string) => {
     const call: Call = { table, op: 'select', filters: [] };
@@ -25,6 +26,9 @@ function fakeDb(responses: Record<string, Result[]> = {}, { migrated = true } = 
       const named = JSON.stringify(call.payload ?? '') + (call.columns ?? '');
       if (!migrated && named.includes('place_id')) {
         return Promise.resolve({ data: null, error: call.op === 'select' ? NO_COLUMN_READ : NO_COLUMN_WRITE });
+      }
+      if (!typed && named.includes('place_type')) {
+        return Promise.resolve({ data: null, error: NO_TYPE_WRITE });
       }
       const queue = responses[`${table}.${call.op}`] ?? [];
       return Promise.resolve((queue.length > 1 ? queue.shift() : queue[0]) ?? { data: null, error: null });
@@ -81,10 +85,26 @@ describe('insertPlaces', () => {
         rating: 4.5,
         review_count: 80,
         place_id: 'p1',
+        place_type: null,
         created_at: at(0),
       },
       expect.objectContaining({ name: 'Bright Dental', place_id: 'p2', created_at: at(1) }),
     ]);
+  });
+
+  it("saves Google's business type, and saves without it until the place type migration has run", async () => {
+    const typedPlace = place('Bright Marketing', 'p1', { placeType: 'Marketing agency' });
+    const migrated = fakeDb({ 'businesses.insert': [{ data: [{ id: 'b1' }], error: null }] });
+    await insertPlaces(migrated.db, 'search-1', [typedPlace], START);
+    expect(migrated.calls[0].payload).toEqual([expect.objectContaining({ place_type: 'Marketing agency', place_id: 'p1' })]);
+
+    const untyped = fakeDb({ 'businesses.insert': [{ data: [{ id: 'b1' }], error: null }] }, { typed: false });
+    const result = await insertPlaces(untyped.db, 'search-1', [typedPlace], START);
+    expect(result.error).toBeNull();
+    expect(untyped.calls).toHaveLength(2);
+    expect(untyped.calls[1].payload).toEqual([expect.not.objectContaining({ place_type: expect.anything() })]);
+    expect(untyped.calls[1].payload).toEqual([expect.objectContaining({ place_id: 'p1' })]);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('docs/migrations/2026-11-04-place-type.sql'));
   });
 
   it("saves them without the place id until the migration has run, and says which one to run", async () => {
