@@ -1,7 +1,10 @@
 // app/api/send-email/route.ts
 
-// "Send email": one lead's outreach email, as edited in the dialog, in the
-// account's brand (email/outreachEmail.ts) with the PDF report attached. Pro
+// "Send email": one lead's outreach email, as edited in the dialog. A cold
+// email is a plain note (email/plainEmail.ts) with the PDF only when ticked,
+// capped per day and never sent twice to one address (email/sendGuards.ts);
+// a requested audit gets the account's branded email (email/outreachEmail.ts)
+// with the PDF report attached. Pro
 // and Agency accounts send from the mailbox they connected in Settings; the
 // owner without one sends from FROM_EMAIL (the Vercel mailbox, or Resend — see
 // email/mailer.ts). The send date is saved so the lead isn't emailed twice by accident.
@@ -18,6 +21,8 @@ import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 import { emailSetupProblem, sendEmail } from '@/app/_shared/lib/email/mailer';
 import { outreachHtml, outreachText } from '@/app/_shared/lib/email/outreachEmail';
 import { outreachProblem } from '@/app/_shared/lib/email/outreach';
+import { plainOutreachHtml, plainOutreachText } from '@/app/_shared/lib/email/plainEmail';
+import { coldSendProblem } from '@/app/_shared/lib/email/sendGuards';
 import { mailboxFor } from '@/app/_shared/lib/email/senders';
 import { planFor, planHas } from '@/app/_shared/lib/usage/plans';
 import { sendAllowed } from '@/app/_shared/lib/usage/rateLimit';
@@ -74,13 +79,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Add your name or company in Settings, so the email says who it's from." }, { status: 400 });
   }
 
-  const logo = await emailLogo(brand);
-  // A request from devartventures.com asked for this email: no opt-out line
-  const email = { body: text, business, audit: business.audit, brand: { ...brand, contact }, requested: Boolean(business.request) };
+  // A request from devartventures.com asked for this email: the branded email, no opt-out line.
+  // Everyone else gets a plain note, as a person writes it; the report goes only when ticked.
+  const requested = Boolean(business.request);
+  const attachReport = requested || input.attach_report === true;
+  const logo = requested ? await emailLogo(brand) : null;
+  const email = { body: text, business, audit: business.audit, brand: { ...brand, contact }, requested };
+  const plain = { body: text, brand: { ...brand, contact } };
   if (preview) {
+    if (!requested) return NextResponse.json({ html: plainOutreachHtml(plain) });
     // A browser can't load the email's attached logo, so the preview carries the image itself
     const logoSrc = logo && `data:${logo.contentType};base64,${logo.content.toString('base64')}`;
     return NextResponse.json({ html: outreachHtml({ ...email, logoSrc }) });
+  }
+
+  // Cold email at a person's pace, and never twice to one address
+  if (!requested) {
+    const refused = await coldSendProblem(db, { businessId, email: business.email });
+    if (refused) return NextResponse.json({ error: refused }, { status: 429 });
   }
 
   // The owner's own mail has no cap; everyone else's mailbox sends at a person's pace
@@ -100,17 +116,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Not sent: ${checkReason(checked.check)}`, email_check: checked.check }, { status: 400 });
   }
 
-  const report = await renderAuditPdf(db, business.audit.id);
-  if (!report.ok) return NextResponse.json({ error: report.error }, { status: report.status });
+  let reportFile: { filename: string; content: Buffer } | null = null;
+  if (attachReport) {
+    const report = await renderAuditPdf(db, business.audit.id);
+    if (!report.ok) return NextResponse.json({ error: report.error }, { status: report.status });
+    reportFile = { filename: report.filename, content: report.pdf };
+  }
 
   const sent = await sendEmail(
     {
       to: business.email,
       subject: subject.trim(),
-      text: outreachText({ ...email, logoSrc: null }),
-      html: outreachHtml({ ...email, logoSrc: logo && `cid:${LOGO_CID}` }),
+      text: requested ? outreachText({ ...email, logoSrc: null }) : plainOutreachText(plain),
+      html: requested ? outreachHtml({ ...email, logoSrc: logo && `cid:${LOGO_CID}` }) : plainOutreachHtml(plain),
       attachments: [
-        { filename: report.filename, content: report.pdf },
+        ...(reportFile ? [reportFile] : []),
         ...(logo ? [{ filename: logo.filename, content: logo.content, cid: LOGO_CID }] : []),
       ],
     },

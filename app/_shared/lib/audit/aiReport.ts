@@ -41,13 +41,16 @@ export function reportFixes(problems: Problem[]): string[] {
   return problems.map((p) => p.fix).filter(Boolean).slice(0, MAX_FIXES);
 }
 
-/** The email's closing offer, used word for word. The PDF report goes with the email. */
+/** The email's closing offer, used word for word. The cold email offers the report; it goes once they reply. */
 export function offerSentence({ businessName, problems }: ReportInput): string {
   const fixes = reportFixes(problems).length;
   const report =
     fixes > 0 ? `a short report with ${fixes} fix${fixes === 1 ? '' : 'es'} for ${businessName}` : `a short report on ${businessName}'s website`;
-  return `I've attached ${report} — ${OFFER_CLOSING}`;
+  return `I put together ${report} — ${OFFER_CLOSING}`;
 }
+
+// Words that make a subject read like a mass mailing, and land it in spam
+const ALARM = /\b(killing|kills?|losing|lose|lost|costs?|costing|hurts?|hurting|urgent|broken|warning|alert|problem|issue)\b/i;
 
 function factLines(problems: Problem[]): string {
   if (problems.length === 0) return NOTHING_FOUND;
@@ -85,8 +88,9 @@ ${factLines(input.problems)}
 Write:
 1. "summary": 2-3 sentences for the business owner, in plain language, ${summaryAsk}
 2. "cold_email": a short cold email to the owner.
-   - First line: "Subject: " and a subject of at most 6 words that names their biggest problem.
-   - Body under 90 words. ${opening}
+   - First line: "Subject: " and a calm subject of 2-5 words, written like a note from a person, for example "question about ${input.website.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/.*$/, '')}" or "your website on phones". Never alarming words such as killing, losing, costs, hurts, urgent or broken.
+   - Start the body with "Hi," on its own line.
+   - Body under 90 words, written like a personal note, not marketing. ${opening}
    - End the body with this sentence, word for word: "${offerSentence(input)}"
    - Sign off with: ${input.writer.signOff}
    - No bullet points.
@@ -127,7 +131,8 @@ export function replyProblem(reply: WrittenReport, input: ReportInput): string |
   const words = emailBody(reply.cold_email).split(/\s+/).filter(Boolean).length;
   if (words > MAX_EMAIL_WORDS) return `The email body is ${words} words; keep it under 90.`;
   const subject = reply.cold_email.trimStart().match(/^subject:\s*([^\n]*)/i)?.[1].trim() ?? '';
-  if (subject.length > MAX_SUBJECT_CHARS) return `The subject is ${subject.length} characters; keep it to 6 words at most.`;
+  if (subject.length > MAX_SUBJECT_CHARS) return `The subject is ${subject.length} characters; keep it to 5 words at most.`;
+  if (ALARM.test(subject)) return 'The subject sounds alarming; write a calm one, like a note from a person.';
   if (!bare(reply.cold_email).includes(bare(offerSentence(input)))) return "It didn't end with the offer sentence.";
   const signature = input.writer.signOff;
   return bare(reply.cold_email).includes(bare(signature)) ? null : `It didn't sign off as ${signature}.`;

@@ -90,7 +90,7 @@ export function useEmailSend(business: Business, onUpdate?: (businessId: string,
         const res = await fetch(API_ROUTES.SEND_EMAIL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ business_id: business.id, subject: draft.subject, body: draft.body }),
+          body: JSON.stringify({ business_id: business.id, subject: draft.subject, body: draft.body, attach_report: draft.attachReport === true }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -122,7 +122,7 @@ export function useEmailSend(business: Business, onUpdate?: (businessId: string,
       const res = await fetch(API_ROUTES.SEND_EMAIL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: business.id, subject: draft.subject, body: draft.body, preview: true }),
+        body: JSON.stringify({ business_id: business.id, subject: draft.subject, body: draft.body, attach_report: draft.attachReport === true, preview: true }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || typeof data.html !== 'string') throw new Error(data.error || "Couldn't build the preview");

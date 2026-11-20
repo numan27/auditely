@@ -22,16 +22,32 @@ const audit = {
 const base = { businessName: 'Smile Dental', problems: [] as Problem[] };
 
 describe('followUpDraft', () => {
-  it('reminds them of the report and its worst problem, signed like the first email', () => {
+  // A cold lead was offered the report, not sent it: the follow-up offers it again
+  it('names the worst problem and offers the report again, signed like the first email', () => {
     expect(followUpDraft({ businessName: 'Smile Dental', problems, firstEmail: `${first}\n\nNuman, DevArtVentures`, sender: devart })).toEqual({
+      subject: 'Re: your website',
+      body: [
+        'Hi,',
+        'Just following up on my note about the Smile Dental website.',
+        "The one thing I'd fix first:\nWe found no contact form or email link on your site. Visitors who'd rather write than call have no easy way to reach you online.",
+        'I have a short report with the rest. Want me to send it over? A one-word reply is fine.',
+        'Numan, DevArtVentures',
+      ].join('\n\n'),
+      attachReport: false,
+    });
+  });
+
+  it('sends the report again to someone who asked for it', () => {
+    expect(followUpDraft({ businessName: 'Smile Dental', problems, firstEmail: `${first}\n\nNuman, DevArtVentures`, sender: devart, attached: true })).toEqual({
       subject: 'Quick follow-up on your website report',
       body: [
-        "Hi,",
+        'Hi,',
         "Just following up on the website report I sent for Smile Dental. I've attached it again in case it got buried.",
         "One thing worth fixing first:\nWe found no contact form or email link on your site. Visitors who'd rather write than call have no easy way to reach you online.",
         'Happy to walk you through the rest on a quick call.',
         'Numan, DevArtVentures',
       ].join('\n\n'),
+      attachReport: true,
     });
   });
 
@@ -40,8 +56,8 @@ describe('followUpDraft', () => {
     expect(body).toBe(
       [
         'Hi,',
-        "Just following up on the website report I sent for Smile Dental. I've attached it again in case it got buried.",
-        'Happy to walk you through it on a quick call.',
+        'Just following up on my note about the Smile Dental website.',
+        'I have a short report with the rest. Want me to send it over? A one-word reply is fine.',
         'The DevArtVentures team',
       ].join('\n\n')
     );
@@ -76,7 +92,9 @@ describe('leadDrafts', () => {
   it("gives the first email and a follow-up about the audit's worst problem", () => {
     const { first: firstDraft, followUp } = leadDrafts(`Subject: No way to message you\n${first}\n\nNuman, DevArtVentures`, 'Smile Dental', audit, null, devart);
     expect(firstDraft.subject).toBe('No way to message you');
-    expect(followUp.subject).toBe('Quick follow-up on your website report');
+    expect(firstDraft.attachReport).toBeUndefined();
+    expect(followUp.subject).toBe('Re: your website');
+    expect(followUp.attachReport).toBe(false);
     expect(followUp.body).toContain('We found no contact form or email link on your site.');
     expect(followUp.body.endsWith('Numan, DevArtVentures')).toBe(true);
   });
@@ -108,6 +126,7 @@ describe('requestDraft', () => {
         'You mentioned "Not enough leads" as your main concern. Happy to go through it, and the rest of the report, on a free 30-minute call, or just reply to this email with any questions.',
         'Numan, DevArtVentures',
       ].join('\n\n'),
+      attachReport: true,
     });
   });
 

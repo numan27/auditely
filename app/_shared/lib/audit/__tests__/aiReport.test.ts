@@ -42,15 +42,15 @@ describe('reportFixes and offerSentence', () => {
   });
 
   it('offers a report with the number of fixes, or a plain report when there are none', () => {
-    // The PDF goes with the email, so the offer is the call, not the report
+    // A cold email offers the report; it goes once they reply
     expect(offerSentence(input())).toBe(
-      "I've attached a short report with 3 fixes for Smile Dental — happy to walk you through it on a quick call."
+      'I put together a short report with 3 fixes for Smile Dental — want me to send it over?'
     );
     expect(offerSentence(input({ problems: [problem(0)] }))).toBe(
-      "I've attached a short report with 1 fix for Smile Dental — happy to walk you through it on a quick call."
+      'I put together a short report with 1 fix for Smile Dental — want me to send it over?'
     );
     expect(offerSentence(input({ problems: [] }))).toBe(
-      "I've attached a short report on Smile Dental's website — happy to walk you through it on a quick call."
+      "I put together a short report on Smile Dental's website — want me to send it over?"
     );
   });
 });
@@ -129,14 +129,21 @@ describe('replyProblem', () => {
     expect(replyProblem(reply(signed('word '.repeat(85))), input())).toBeNull();
   });
 
-  it('asks for a subject of at most 6 words and sends back a long one', () => {
-    expect(buildReportPrompt(input())).toContain('a subject of at most 6 words');
+  it('asks for a calm subject of a few words and sends back a long one', () => {
+    expect(buildReportPrompt(input())).toContain('a calm subject of 2-5 words');
     const subject = "Let's fix the ways patients can't reach you online today";
     expect(replyProblem(reply(signed('Your site is slow.').replace('Subject: Hi', `Subject: ${subject}`)), input())).toBe(
-      `The subject is ${subject.length} characters; keep it to 6 words at most.`
+      `The subject is ${subject.length} characters; keep it to 5 words at most.`
     );
     const short = signed('Your site is slow.').replace('Subject: Hi', "Subject: Patients can't reach you online");
     expect(replyProblem(reply(short), input())).toBeNull();
+  });
+
+  it('sends back a subject that sounds like a mass mailing', () => {
+    const alarming = signed('Your site is slow.').replace('Subject: Hi', 'Subject: Mobile speed is killing leads');
+    expect(replyProblem(reply(alarming), input())).toBe('The subject sounds alarming; write a calm one, like a note from a person.');
+    const calm = signed('Your site is slow.').replace('Subject: Hi', 'Subject: question about smiledental.com');
+    expect(replyProblem(reply(calm), input())).toBeNull();
   });
 
   it('checks the account’s own sign-off, and lets its numbers through', () => {

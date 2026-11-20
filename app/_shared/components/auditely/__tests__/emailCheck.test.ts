@@ -38,9 +38,11 @@ const button = (html: string, label: string) => html.split('<button').find((part
 const sendDisabled = (html: string) => button(html, 'Send email').includes('disabled=""');
 
 describe('SendEmailModal and the address check', () => {
-  it('describes the email in the account’s own branding, never as DevArtVentures', () => {
+  it('offers to attach the PDF, unticked for a cold email, and never names DevArtVentures', () => {
     const html = dialog();
-    expect(html).toContain('Sent with your branding: your message, a snapshot of the audit and a “Book your free call” button, with the PDF report attached.');
+    expect(html).toContain('Attach the PDF report');
+    expect(html).toContain('Sent as a plain note, like an email from you, with no attachment.');
+    expect(html).not.toMatch(/<input[^>]*type="checkbox"[^>]*checked/);
     expect(html.toLowerCase()).not.toContain('devart');
   });
 

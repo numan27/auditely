@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/app/_shared/components/ui/button/button';
+import { Checkbox } from '@/app/_shared/components/ui/checkbox/checkbox';
 import { EmailCheckNote } from '@/app/_shared/components/auditely/emailCheckNote/emailCheckNote';
 import { Input } from '@/app/_shared/components/ui/input/input';
 import { Modal } from '@/app/_shared/components/ui/modal/modal';
@@ -40,6 +41,8 @@ interface SendEmailModalProps {
 export function SendEmailModal({ businessName, to, draft, sentAt, sending, error, check, checking, checkNote, onSend, onPreview, onClose }: SendEmailModalProps) {
   const [subject, setSubject] = useState(draft.subject);
   const [body, setBody] = useState(draft.body);
+  // Off for a cold email (an attachment from a stranger reads as spam); on for a reply to someone who asked
+  const [attachReport, setAttachReport] = useState(draft.attachReport === true);
   // The designed email while it is being looked at; null while editing
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -52,7 +55,7 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
     setPreviewing(true);
     setPreviewError(null);
     try {
-      setPreviewHtml(await onPreview({ subject, body }));
+      setPreviewHtml(await onPreview({ subject, body, attachReport }));
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Couldn't build the preview");
     } finally {
@@ -88,9 +91,16 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
                 onChange={(e) => setBody(e.target.value)}
                 disabled={sending || previewing}
               />
+              <Checkbox
+                label="Attach the PDF report"
+                checked={attachReport}
+                onChange={(e) => setAttachReport(e.target.checked)}
+                disabled={sending || previewing}
+              />
               <p className="text-sm text-[var(--color-text-tertiary)]">
-                Sent with your branding: your message, a snapshot of the audit and a “Book your free call” button, with the PDF
-                report attached.
+                {attachReport
+                  ? 'The PDF report goes with this email. Best when they asked for it or replied to your first email.'
+                  : 'Sent as a plain note, like an email from you, with no attachment. Tick the box once they reply asking for the report.'}
               </p>
             </>
           ) : (
@@ -145,7 +155,7 @@ export function SendEmailModal({ businessName, to, draft, sentAt, sending, error
           size="sm"
           onClick={() => {
             setPreviewError(null);
-            onSend({ subject, body });
+            onSend({ subject, body, attachReport });
           }}
           isLoading={sending}
           disabled={!!problem || checking || !!blocked}

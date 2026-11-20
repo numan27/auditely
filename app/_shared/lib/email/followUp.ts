@@ -20,6 +20,8 @@ interface FollowUpInput {
   /** The requester's name, for the greeting; a lead's is unknown */
   name?: string;
   sender: Sender;
+  /** The first email carried the report (a requested audit), so this one sends it again */
+  attached?: boolean;
 }
 
 interface RequestReplyInput {
@@ -64,16 +66,25 @@ const worstProblem = (worst: Problem) => [`${worst.problem}.`, worst.cost].filte
 // The form's "Not sure" says nothing to answer
 const NO_CONCERN = /^not sure$/i;
 
-export function followUpDraft({ businessName, problems, firstEmail, name, sender }: FollowUpInput): OutreachDraft {
+export function followUpDraft({ businessName, problems, firstEmail, name, sender, attached = false }: FollowUpInput): OutreachDraft {
   const worst = problems[0];
-  const paragraphs = [
-    greeting(name),
-    `Just following up on the website report I sent for ${businessName}. I've attached it again in case it got buried.`,
-    worst && `One thing worth fixing first:\n${worstProblem(worst)}`,
-    `Happy to walk you through ${worst ? 'the rest' : 'it'} on a quick call.`,
-    signOff(firstEmail, sender),
-  ];
-  return { subject: 'Quick follow-up on your website report', body: paragraphs.filter(Boolean).join('\n\n') };
+  // Someone who asked for the audit was sent the report; a cold lead was only offered it
+  const paragraphs = attached
+    ? [
+        greeting(name),
+        `Just following up on the website report I sent for ${businessName}. I've attached it again in case it got buried.`,
+        worst && `One thing worth fixing first:\n${worstProblem(worst)}`,
+        `Happy to walk you through ${worst ? 'the rest' : 'it'} on a quick call.`,
+        signOff(firstEmail, sender),
+      ]
+    : [
+        greeting(name),
+        `Just following up on my note about the ${businessName} website.`,
+        worst && `The one thing I'd fix first:\n${worstProblem(worst)}`,
+        "I have a short report with the rest. Want me to send it over? A one-word reply is fine.",
+        signOff(firstEmail, sender),
+      ];
+  return { subject: attached ? 'Quick follow-up on your website report' : 'Re: your website', body: paragraphs.filter(Boolean).join('\n\n'), attachReport: attached };
 }
 
 /**
@@ -95,7 +106,7 @@ export function requestDraft({ businessName, request, problems, aiEmail, sender 
       : `Happy to walk you through the report on ${call}.`,
     signOff(aiEmail, sender),
   ];
-  return { subject: `Your free website audit for ${businessName}`, body: paragraphs.join('\n\n') };
+  return { subject: `Your free website audit for ${businessName}`, body: paragraphs.join('\n\n'), attachReport: true };
 }
 
 /**
@@ -112,7 +123,10 @@ export function leadDrafts(
   const problems = rankedProblems(audit);
   const ai = outreachDraft(coldEmail, businessName);
   const first = request ? requestDraft({ businessName, request, problems, aiEmail: ai.body, sender }) : ai;
-  return { first, followUp: followUpDraft({ businessName, problems, firstEmail: first.body, name: request?.name, sender }) };
+  return {
+    first,
+    followUp: followUpDraft({ businessName, problems, firstEmail: first.body, name: request?.name, sender, attached: !!request }),
+  };
 }
 
 /**

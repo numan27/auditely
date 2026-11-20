@@ -7,6 +7,7 @@ import { BRAND_UNAVAILABLE, BrandUnavailable, brandFor, emailLogo } from '@/app/
 import { resolveBrand } from '@/app/_shared/lib/brand/brandRules';
 import { checkLeadEmail } from '@/app/_shared/lib/email/leadEmailCheck';
 import { mailboxFor } from '@/app/_shared/lib/email/senders';
+import { coldSendProblem } from '@/app/_shared/lib/email/sendGuards';
 import { featureMessage } from '@/app/_shared/lib/usage/usageCopy';
 
 // Fake Supabase: the business (with its audit and report) and every update
@@ -47,6 +48,8 @@ vi.mock('@/app/_shared/lib/email/mailer', () => ({ emailSetupProblem: vi.fn(), s
 vi.mock('@/app/_shared/lib/email/leadEmailCheck', () => ({ checkLeadEmail: vi.fn() }));
 // Which mailbox an account sends from (senders.test.ts reads saved ones for real)
 vi.mock('@/app/_shared/lib/email/senders', () => ({ mailboxFor: vi.fn() }));
+// The daily cap and the one-email-per-address rule (sendGuards.test.ts reads the rows)
+vi.mock('@/app/_shared/lib/email/sendGuards', () => ({ coldSendProblem: vi.fn() }));
 
 // The signed-in user's client: the route must hand this one to the libraries
 const userDb = { from: db.from };
@@ -76,6 +79,9 @@ const businessRow = (over: Record<string, unknown> = {}) => ({
   },
   ...over,
 });
+// Someone who asked for the audit on devartventures.com
+const requestedRow = () =>
+  businessRow({ request: { source_id: 'req-1', name: 'Sarah', business_type: null, main_concern: null, requested_at: '2026-10-27T09:00:00Z' } });
 const draft = { business_id: 'b1', subject: 'Quick note about your site', body: 'Hi there,\nYour site is slow.' };
 const checked = (verdict: string, status: string) => ({
   state: 'checked' as const,
@@ -99,6 +105,7 @@ beforeEach(() => {
   vi.mocked(emailLogo).mockReset().mockResolvedValue({ content: LOGO, contentType: 'image/png', filename: 'brand-logo.png' });
   vi.mocked(renderAuditPdf).mockReset().mockResolvedValue({ ok: true, pdf: PDF, filename: 'audit-smile-dental.pdf' });
   vi.mocked(mailboxFor).mockReset().mockResolvedValue({ ok: true, mailbox: 'env' });
+  vi.mocked(coldSendProblem).mockReset().mockResolvedValue(null);
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -111,7 +118,8 @@ describe('POST /api/send-email', () => {
     expect(maxDuration).toBe(60);
   });
 
-  it("sends the edited email to the business with the PDF attached, and records when", async () => {
+  // A cold email reads like a note from a person: no design, no logo, no attachment
+  it('sends a lead a plain note without the PDF, and records when', async () => {
     const { status, json } = await post(draft);
     expect(status).toBe(200);
     // No mailbox of its own: the owner's email goes through the Vercel one
@@ -119,30 +127,60 @@ describe('POST /api/send-email', () => {
       {
         to: 'office@smiledental.com',
         subject: 'Quick note about your site',
-        text: expect.stringMatching(/^Hi there,\nYour site is slow\.\n\n---/),
+        text: expect.stringMatching(/^Hi there,\nYour site is slow\.\n\n/),
         html: expect.stringContaining('Hi there,<br>Your site is slow.'),
-        attachments: [
-          { filename: 'audit-smile-dental.pdf', content: PDF },
-          { filename: 'brand-logo.png', content: LOGO, cid: 'brand-logo' },
-        ],
+        attachments: [],
       },
       undefined
     );
     const { html } = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(html).toContain('<img src="cid:brand-logo"');
-    expect(html).toContain('DevArtVentures');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('Book your free call');
+    expect(html).toContain('devartventures.com');
     expect(brandFor).toHaveBeenCalledWith('owner-1');
-    expect(emailLogo).toHaveBeenCalledWith(ownerBrand);
-    expect(html).toContain('Smile Dental');
-    expect(html).toContain('Book your free call');
-    expect(renderAuditPdf).toHaveBeenCalledWith(userDb, 'a1');
+    expect(emailLogo).not.toHaveBeenCalled();
+    expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(coldSendProblem).toHaveBeenCalledWith(userDb, { businessId: 'b1', email: 'office@smiledental.com' });
     expect(db.state.updates).toEqual([{ emailed_at: json.emailed_at }]);
     expect(new Date(json.emailed_at).getTime()).not.toBeNaN();
   });
 
+  it('attaches the PDF to the plain note when asked to', async () => {
+    expect((await post({ ...draft, attach_report: true })).status).toBe(200);
+    const sent = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(sent.attachments).toEqual([{ filename: 'audit-smile-dental.pdf', content: PDF }]);
+    expect(sent.html).not.toContain('<img');
+    expect(renderAuditPdf).toHaveBeenCalledWith(userDb, 'a1');
+  });
+
+  it('sends no cold email the daily cap or the one-email-per-address rule stops', async () => {
+    vi.mocked(coldSendProblem).mockResolvedValue('Not sent: office@smiledental.com was already emailed on Nov 3 for Smile Dental 2.');
+    expect(await post(draft)).toEqual({
+      status: 429,
+      json: { error: 'Not sent: office@smiledental.com was already emailed on Nov 3 for Smile Dental 2.' },
+    });
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(db.state.updates).toEqual([]);
+  });
+
+  it('sends a requested audit in the brand, with the PDF and logo, past the cold-email rules', async () => {
+    db.state.business = requestedRow();
+    expect((await post(draft)).status).toBe(200);
+    const sent = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(sent.attachments).toEqual([
+      { filename: 'audit-smile-dental.pdf', content: PDF },
+      { filename: 'brand-logo.png', content: LOGO, cid: 'brand-logo' },
+    ]);
+    expect(sent.html).toContain('<img src="cid:brand-logo"');
+    expect(sent.html).toContain('DevArtVentures');
+    expect(sent.html).toContain('Book your free call');
+    expect(emailLogo).toHaveBeenCalledWith(ownerBrand);
+    expect(coldSendProblem).not.toHaveBeenCalled();
+  });
+
   // They asked for the audit on devartventures.com: no "we won't email again"
   it('tells a requester why the email came instead of offering to stop', async () => {
-    db.state.business = businessRow({ request: { source_id: 'req-1', name: 'Sarah', business_type: null, main_concern: null, requested_at: '2026-10-27T09:00:00Z' } });
+    db.state.business = requestedRow();
     expect((await post(draft)).status).toBe(200);
     const { html, text } = vi.mocked(sendEmail).mock.calls[0][0];
     expect(html).toContain('you requested a free website audit on devartventures.com');
@@ -152,10 +190,13 @@ describe('POST /api/send-email', () => {
 
   it('keeps the opt-out line for a lead', async () => {
     await post(draft);
-    expect(vi.mocked(sendEmail).mock.calls[0][0].html).toContain("we won't email again");
+    const { html, text } = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(html).toContain("I won't email again");
+    expect(text).toContain("I won't email again");
   });
 
-  it('still sends, without the logo, when the logo file can not be read', async () => {
+  it('still sends a requested audit, without the logo, when the logo file can not be read', async () => {
+    db.state.business = requestedRow();
     vi.mocked(emailLogo).mockResolvedValue(null);
     expect((await post(draft)).status).toBe(200);
     const sent = vi.mocked(sendEmail).mock.calls[0][0];
@@ -165,17 +206,22 @@ describe('POST /api/send-email', () => {
 
   it('shows the email as it will look, without sending or needing email to be set up', async () => {
     vi.mocked(emailSetupProblem).mockReturnValue("Email sending isn't set up.");
-    const { status, json } = await post({ ...draft, preview: true });
-    expect(status).toBe(200);
-    expect(json.html).toContain('Hi there,<br>Your site is slow.');
+    const plain = await post({ ...draft, preview: true });
+    expect(plain.status).toBe(200);
+    expect(plain.json.html).toContain('Hi there,<br>Your site is slow.');
+    expect(plain.json.html).not.toContain('<img');
+    db.state.business = requestedRow();
+    const branded = await post({ ...draft, preview: true });
     // A browser can't load the email's attached logo, so the preview carries the image itself
-    expect(json.html).toContain(`<img src="data:image/png;base64,${LOGO.toString('base64')}"`);
+    expect(branded.json.html).toContain(`<img src="data:image/png;base64,${LOGO.toString('base64')}"`);
     expect(renderAuditPdf).not.toHaveBeenCalled();
+    expect(coldSendProblem).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
     expect(db.state.updates).toEqual([]);
   });
 
   it('sends in the brand the owner’s profile gives, with its own logo type', async () => {
+    db.state.business = requestedRow();
     vi.mocked(brandFor).mockResolvedValue(acmeBrand);
     vi.mocked(emailLogo).mockResolvedValue({ content: LOGO, contentType: 'image/jpeg', filename: 'brand-logo.jpg' });
     expect((await post(draft)).status).toBe(200);
@@ -223,9 +269,9 @@ describe('POST /api/send-email', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("doesn't send without the PDF", async () => {
+  it("doesn't send without the PDF it was asked to attach", async () => {
     vi.mocked(renderAuditPdf).mockResolvedValue({ ok: false, status: 500, error: 'Failed to generate PDF' });
-    expect(await post(draft)).toEqual({ status: 500, json: { error: 'Failed to generate PDF' } });
+    expect(await post({ ...draft, attach_report: true })).toEqual({ status: 500, json: { error: 'Failed to generate PDF' } });
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
@@ -317,7 +363,7 @@ describe('/api/send-email for other accounts', () => {
     expect(mailboxFor).toHaveBeenCalledWith(TESTER);
     const [sent, mailbox] = vi.mocked(sendEmail).mock.calls[0];
     expect(mailbox).toEqual({ settings: SAVED, fromName: 'Sam Lee' });
-    expect(sent.html).toContain('>Acme Studio</a>');
+    expect(sent.html).toContain('acme.studio');
     expect(sent.html?.toLowerCase()).not.toContain('devart');
     expect(sent.text.toLowerCase()).not.toContain('devart');
     // The Vercel mailbox is the owner's, so its setup doesn't matter here

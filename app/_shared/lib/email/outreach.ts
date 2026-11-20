@@ -6,16 +6,18 @@
 export interface OutreachDraft {
   subject: string;
   body: string;
+  /** Attach the PDF report. A cold email goes without it: an attachment from a stranger reads as spam. */
+  attachReport?: boolean;
 }
 
 export const SUBJECT_MAX = 150;
 export const BODY_MAX = 5000;
 
-/** How the AI's offer sentence ends (aiReport's offerSentence): the PDF goes with the email, so it offers the call */
-export const OFFER_CLOSING = 'happy to walk you through it on a quick call.';
+/** How the AI's offer sentence ends (aiReport's offerSentence): a cold email offers the report, a reply sends it */
+export const OFFER_CLOSING = 'want me to send it over?';
 
-// Reports written before the PDF went with the email offered to send it instead
-const OLD_OFFER = /I put together (a short report[^\n]*?)\s*[—–-]+\s*want me to send it over\?/i;
+// Reports written while the PDF went with every cold email said it was attached
+const ATTACHED_OFFER = /I've attached (a short report[^\n]*?)\s*[—–-]+\s*happy to walk you through it on a quick call\./i;
 // Longer than this gets cut off in an inbox
 const SHORT_SUBJECT = 50;
 
@@ -40,10 +42,10 @@ export function outreachDraft(coldEmail: string, businessName: string): Outreach
   const [firstLine, ...rest] = email.split('\n');
   const subject = firstLine.match(/^\s*subject:\s*(.+)$/i)?.[1].trim();
   const body = signOffInOwnParagraph(
-    (subject ? rest.join('\n') : email).trim().replace(OLD_OFFER, `I've attached $1 — ${OFFER_CLOSING}`)
+    (subject ? rest.join('\n') : email).trim().replace(ATTACHED_OFFER, `I put together $1 — ${OFFER_CLOSING}`)
   );
-  const named = `A few quick fixes for the ${businessName} website`;
-  return { subject: subject ?? (named.length <= SHORT_SUBJECT ? named : 'A few quick fixes for your website'), body };
+  const named = `Question about the ${businessName} website`;
+  return { subject: subject ?? (named.length <= SHORT_SUBJECT ? named : 'Question about your website'), body };
 }
 
 /** Why this email can't be sent as it is; null when it can */

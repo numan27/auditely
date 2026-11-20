@@ -21,12 +21,12 @@ describe('outreachDraft', () => {
   });
 
   it('keeps the fallback subject short when the business name is long', () => {
-    expect(outreachDraft('Hi there.', 'Eva Galstian, DO: Family Medicine, NYC').subject).toBe('A few quick fixes for your website');
+    expect(outreachDraft('Hi there.', 'Eva Galstian, DO: Family Medicine, NYC').subject).toBe('Question about your website');
   });
 
   it('falls back to a subject naming the business when the email has none', () => {
     expect(outreachDraft('Hi there,\nYour site is slow.', 'Smile Dental')).toEqual({
-      subject: 'A few quick fixes for the Smile Dental website',
+      subject: 'Question about the Smile Dental website',
       body: 'Hi there,\nYour site is slow.',
     });
   });
@@ -41,15 +41,15 @@ describe('outreachDraft layout', () => {
     expect(body).toBe(`Hi, your site is slow. ${offer}\n\nThe DevArtVentures team`);
   });
 
-  // Reports written before the PDF went with the email offered to send it
-  it('turns the old offer to send the report into the attached report and the call', () => {
-    const old = 'Hi, your site is slow. I put together a short report with 4 fixes for Smile-Dental — want me to send it over? The DevArtVentures team';
+  // Reports written while the PDF went with every cold email said it was attached
+  it('turns the old attached report and call into the offer to send the report', () => {
+    const old = "Hi, your site is slow. I've attached a short report with 4 fixes for Smile-Dental — happy to walk you through it on a quick call. The DevArtVentures team";
     expect(outreachDraft(`Subject: Hi\n${old}`, 'Smile-Dental').body).toBe(
-      "Hi, your site is slow. I've attached a short report with 4 fixes for Smile-Dental — happy to walk you through it on a quick call.\n\nThe DevArtVentures team"
+      'Hi, your site is slow. I put together a short report with 4 fixes for Smile-Dental — want me to send it over?\n\nThe DevArtVentures team'
     );
-    const plain = "Hi. I put together a short report on Smile Dental's website - want me to send it over?\n\nNuman, DevArtVentures";
+    const plain = "Hi. I've attached a short report on Smile Dental's website - happy to walk you through it on a quick call.\n\nNuman, DevArtVentures";
     expect(outreachDraft(`Subject: Hi\n${plain}`, 'Smile Dental').body).toBe(
-      "Hi. I've attached a short report on Smile Dental's website — happy to walk you through it on a quick call.\n\nNuman, DevArtVentures"
+      "Hi. I put together a short report on Smile Dental's website — want me to send it over?\n\nNuman, DevArtVentures"
     );
   });
 
@@ -59,9 +59,9 @@ describe('outreachDraft layout', () => {
   });
 
   it('rewrites the old offer for a business with a question mark in its name', () => {
-    const old = "Hi. I put together a short report on What's Up? Cafe's website — want me to send it over?\n\nNuman, DevArtVentures";
+    const old = "Hi. I've attached a short report on What's Up? Cafe's website — happy to walk you through it on a quick call.\n\nNuman, DevArtVentures";
     expect(outreachDraft(`Subject: Hi\n${old}`, "What's Up? Cafe").body).toBe(
-      "Hi. I've attached a short report on What's Up? Cafe's website — happy to walk you through it on a quick call.\n\nNuman, DevArtVentures"
+      "Hi. I put together a short report on What's Up? Cafe's website — want me to send it over?\n\nNuman, DevArtVentures"
     );
   });
 
